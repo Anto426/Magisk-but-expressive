@@ -1637,6 +1637,13 @@ private val MAINTAINER_LINKS: Map<String, List<ContributorLink>> = mapOf(
     "canyie" to listOf(
         ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/canyieq"),
         ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/canyie")
+    ),
+    "anto426" to listOf(
+        ContributorLink(
+            CoreR.string.github,
+            CoreR.drawable.ic_github,
+            "https://github.com/Anto426"
+        )
     )
 )
 
@@ -1649,6 +1656,12 @@ private fun createContributor(login: String, avatarUrl: String, htmlUrl: String)
         links = MAINTAINER_LINKS[normalized].orEmpty()
     )
 }
+
+private val FORK_MAINTAINER = createContributor(
+    login = "Anto426",
+    avatarUrl = "https://github.com/Anto426.png",
+    htmlUrl = "https://github.com/Anto426"
+)
 
 interface GitHubService {
     @GET("repos/topjohnwu/Magisk/contributors")
@@ -1694,8 +1707,13 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
     }
 
     private fun cacheContributors(list: List<Contributor>) {
-        contributorsCache = list
+        contributorsCache = withPinnedContributors(list)
         contributorsCacheTimestamp = System.currentTimeMillis()
+    }
+
+    private fun withPinnedContributors(list: List<Contributor>): List<Contributor> {
+        return (listOf(FORK_MAINTAINER) + list)
+            .distinctBy { it.login.lowercase(Locale.US) }
     }
 
     fun refresh() {
@@ -1724,7 +1742,7 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
                                 listOf("topjohnwu", "vvb2060", "yujincheng08", "rikkaw", "canyie")
                             val fetchedMap = fetched.associateBy { it.login.lowercase(Locale.US) }
                             val ordered = priorityOrder.mapNotNull { handle -> fetchedMap[handle] }
-                            val finalList = ordered.ifEmpty { fetched }
+                            val finalList = withPinnedContributors(ordered.ifEmpty { fetched })
                             cacheContributors(finalList)
 
                             _state.update {
@@ -1737,7 +1755,7 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
                         .onFailure {
                             _state.update {
                                 it.copy(
-                                    contributors = emptyList(),
+                                    contributors = withPinnedContributors(emptyList()),
                                     contributorsLoading = false
                                 )
                             }
