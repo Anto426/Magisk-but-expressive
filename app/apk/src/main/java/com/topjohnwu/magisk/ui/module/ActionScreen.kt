@@ -322,8 +322,14 @@ private class ModuleActionComposeViewModel : ViewModel() {
         override fun onAddElement(e: String?) {
             e ?: return
             logs.add(e)
-            lineChannel.trySend(e)
+            if (!isStepLine(e)) {
+                lineChannel.trySend(e)
+            }
         }
+    }
+
+    private fun isStepLine(line: String): Boolean {
+        return line.replace("\u0000", "").trimStart().startsWith("-")
     }
 
     fun start(actionId: String, actionName: String) {

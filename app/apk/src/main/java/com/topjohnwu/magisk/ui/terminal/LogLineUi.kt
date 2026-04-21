@@ -1,20 +1,12 @@
 package com.topjohnwu.magisk.ui.terminal
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.dp
 
 private enum class LogSeverity { ERROR, WARN, INFO }
 private val ERROR_WORDS = Regex("\\b(error|failed|failure|fatal|exception|denied|abort|invalid)\\b", RegexOption.IGNORE_CASE)
@@ -38,41 +30,26 @@ fun StyledLogLine(
 ) {
     val normalized = line.replace("\u0000", "").trimEnd()
     val severity = detectSeverity(normalized)
-    val (tag, container, content) = when (severity) {
-        LogSeverity.ERROR -> Triple("ERR", colors.errorContainer, colors.onErrorContainer)
-        LogSeverity.WARN -> Triple("WRN", colors.tertiaryContainer, colors.onTertiaryContainer)
+    val startsWithStepPrefix = normalized.trimStart().startsWith("-")
+    if (severity == LogSeverity.INFO && startsWithStepPrefix) return
+
+    val contentColor = when (severity) {
+        LogSeverity.ERROR -> colors.error
+        LogSeverity.WARN -> colors.tertiary
         LogSeverity.INFO -> {
             when {
-                normalized.startsWith("-") -> Triple("STEP", colors.primaryContainer.copy(alpha = 0.45f), colors.onPrimaryContainer)
-                normalized.startsWith("*") -> Triple("INFO", colors.secondaryContainer.copy(alpha = 0.5f), colors.onSecondaryContainer)
-                else -> Triple("LOG", colors.surfaceContainerHighest, colors.onSurfaceVariant)
+                normalized.startsWith("*") -> colors.onSecondaryContainer
+                else -> colors.onSurfaceVariant
             }
         }
     }
 
-    Row(
+    Text(
+        text = ansiLogText(normalized, colors),
         modifier = modifier,
-        horizontalArrangement = Arrangement.Start
-    ) {
-        Surface(
-            color = container,
-            contentColor = content,
-            shape = RoundedCornerShape(6.dp)
-        ) {
-            Text(
-                text = tag,
-                modifier = Modifier.width(30.dp),
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = ansiLogText(normalized, colors),
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
-            softWrap = true
-        )
-    }
+        color = contentColor,
+        fontFamily = FontFamily.Monospace,
+        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
+        softWrap = true
+    )
 }

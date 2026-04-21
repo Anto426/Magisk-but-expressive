@@ -4,14 +4,13 @@ import android.net.Uri
 import android.os.Build
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,7 +22,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,6 +62,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.SnackbarHost
@@ -80,8 +81,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -112,6 +111,7 @@ import com.topjohnwu.magisk.ui.settings.SettingsScreen
 import com.topjohnwu.magisk.ui.settings.ThemeScreen
 import com.topjohnwu.magisk.ui.superuser.SuperuserLogsScreen
 import com.topjohnwu.magisk.ui.superuser.SuperuserScreen
+import com.topjohnwu.magisk.ui.theme.MagiskExpressiveTheme
 import com.topjohnwu.magisk.ui.theme.magiskComposeColorScheme
 import kotlin.math.abs
 import com.topjohnwu.magisk.core.R as CoreR
@@ -129,7 +129,7 @@ fun MagiskAppContainer(
         darkTheme = darkTheme
     )
 
-    MaterialTheme(colorScheme = colorScheme) {
+    MagiskExpressiveTheme(colorScheme = colorScheme) {
         val navController = rememberNavController()
         val snackbarHostState = remember { SnackbarHostState() }
         var homeRebootRequestToken by remember { mutableStateOf(0) }
@@ -221,7 +221,10 @@ fun MagiskAppContainer(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding())
+                    .padding(
+                        top = paddingValues.calculateTopPadding()
+                    )
+                    .navigationBarsPadding()
             ) {
 
                 NavHost(
@@ -404,22 +407,47 @@ fun MagiskAppContainer(
                     }
                 }
 
-                if (isRootRoute) {
-                    Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                        MagiskFloatingBottomBar(
-                            destinations = rootDestinations,
-                            currentRoute = currentRoute,
-                            floating = true,
-                            onNavigate = { route ->
-                                navController.navigate(route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+                AnimatedVisibility(
+                    visible = isRootRoute,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    enter = fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 220,
+                            easing = LinearOutSlowInEasing
+                        )
+                    ) + slideInVertically(
+                        initialOffsetY = { it / 2 },
+                        animationSpec = tween(
+                            durationMillis = 260,
+                            easing = FastOutSlowInEasing
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = tween(
+                            durationMillis = 140,
+                            easing = FastOutLinearInEasing
+                        )
+                    ) + slideOutVertically(
+                        targetOffsetY = { it / 2 },
+                        animationSpec = tween(
+                            durationMillis = 190,
+                            easing = FastOutLinearInEasing
+                        )
+                    )
+                ) {
+                    MagiskFloatingBottomBar(
+                        destinations = rootDestinations,
+                        currentRoute = currentRoute,
+                        floating = true,
+                        onNavigate = { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
                                 }
-                            })
-                    }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        })
                 }
             }
         }
@@ -767,78 +795,59 @@ private fun MagiskFloatingBottomBar(
             .navigationBarsPadding()
             .height(72.dp)
     }
+    val barShape = if (floating) {
+        RoundedCornerShape(32.dp)
+    } else {
+        RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    }
+    val barContainerColor = if (floating) {
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
 
     Surface(
         modifier = barModifier,
-        shape = if (floating) RoundedCornerShape(32.dp) else RoundedCornerShape(
-            topStart = 20.dp,
-            topEnd = 20.dp
-        ),
-        color = if (floating) {
-            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainer
-        },
+        shape = barShape,
+        color = barContainerColor,
         tonalElevation = if (floating) 12.dp else 0.dp,
         shadowElevation = if (floating) 16.dp else 0.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = if (floating) 8.dp else 12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+        NavigationBar(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            tonalElevation = 0.dp
         ) {
             destinations.forEach { dest ->
                 val selected = currentRoute == dest.route
-                val scale by animateFloatAsState(
-                    targetValue = if (selected) {
-                        if (floating) 1.07f else 1.04f
-                    } else {
-                        1f
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = {
+                        if (!selected) onNavigate(dest.route)
                     },
-                    animationSpec = tween(
-                        durationMillis = 220,
-                        easing = FastOutSlowInEasing
-                    ),
-                    label = "bottomBarScale"
-                )
-
-                val containerColor by animateColorAsState(
-                    targetValue = if (selected) {
-                        if (floating) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-                    } else {
-                        Color.Transparent
-                    },
-                    animationSpec = tween(
-                        durationMillis = 240,
-                        easing = FastOutSlowInEasing
-                    ),
-                    label = "bottomBarContainerColor"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(if (floating) 56.dp else 52.dp)
-                        .padding(horizontal = 4.dp)
-                        .clip(CircleShape)
-                        .background(containerColor)
-                        .clickable(enabled = !selected) { onNavigate(dest.route) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (selected) dest.selectedIcon else dest.icon,
-                        contentDescription = stringResource(id = dest.labelRes),
-                        modifier = Modifier
-                            .size(28.dp)
-                            .scale(scale),
-                        tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                            alpha = 0.7f
+                    icon = {
+                        Icon(
+                            imageVector = if (selected) dest.selectedIcon else dest.icon,
+                            contentDescription = stringResource(id = dest.labelRes),
+                            modifier = Modifier.size(if (floating) 24.dp else 22.dp)
                         )
+                    },
+                    label = {
+                        Text(
+                            text = stringResource(id = dest.labelRes),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    alwaysShowLabel = floating,
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
+                )
             }
         }
     }
