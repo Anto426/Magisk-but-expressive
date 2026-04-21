@@ -1,15 +1,24 @@
 plugins {
-    id("com.android.application")
+    alias(libs.plugins.android.application)
     kotlin("plugin.parcelize")
-    kotlin("plugin.compose")
-    kotlin("plugin.serialization")
+    alias(libs.plugins.legacy.kapt)
+    alias(libs.plugins.navigation.safeargs)
 }
 
 setupMainApk()
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = true
+    mapDiagnosticLocations = true
+    javacOptions {
+        option("-Xmaxerrs", "1000")
+    }
+}
+
 android {
     buildFeatures {
-        compose = true
+        dataBinding = true
     }
 
     compileOptions {
@@ -30,32 +39,24 @@ android {
 
 dependencies {
     implementation(project(":core"))
-    implementation(libs.ui.graphics)
     coreLibraryDesugaring(libs.jdk.libs)
 
+    implementation(libs.indeterminate.checkbox)
+    implementation(libs.rikka.layoutinflater)
+    implementation(libs.rikka.insets)
+    implementation(libs.rikka.recyclerview)
+
+    implementation(libs.navigation.fragment.ktx)
+    implementation(libs.navigation.ui.ktx)
+
+    implementation(libs.constraintlayout)
+    implementation(libs.swiperefreshlayout)
+    implementation(libs.recyclerview)
+    implementation(libs.transition)
+    implementation(libs.fragment.ktx)
     implementation(libs.appcompat)
     implementation(libs.material)
 
-    // Compose
-    implementation(platform(libs.compose.bom))
-    implementation(libs.compose.ui)
-    implementation(libs.foundation)
-    implementation(libs.compose.ui.tooling.preview)
-    debugImplementation(libs.compose.ui.tooling)
-    implementation(libs.activity.compose)
-    implementation(libs.lifecycle.runtime.compose)
-    implementation(libs.lifecycle.viewmodel.compose)
-    implementation(libs.material.icons.extended)
-    implementation(libs.material3)
-    implementation(libs.navigation.compose)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.svg)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.moshi)
-
-    // Navigation3
-    implementation(libs.navigation3.runtime)
-    implementation(libs.navigationevent.compose)
-    implementation(libs.lifecycle.viewmodel.navigation3)
-
+    // Make sure kapt runs with a proper kotlin-stdlib
+    kapt(kotlin("stdlib"))
 }

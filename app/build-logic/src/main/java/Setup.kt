@@ -14,13 +14,9 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.StopExecutionException
 import org.gradle.api.tasks.Sync
 import org.gradle.kotlin.dsl.assign
-import org.gradle.kotlin.dsl.exclude
 import org.gradle.kotlin.dsl.filter
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.register
-import org.gradle.kotlin.dsl.withType
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.File
 import java.net.URI
 import java.security.MessageDigest
@@ -47,13 +43,11 @@ internal fun Project.androidAppComponents(configure: Action<ApplicationAndroidCo
 fun Project.setupCommon() {
     android {
         compileSdk {
-            version = release(36) {
-                minorApiLevel = 1
-            }
+            version = release(37)
         }
-        buildToolsVersion = "36.1.0"
+        buildToolsVersion = "37.0.0"
         ndkPath = "${androidComponents.sdkComponents.sdkDirectory.get().asFile}/ndk/magisk"
-        ndkVersion = "29.0.14206865"
+        ndkVersion = "30.0.14904198"
 
         defaultConfig.apply {
             minSdk = 23
@@ -70,27 +64,16 @@ fun Project.setupCommon() {
                     "/META-INF/*",
                     "/META-INF/androidx/**",
                     "/META-INF/versions/**",
+                    "/META-INF/native-image/**",
                     "/org/bouncycastle/**",
                     "/org/apache/commons/**",
                     "/kotlin/**",
-                    "/kotlinx/**",
-                    "/okhttp3/**",
                     "/*.txt",
-                    "/*.bin",
                     "/*.json",
+                    "**/*.bin",
+                    "**/*.proto",
                 )
             }
-        }
-    }
-
-    configurations.all {
-        exclude("org.jetbrains.kotlin", "kotlin-stdlib-jdk7")
-        exclude("org.jetbrains.kotlin", "kotlin-stdlib-jdk8")
-    }
-
-    tasks.withType<KotlinCompile> {
-        compilerOptions {
-            jvmTarget = JvmTarget.JVM_21
         }
     }
 }
@@ -156,10 +139,8 @@ fun Project.setupCoreLib() {
                     true
                 }
             }
-
-            variant.sources.jniLibs?.let {
-                it.addGeneratedSourceDirectory(syncLibs, SyncWithDir::outputFolder)
-            }
+            variant.sources.jniLibs
+                ?.addGeneratedSourceDirectory(syncLibs, SyncWithDir::outputFolder)
 
             val syncResources = tasks.register("sync${variantCapped}Resources", SyncWithDir::class) {
                 outputFolder.set(layout.buildDirectory.dir("$variantName/resources"))
@@ -174,12 +155,10 @@ fun Project.setupCoreLib() {
                     }
                 }
             }
+            variant.sources.resources
+                ?.addGeneratedSourceDirectory(syncResources, SyncWithDir::outputFolder)
 
-            variant.sources.resources?.let {
-                it.addGeneratedSourceDirectory(syncResources, SyncWithDir::outputFolder)
-            }
-
-            val stubTask = tasks.getByPath(":stub:comment$variantCapped")
+            val stubTask = tasks.getByPath(":stub:transform${variantCapped}Apk")
             val syncAssets = tasks.register("sync${variantCapped}Assets", SyncWithDir::class) {
                 outputFolder.set(layout.buildDirectory.dir("$variantName/assets"))
                 into(outputFolder)
@@ -211,10 +190,8 @@ fun Project.setupCoreLib() {
                     filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
                 }
             }
-
-            variant.sources.assets?.let {
-                it.addGeneratedSourceDirectory(syncAssets, SyncWithDir::outputFolder)
-            }
+            variant.sources.assets
+                ?.addGeneratedSourceDirectory(syncAssets, SyncWithDir::outputFolder)
         }
     }
 }
@@ -235,7 +212,7 @@ fun Project.setupAppCommon() {
         }
 
         defaultConfig {
-            targetSdk = 36
+            targetSdk = 37
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt")
             )
@@ -270,20 +247,23 @@ fun Project.setupAppCommon() {
     androidAppComponents {
         onVariants { variant ->
             val commentTask = tasks.register(
-                "comment${variant.name.replaceFirstChar { it.uppercase() }}",
-                AddCommentTask::class.java
+                "transform${variant.name.replaceFirstChar { it.uppercase() }}Apk",
+                TransformApkTask::class.java
             )
             val transformationRequest = variant.artifacts.use(commentTask)
-                .wiredWithDirectories(AddCommentTask::apkFolder, AddCommentTask::outFolder)
+                .wiredWithDirectories(TransformApkTask::apkFolder, TransformApkTask::outFolder)
                 .toTransformMany(SingleArtifact.APK)
             val signingConfig = androidApp.buildTypes.getByName(variant.buildType!!).signingConfig
             commentTask.configure {
                 this.transformationRequest = transformationRequest
                 this.signingConfig = signingConfig
-                this.comment = "version=${Config.version}\n" +
-                        "versionCode=${Config.versionCode}\n" +
-                        "stubVersion=${Config.stubVersion}\n"
                 this.outFolder.set(layout.buildDirectory.dir("outputs/apk/${variant.name}"))
+                // Always add a transformation to set comments on the APK
+                this.transformations.add {
+                    it.eocdComment = ("version=${Config.version}\n" +
+                            "versionCode=${Config.versionCode}\n" +
+                            "stubVersion=${Config.stubVersion}\n").toByteArray()
+                }
             }
 
         }
@@ -348,10 +328,7 @@ fun Project.setupTestApk() {
                     rename { "shamiko.zip" }
                 }
             }
-
-            variant.sources.assets?.let {
-                it.addGeneratedSourceDirectory(dlTask, SyncWithDir::outputFolder)
-            }
+            variant.sources.assets?.addGeneratedSourceDirectory(dlTask, SyncWithDir::outputFolder)
         }
     }
 }

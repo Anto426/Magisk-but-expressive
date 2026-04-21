@@ -36,7 +36,7 @@ interface SplashScreenHost {
 }
 
 class SplashController<T>(private val activity: T)
-    where T : ComponentActivity, T: SplashScreenHost {
+    where T: ComponentActivity, T: SplashScreenHost {
 
     companion object {
         private var splashShown = false
