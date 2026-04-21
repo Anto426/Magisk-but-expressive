@@ -210,6 +210,15 @@ Add translations in:
   <img src="./asset/divider.gif" width="440" height="40" />
 </p>
 
+## Contributors
+
+- [topjohnwu](https://github.com/topjohnwu) - original Magisk author.
+- [Anto426](https://github.com/Anto426) - fork maintainer.
+
+<p align="center">
+  <img src="./asset/divider.gif" width="440" height="40" />
+</p>
+
 ## <img src="./asset/icon4.gif" width="48px" /> License
 
 ```text
