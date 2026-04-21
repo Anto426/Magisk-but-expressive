@@ -1,15 +1,3 @@
-<p align="center">
-  <h1 align="center">Magisk Fork</h1>
-</p>
-
-<p align="center">
-  <img src="./docs/images/logo.png" width="220" alt="Magisk logo" />
-</p>
-
-<p align="center">
-  <img src="./asset/divider.gif" width="440" height="40" />
-</p>
-
 ## <img src="./asset/icon.gif" width="44px" /> About
 
 This repository is a fork of the official Magisk project.
