@@ -34,7 +34,7 @@ Magisk is an open-source suite for Android customization with systemless root, m
 
 ## Downloads
 
-[GitHub Releases](https://github.com/anto426/Magisk/releases) is the only official source for Magisk downloads and release information.
+[GitHub Releases](https://github.com/anto426/Magisk/releases).
 
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
