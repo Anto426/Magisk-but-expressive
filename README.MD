@@ -1,8 +1,8 @@
 ## <img src="./asset/icon.gif" width="44px" /> About
 
 This repository is a fork of the official Magisk project.
+
 Upstream: https://github.com/topjohnwu/Magisk
-Fork: https://github.com/Anto426/Magisk
 
 ```sh
 magisk@android:~$ whoami
