@@ -1,24 +1,15 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
     kotlin("plugin.parcelize")
-    alias(libs.plugins.legacy.kapt)
-    alias(libs.plugins.navigation.safeargs)
 }
 
 setupMainApk()
 
-kapt {
-    correctErrorTypes = true
-    useBuildCache = true
-    mapDiagnosticLocations = true
-    javacOptions {
-        option("-Xmaxerrs", "1000")
-    }
-}
-
 android {
     buildFeatures {
-        dataBinding = true
+        compose = true
     }
 
     compileOptions {
@@ -41,22 +32,30 @@ dependencies {
     implementation(project(":core"))
     coreLibraryDesugaring(libs.jdk.libs)
 
-    implementation(libs.indeterminate.checkbox)
-    implementation(libs.rikka.layoutinflater)
-    implementation(libs.rikka.insets)
-    implementation(libs.rikka.recyclerview)
-
-    implementation(libs.navigation.fragment.ktx)
-    implementation(libs.navigation.ui.ktx)
-
-    implementation(libs.constraintlayout)
-    implementation(libs.swiperefreshlayout)
-    implementation(libs.recyclerview)
-    implementation(libs.transition)
-    implementation(libs.fragment.ktx)
     implementation(libs.appcompat)
     implementation(libs.material)
 
-    // Make sure kapt runs with a proper kotlin-stdlib
-    kapt(kotlin("stdlib"))
+    // Compose
+    implementation(libs.compose.ui)
+    implementation(libs.foundation)
+    implementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.compose.ui.tooling)
+    implementation(libs.activity.compose)
+    implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.compose.material.icons.extended)
+    implementation(libs.compose.material3)
+
+    // Navigation
+    implementation(libs.navigation.compose)
+    implementation(libs.navigation3.runtime)
+    implementation(libs.navigation3.ui)
+    implementation(libs.navigationevent.compose)
+    implementation(libs.lifecycle.viewmodel.navigation3)
+
+    // UI assets / network
+    implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.moshi)
 }
