@@ -15,6 +15,7 @@ magisk@android:~$ echo "repo"
 https://github.com/Anto426/Magisk
 ```
 
+
 Magisk is an open-source suite for Android customization with systemless root, module support, boot image tooling, and process-level runtime extensions.
 
 <p align="center">
