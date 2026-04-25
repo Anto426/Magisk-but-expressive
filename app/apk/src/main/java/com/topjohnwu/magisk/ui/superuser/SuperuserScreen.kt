@@ -3,25 +3,15 @@ package com.topjohnwu.magisk.ui.superuser
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Process
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,7 +34,6 @@ import androidx.compose.material.icons.rounded.HistoryEdu
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -55,7 +44,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -96,9 +84,19 @@ import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.model.su.SuPolicy
+import com.topjohnwu.magisk.core.model.su.SuLog
+import com.topjohnwu.magisk.core.repository.LogRepository
+import com.topjohnwu.magisk.core.su.SuEvents
 import com.topjohnwu.magisk.ui.MATCH_UNINSTALLED_PACKAGES_COMPAT
 import com.topjohnwu.magisk.ui.RefreshOnResume
-import com.topjohnwu.magisk.ui.animation.MotionTokens
+import com.topjohnwu.magisk.ui.animation.MagiskMotion
+import com.topjohnwu.magisk.ui.animation.rememberExpandableCardMotion
+import com.topjohnwu.magisk.ui.component.MagiskDialog
+import com.topjohnwu.magisk.ui.component.MagiskDialogConfirmButton
+import com.topjohnwu.magisk.ui.component.MagiskDialogDismissButton
+import com.topjohnwu.magisk.ui.component.MagiskEmptyState
+import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -107,6 +105,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -176,67 +175,38 @@ fun SuperuserScreen(
             }
         }
 
-        SnackbarHost(
+        MagiskSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 110.dp)
+                .padding(bottom = MagiskUiDefaults.SnackbarBottomPadding)
         )
     }
 
     pendingRevoke?.let { item ->
-        AlertDialog(
+        MagiskDialog(
             onDismissRequest = { pendingRevoke = null },
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        shape = CircleShape,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Warning,
-                            null,
-                            modifier = Modifier.padding(6.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                    Text(
-                        text = stringResource(id = CoreR.string.su_revoke_title),
-                        fontWeight = FontWeight.Black
-                    )
-                }
-            },
+            title = stringResource(id = CoreR.string.su_revoke_title),
+            icon = Icons.Rounded.Warning,
+            iconTint = MaterialTheme.colorScheme.error,
             text = {
                 Text(
                     text = stringResource(id = CoreR.string.su_revoke_msg, item.title),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
-            shape = RoundedCornerShape(32.dp),
             confirmButton = {
-                Button(
+                MagiskDialogConfirmButton(
                     onClick = {
                         pendingRevoke = null
                         scope.launch { viewModel.revoke(item) }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(
-                        text = stringResource(id = android.R.string.ok),
-                        fontWeight = FontWeight.Black
-                    )
-                }
+                    destructive = true
+                )
             },
             dismissButton = {
-                TextButton(onClick = { pendingRevoke = null }) {
-                    Text(text = stringResource(id = android.R.string.cancel))
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                MagiskDialogDismissButton(onClick = { pendingRevoke = null })
+            }
         )
     }
 }
@@ -257,36 +227,10 @@ private fun ensureAuthThen(
 
 @Composable
 private fun EmptyStateContent() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Surface(
-            modifier = Modifier.size(140.dp),
-            shape = RoundedCornerShape(48.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Rounded.Security,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                )
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(id = CoreR.string.superuser_policy_none),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Black,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.outline
-        )
-    }
+    MagiskEmptyState(
+        icon = Icons.Rounded.Security,
+        title = stringResource(id = CoreR.string.superuser_policy_none)
+    )
 }
 
 @Composable
@@ -318,8 +262,8 @@ private fun PolicyList(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 140.dp, top = 16.dp, start = 20.dp, end = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        contentPadding = MagiskUiDefaults.screenContentPadding(),
+        verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.ListItemSpacing)
     ) {
         item {
             SuperuserLogsButton(onClick = onOpenLogs)
@@ -327,7 +271,12 @@ private fun PolicyList(
 
         if (items.isEmpty()) {
             item {
-                Box(Modifier.fillParentMaxHeight(0.7f), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .fillParentMaxWidth()
+                        .fillParentMaxHeight(0.7f),
+                    contentAlignment = Alignment.Center
+                ) {
                     EmptyStateContent()
                 }
             }
@@ -353,13 +302,13 @@ private fun SuperuserLogsButton(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp),
-        shape = RoundedCornerShape(20.dp),
+            .height(MagiskUiDefaults.PrimaryActionHeight),
+        shape = MagiskUiDefaults.MediumShape,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -389,32 +338,21 @@ private fun StylishMagiskPolicyCard(
     onToggleLog: () -> Unit,
     onRevoke: () -> Unit
 ) {
-    val transition = updateTransition(targetState = item.expanded, label = "cardTransition")
+    val cardMotion = rememberExpandableCardMotion(
+        expanded = item.expanded,
+        expandedElevation = MagiskUiDefaults.ExpandedCardElevation,
+        expandedScale = 1f,
+        collapsedScale = 1f
+    )
 
-    val rotation by transition.animateFloat(
-        transitionSpec = {
-            spring(
-                dampingRatio = MotionTokens.DampingLowBouncy,
-                stiffness = MotionTokens.StiffnessMediumLow
-            )
+    val containerColor by MagiskMotion.animateColor(
+        targetValue = if (item.expanded) {
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
         },
-        label = "rotation"
-    ) { if (it) 90f else 0f }
-
-    val elevation by transition.animateDp(
-        transitionSpec = {
-            spring(
-                dampingRatio = MotionTokens.DampingNoBounce,
-                stiffness = MotionTokens.StiffnessMediumLow
-            )
-        },
-        label = "elevation"
-    ) { if (it) 8.dp else 2.dp }
-
-    val containerColor by transition.animateColor(
-        transitionSpec = { tween(MotionTokens.DurationEmphasized) },
         label = "color"
-    ) { if (it) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerHigh }
+    )
 
     val isAllowed = item.policy >= SuPolicy.ALLOW
     val iconPainter = remember(item.uid, item.packageName, item.icon) {
@@ -430,20 +368,12 @@ private fun StylishMagiskPolicyCard(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(
-                spring(
-                    dampingRatio = MotionTokens.DampingNoBounce,
-                    stiffness = MotionTokens.StiffnessMediumLow
-                )
+                MagiskMotion.cardContentSpring()
             ),
-        shape = RoundedCornerShape(
-            topEnd = 48.dp,
-            bottomStart = 48.dp,
-            topStart = 16.dp,
-            bottomEnd = 16.dp
-        ),
+        shape = MagiskUiDefaults.OrganicShapeReversed,
         onClick = onToggleExpanded,
         colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = elevation)
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = cardMotion.elevation)
     ) {
         Box {
             Icon(
@@ -488,7 +418,7 @@ private fun StylishMagiskPolicyCard(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding)
                     ) {
                         Text(
                             text = item.title,
@@ -543,7 +473,7 @@ private fun StylishMagiskPolicyCard(
                         imageVector = Icons.AutoMirrored.Rounded.NavigateNext,
                         contentDescription = null,
                         modifier = Modifier
-                            .rotate(rotation)
+                            .rotate(cardMotion.rotation)
                             .padding(start = 12.dp),
                         tint = MaterialTheme.colorScheme.outline
                     )
@@ -551,19 +481,8 @@ private fun StylishMagiskPolicyCard(
 
                 AnimatedVisibility(
                     visible = item.expanded,
-                    enter = expandVertically(
-                        spring(
-                            dampingRatio = MotionTokens.DampingNoBounce,
-                            stiffness = MotionTokens.StiffnessLow
-                        )
-                    ) + fadeIn(
-                        animationSpec = tween(MotionTokens.DurationStandard)
-                    ),
-                    exit = shrinkVertically(
-                        animationSpec = tween(MotionTokens.DurationCollapse)
-                    ) + fadeOut(
-                        animationSpec = tween(MotionTokens.DurationQuick)
-                    )
+                    enter = MagiskMotion.simpleExpandEnter(),
+                    exit = MagiskMotion.simpleExpandExit()
                 ) {
                     Column {
                         Spacer(Modifier.height(28.dp))
@@ -581,8 +500,8 @@ private fun StylishMagiskPolicyCard(
                             ) {
                                 FilledTonalIconButton(
                                     onClick = onToggleNotify,
-                                    modifier = Modifier.size(52.dp),
-                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier.size(MagiskUiDefaults.IconActionSize),
+                                    shape = MagiskUiDefaults.SmallShape,
                                     colors = IconButtonDefaults.filledTonalIconButtonColors(
                                         containerColor = if (item.notification) {
                                             MaterialTheme.colorScheme.primaryContainer
@@ -616,8 +535,8 @@ private fun StylishMagiskPolicyCard(
                             ) {
                                 FilledTonalIconButton(
                                     onClick = onToggleLog,
-                                    modifier = Modifier.size(52.dp),
-                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier.size(MagiskUiDefaults.IconActionSize),
+                                    shape = MagiskUiDefaults.SmallShape,
                                     colors = IconButtonDefaults.filledTonalIconButtonColors(
                                         containerColor = if (item.logging) {
                                             MaterialTheme.colorScheme.primaryContainer
@@ -651,7 +570,7 @@ private fun StylishMagiskPolicyCard(
                             ) {
                                 Surface(
                                     onClick = onRevoke,
-                                    modifier = Modifier.size(52.dp),
+                                    modifier = Modifier.size(MagiskUiDefaults.IconActionSize),
                                     shape = CircleShape,
                                     color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
                                 ) {
@@ -698,6 +617,7 @@ data class PolicyUiItem(
     val icon: Bitmap,
     val isSharedUid: Boolean,
     val policy: Int,
+    val remain: Long,
     val notification: Boolean,
     val logging: Boolean,
     val expanded: Boolean = false
@@ -717,6 +637,7 @@ data class SuperuserUiState(
 
 class SuperuserComposeViewModel(
     private val policyDao: com.topjohnwu.magisk.core.data.magiskdb.PolicyDao,
+    private val logRepo: LogRepository,
     private val pm: PackageManager
 ) : ViewModel() {
     private val _state = MutableStateFlow(SuperuserUiState())
@@ -724,14 +645,29 @@ class SuperuserComposeViewModel(
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
     private var reloadJob: Job? = null
+    private var lastReloadAt = 0L
 
     init {
-        reload()
+        reload(force = true)
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
+        viewModelScope.launch {
+            SuEvents.policyChanged.debounce(400).collect {
+                reload(force = true)
+            }
+        }
     }
 
-    fun reload() {
-        reloadJob?.cancel()
+    fun reload(force: Boolean = false) {
         val previousItems = _state.value.items
+        val now = SystemClock.elapsedRealtime()
+        if (!force && reloadJob?.isActive == true) {
+            return
+        }
+        if (!force && now - lastReloadAt < MIN_RELOAD_INTERVAL_MS) {
+            return
+        }
+        lastReloadAt = now
+        reloadJob?.cancel()
         if (previousItems.isEmpty()) {
             _state.update { it.copy(loading = true) }
         }
@@ -746,37 +682,64 @@ class SuperuserComposeViewModel(
         withContext(Dispatchers.IO) {
             if (!Info.showSuperUser) return@withContext emptyList()
             policyDao.deleteOutdated(); policyDao.delete(AppContext.applicationInfo.uid)
+            val previousByUid = previousByKey.values.groupBy { it.uid }
+            val latestLogsByUid = logRepo.fetchSuLogs()
+                .asSequence()
+                .distinctBy { it.fromUid }
+                .associateBy { it.fromUid }
             val policies = mutableListOf<PolicyUiItem>()
             for (policy in policyDao.fetchAll()) {
+                val sizeBeforePolicy = policies.size
                 val pkgs =
                     if (policy.uid == Process.SYSTEM_UID) arrayOf("android") else pm.getPackagesForUid(
                         policy.uid
                     )
-                pkgs?.forEach { pkg ->
-                    try {
+                if (pkgs.isNullOrEmpty()) {
+                    val previous = previousByUid[policy.uid]?.firstOrNull()
+                    val item = previous?.withPolicy(policy)
+                        ?: latestLogsByUid[policy.uid]?.toPolicyItem(policy)
+                    item?.let(policies::add)
+                    continue
+                }
+                pkgs.forEach { pkg ->
+                    val item = runCatching {
                         val info = pm.getPackageInfo(pkg, MATCH_UNINSTALLED_PACKAGES_COMPAT)
                         val appInfo = info.applicationInfo
                         val key = policyKey(policy.uid, info.packageName)
                         val previous = previousByKey[key]
-                        policies.add(
-                            PolicyUiItem(
-                                uid = policy.uid,
-                                packageName = info.packageName,
-                                appName = appInfo?.loadLabel(pm)?.toString() ?: info.packageName,
-                                icon = previous?.icon ?: (appInfo?.loadIcon(pm)
-                                    ?: pm.defaultActivityIcon).toBitmap(),
-                                isSharedUid = info.sharedUserId != null,
-                                policy = policy.policy,
-                                notification = policy.notification,
-                                logging = policy.logging,
-                                expanded = previous?.expanded ?: false
-                            )
+                        PolicyUiItem(
+                            uid = policy.uid,
+                            packageName = info.packageName,
+                            appName = appInfo?.loadLabel(pm)?.toString() ?: info.packageName,
+                            icon = previous?.icon ?: (appInfo?.loadIcon(pm)
+                                ?: pm.defaultActivityIcon).toBitmap(),
+                            isSharedUid = info.sharedUserId != null,
+                            policy = policy.policy,
+                            remain = policy.remain,
+                            notification = policy.notification,
+                            logging = policy.logging,
+                            expanded = previous?.expanded ?: false
                         )
-                    } catch (_: Exception) {
+                    }.getOrElse {
+                        previousByKey[policyKey(policy.uid, pkg)]?.withPolicy(policy)
+                            ?: latestLogsByUid[policy.uid]?.takeIf {
+                                it.packageName == pkg || it.packageName.substringBefore(":") == pkg
+                            }?.toPolicyItem(policy)
                     }
+                    item?.let(policies::add)
+                }
+                if (policies.size == sizeBeforePolicy) {
+                    val previous = previousByUid[policy.uid]?.firstOrNull()
+                    val item = previous?.withPolicy(policy)
+                        ?: latestLogsByUid[policy.uid]?.toPolicyItem(policy)
+                    item?.let(policies::add)
                 }
             }
-            policies.sortedBy { it.appName.lowercase(Locale.ROOT) }
+            policies.distinctBy { policyKey(it.uid, it.packageName) }
+                .sortedWith(compareBy(
+                    { it.appName.lowercase(Locale.ROOT) },
+                    { it.packageName }
+                ))
         }
 
     fun toggleExpanded(uid: Int, pkg: String) {
@@ -793,9 +756,7 @@ class SuperuserComposeViewModel(
         viewModelScope.launch {
             val item = state.value.items.firstOrNull { it.uid == uid } ?: return@launch
             withContext(Dispatchers.IO) {
-                policyDao.update(SuPolicy(uid).apply {
-                    policy = p; notification = item.notification; logging = item.logging
-                })
+                policyDao.update(item.toPolicy(policy = p))
             }
             _state.update { st -> st.copy(items = st.items.map { if (it.uid == uid) it.copy(policy = p) else it }) }
             _messages.emit(
@@ -812,9 +773,7 @@ class SuperuserComposeViewModel(
             val uid = item.uid
             val nv = !item.notification
             withContext(Dispatchers.IO) {
-                policyDao.update(SuPolicy(uid).apply {
-                    policy = item.policy; notification = nv; logging = item.logging
-                })
+                policyDao.update(item.toPolicy(notification = nv))
             }
             _state.update { st ->
                 st.copy(items = st.items.map {
@@ -837,9 +796,7 @@ class SuperuserComposeViewModel(
             val uid = item.uid
             val nv = !item.logging
             withContext(Dispatchers.IO) {
-                policyDao.update(SuPolicy(uid).apply {
-                    policy = item.policy; notification = item.notification; logging = nv
-                })
+                policyDao.update(item.toPolicy(logging = nv))
             }
             _state.update { st -> st.copy(items = st.items.map { if (it.uid == uid) it.copy(logging = nv) else it }) }
             _messages.emit(
@@ -862,13 +819,60 @@ class SuperuserComposeViewModel(
 
     private fun policyKey(uid: Int, packageName: String): String = "$uid:$packageName"
 
+    private fun PolicyUiItem.withPolicy(policy: SuPolicy) = copy(
+        policy = policy.policy,
+        remain = policy.remain,
+        notification = policy.notification,
+        logging = policy.logging
+    )
+
+    private fun PolicyUiItem.toPolicy(
+        policy: Int = this.policy,
+        notification: Boolean = this.notification,
+        logging: Boolean = this.logging
+    ) = SuPolicy(
+        uid = uid,
+        policy = policy,
+        remain = remain,
+        notification = notification,
+        logging = logging
+    )
+
+    private fun SuLog.toPolicyItem(policy: SuPolicy): PolicyUiItem {
+        val fallbackName = AppContext.getString(CoreR.string.uid_label, policy.uid)
+        val resolvedPackage = packageName.takeUnless { it.isBlank() } ?: fallbackName
+        val resolvedAppName = appName.takeUnless { it.isBlank() } ?: resolvedPackage
+        val iconPackage = resolvedPackage
+            .takeUnless { it == fallbackName }
+            ?.substringBefore(":")
+        val icon = iconPackage
+            ?.let { runCatching { pm.getApplicationIcon(it).toBitmap() }.getOrNull() }
+            ?: pm.defaultActivityIcon.toBitmap()
+        return PolicyUiItem(
+            uid = policy.uid,
+            packageName = resolvedPackage,
+            appName = resolvedAppName,
+            icon = icon,
+            isSharedUid = resolvedPackage.contains(":") || resolvedPackage == fallbackName,
+            policy = policy.policy,
+            remain = policy.remain,
+            notification = policy.notification,
+            logging = policy.logging
+        )
+    }
+
     object Factory : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST") return SuperuserComposeViewModel(
                 ServiceLocator.policyDB,
+                ServiceLocator.logRepo,
                 AppContext.packageManager
             ) as T
         }
+    }
+
+    companion object {
+        private const val MIN_RELOAD_INTERVAL_MS = 1200L
     }
 }
 

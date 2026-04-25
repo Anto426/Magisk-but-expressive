@@ -104,6 +104,22 @@
     <string name="logs_cleared">Log successfully cleared</string>
     <string name="save_log">Save log</string>
     <string name="clear_log">Clear log</string>
+    <string name="refresh_log">Refresh log</string>
+    <string name="log_entries">Entries</string>
+    <string name="log_issues">Issues</string>
+    <string name="log_sources">Sources</string>
+    <string name="log_filter_all">All</string>
+    <string name="log_filter_magisk">Magisk</string>
+    <string name="log_filter_su">SU</string>
+    <string name="log_filter_issues">Issues</string>
+    <string name="log_source_magisk">Magisk</string>
+    <string name="log_source_su">SU</string>
+    <string name="log_source_system">System</string>
+    <string name="log_search_hint">Search events</string>
+    <string name="log_filtered_empty_title">No matching events</string>
+    <string name="log_filtered_empty_subtitle">Try a different search or filter.</string>
+    <string name="log_clear_confirm_title">Clear log?</string>
+    <string name="log_clear_confirm_msg">This removes the current Magisk event log.</string>
     <string name="back">Back</string>
     <string name="superuser_setting">Superuser Setting</string>
     <string name="enabled">Enabled</string>
@@ -310,6 +326,7 @@
     <string name="install_complete_options_first">Please complete the options step first</string>
     <string name="superuser_logs">Superuser logs</string>
     <string name="shared_uid_label">[SharedUID] %1$s</string>
+    <string name="uid_label">[UID] %1$d</string>
     <string name="isolated_process_label">(isolated) %1$s</string>
     <string name="denylist_search_filters">Search &amp; filters</string>
     <string name="denylist_sort_active_first">Active first</string>
@@ -349,4 +366,5 @@
     <string name="theme_color_dark_on_surface">Dark On Surface</string>
     <string name="theme_color_light_error">Light Error</string>
     <string name="theme_color_dark_error">Dark Error</string>
+    <string name="settings_search" />
 </resources>

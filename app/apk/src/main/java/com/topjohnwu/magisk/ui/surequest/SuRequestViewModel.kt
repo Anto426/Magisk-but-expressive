@@ -20,6 +20,7 @@ import com.topjohnwu.magisk.core.su.SuRequestHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit.SECONDS
+import com.topjohnwu.magisk.core.R as CoreR
 
 class SuRequestViewModel(
     policyDB: PolicyDao,
@@ -78,12 +79,16 @@ class SuRequestViewModel(
 
         if (app == null) {
             icon = pm.defaultActivityIcon
-            title = "[SharedUID] ${info.sharedUserId}"
+            title = AppContext.getString(CoreR.string.shared_uid_label, info.sharedUserId.orEmpty())
             packageName = info.sharedUserId.toString()
         } else {
-            val prefix = if (info.sharedUserId == null) "" else "[SharedUID] "
             icon = app.loadIcon(pm)
-            title = "$prefix${app.getLabel(pm)}"
+            val label = app.getLabel(pm)
+            title = if (info.sharedUserId == null) {
+                label
+            } else {
+                AppContext.getString(CoreR.string.shared_uid_label, label)
+            }
             packageName = info.packageName
         }
 

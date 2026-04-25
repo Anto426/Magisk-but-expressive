@@ -6,18 +6,10 @@ import android.widget.TextView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -40,8 +31,6 @@ import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -72,7 +61,10 @@ import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.displayName
+import com.topjohnwu.magisk.ui.animation.MagiskMotion
+import com.topjohnwu.magisk.ui.component.ExpressiveSection
 import com.topjohnwu.magisk.ui.component.ConfirmResult
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
 import com.topjohnwu.magisk.ui.component.rememberConfirmDialog
 import com.topjohnwu.magisk.ui.navigation.Route
 import com.topjohnwu.magisk.core.R as CoreR
@@ -121,17 +113,12 @@ fun InstallScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                bottom = 140.dp,
-                start = 20.dp,
-                end = 20.dp,
-                top = 12.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(28.dp)
+            contentPadding = MagiskUiDefaults.screenContentPadding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.ListItemSpacing)
         ) {
             if (!viewModel.skipOptions) {
                 item {
-                    InstallSection(
+                    ExpressiveSection(
                         title = stringResource(id = CoreR.string.install_options_title),
                         icon = Icons.Rounded.Tune
                     ) {
@@ -160,8 +147,8 @@ fun InstallScreen(
                                     onClick = viewModel::nextStep,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(56.dp),
-                                    shape = RoundedCornerShape(16.dp),
+                                        .height(MagiskUiDefaults.PrimaryActionHeight),
+                                    shape = MagiskUiDefaults.PillShape,
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                 ) {
                                     Text(
@@ -183,13 +170,13 @@ fun InstallScreen(
             }
 
             item {
-                InstallSection(
+                ExpressiveSection(
                     title = stringResource(id = CoreR.string.install_method_title),
                     icon = Icons.Rounded.SettingsSuggest
                 ) {
                     AnimatedContent(
                         targetState = state.step >= 1,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        transitionSpec = { MagiskMotion.fadeContent() },
                         label = "methodContent"
                     ) { isStepReady ->
                         if (isStepReady) {
@@ -253,7 +240,7 @@ fun InstallScreen(
 
             if (state.notes.isNotBlank()) {
                 item {
-                    InstallSection(
+                    ExpressiveSection(
                         title = stringResource(id = CoreR.string.release_notes),
                         icon = Icons.Rounded.HistoryEdu
                     ) {
@@ -264,54 +251,6 @@ fun InstallScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun InstallSection(
-    title: String,
-    icon: ImageVector,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(modifier = Modifier.animateContentSize(spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow))) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    icon, null,
-                    modifier = Modifier.padding(6.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Spacer(Modifier.width(16.dp))
-            Text(
-                text = title.uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.2.sp,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(vertical = 8.dp),
-                content = content
-            )
         }
     }
 }
@@ -328,7 +267,7 @@ private fun ExpressiveToggleRow(
         color = Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.medium)
             .clickable { onToggle(!checked) }
     ) {
         Row(
@@ -361,7 +300,7 @@ private fun ExpressiveMethodRow(
     icon: ImageVector,
     onClick: () -> Unit
 ) {
-    val backgroundColor by animateColorAsState(
+    val backgroundColor by MagiskMotion.animateColor(
         if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f)
         else Color.Transparent,
         label = "bg"
@@ -369,11 +308,11 @@ private fun ExpressiveMethodRow(
 
     Surface(
         color = backgroundColor,
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(MaterialTheme.shapes.large)
             .clickable { onClick() }
     ) {
         Row(
@@ -382,8 +321,8 @@ private fun ExpressiveMethodRow(
         ) {
             Surface(
                 color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                shape = CircleShape,
-                modifier = Modifier.size(48.dp)
+                shape = MagiskUiDefaults.PillShape,
+                modifier = Modifier.size(MagiskUiDefaults.IconContainerSize)
             ) {
                 Icon(
                     icon, null,

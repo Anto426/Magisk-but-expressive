@@ -6,30 +6,11 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,8 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.NavigateNext
 import androidx.compose.material.icons.rounded.Check
@@ -56,7 +35,6 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
 import androidx.compose.material.icons.rounded.SystemUpdateAlt
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,7 +44,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -110,8 +87,13 @@ import com.topjohnwu.magisk.core.model.module.LocalModule
 import com.topjohnwu.magisk.core.model.module.OnlineModule
 import com.topjohnwu.magisk.ui.MainActivity
 import com.topjohnwu.magisk.ui.RefreshOnResume
-import com.topjohnwu.magisk.ui.animation.MotionTokens
+import com.topjohnwu.magisk.ui.animation.MagiskMotion
 import com.topjohnwu.magisk.ui.component.ConfirmResult
+import com.topjohnwu.magisk.ui.component.MagiskDialog
+import com.topjohnwu.magisk.ui.component.MagiskDialogDismissButton
+import com.topjohnwu.magisk.ui.component.MagiskEmptyState
+import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
 import com.topjohnwu.magisk.ui.component.rememberConfirmDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -147,13 +129,14 @@ fun ModuleScreen(
     var pendingOnlineModule by remember { mutableStateOf<OnlineModule?>(null) }
     val showOnlineDialog = rememberSaveable { mutableStateOf(false) }
 
+    val defaultZipName = stringResource(id = CoreR.string.documents)
     val zipPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val displayName =
                 context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                     val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                     if (cursor.moveToFirst() && idx >= 0) cursor.getString(idx) else null
-                } ?: uri.lastPathSegment ?: "module.zip"
+                } ?: uri.lastPathSegment ?: defaultZipName
             scope.launch {
                 val result = localInstallDialog.awaitConfirm(
                     title = confirmInstallTitle,
@@ -166,8 +149,8 @@ fun ModuleScreen(
         }
     }
 
-    LaunchedEffect(Unit) { viewModel.refresh(force = true) }
-    RefreshOnResume { viewModel.refresh(force = true) }
+    LaunchedEffect(Unit) { viewModel.refresh() }
+    RefreshOnResume { viewModel.refresh() }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
@@ -215,16 +198,11 @@ fun ModuleScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    bottom = 140.dp,
-                    top = 16.dp,
-                    start = 20.dp,
-                    end = 20.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                contentPadding = MagiskUiDefaults.screenContentPadding(),
+                verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.ListItemSpacing)
             ) {
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.SectionSpacing)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -232,9 +210,9 @@ fun ModuleScreen(
                             Surface(
                                 onClick = { showSearch = !showSearch },
                                 modifier = Modifier
-                                    .height(56.dp)
+                                    .height(MagiskUiDefaults.ActionHeight)
                                     .weight(0.3f),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = MagiskUiDefaults.SmallShape,
                                 color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -250,8 +228,8 @@ fun ModuleScreen(
                                 onClick = { zipPicker.launch("application/zip") },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(56.dp),
-                                shape = RoundedCornerShape(16.dp)
+                                    .height(MagiskUiDefaults.PrimaryActionHeight),
+                                shape = MagiskUiDefaults.PillShape
                             ) {
                                 Icon(
                                     Icons.Rounded.FileUpload,
@@ -268,14 +246,14 @@ fun ModuleScreen(
 
                         AnimatedVisibility(
                             visible = showSearch,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
+                            enter = MagiskMotion.simpleExpandEnter(),
+                            exit = MagiskMotion.simpleExpandExit()
                         ) {
                             OutlinedTextField(
                                 value = query,
                                 onValueChange = { query = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = MagiskUiDefaults.SmallShape,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
@@ -291,10 +269,16 @@ fun ModuleScreen(
                 if (state.modules.isEmpty()) {
                     item {
                         Box(
-                            Modifier.fillParentMaxHeight(0.7f),
+                            Modifier
+                                .fillParentMaxWidth()
+                                .fillParentMaxHeight(0.7f),
                             contentAlignment = Alignment.Center
                         ) {
-                            EmptyStateView()
+                            MagiskEmptyState(
+                                icon = Icons.Rounded.ExtensionOff,
+                                title = stringResource(id = CoreR.string.module_empty),
+                                subtitle = stringResource(id = CoreR.string.module_action_install_external)
+                            )
                         }
                     }
                 } else if (filteredModules.isEmpty()) {
@@ -314,16 +298,16 @@ fun ModuleScreen(
                     }
                 } else {
                     itemsIndexed(filteredModules, key = { _, m -> m.id }) { _, module ->
-                        StylishMagiskModuleCard(
+                        ModuleCard(
                             module = module,
                             onToggleExpanded = { viewModel.toggleExpanded(module.id) },
                             onToggleEnabled = { viewModel.toggleEnabled(module.id) },
                             onToggleRemove = { viewModel.toggleRemove(module.id) },
                             onUpdate = { onlineModule ->
-                                if (onlineModule == null) return@StylishMagiskModuleCard
+                                if (onlineModule == null) return@ModuleCard
                                 if (Info.isConnected.value != true) {
                                     viewModel.postMessageRes(CoreR.string.no_connection)
-                                    return@StylishMagiskModuleCard
+                                    return@ModuleCard
                                 }
                                 pendingOnlineModule = onlineModule
                                 showOnlineDialog.value = true
@@ -335,476 +319,11 @@ fun ModuleScreen(
             }
         }
 
-        SnackbarHost(
+        MagiskSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 120.dp)
-        )
-    }
-}
-
-@Composable
-private fun StylishMagiskModuleCard(
-    module: ModuleUiItem,
-    onToggleExpanded: () -> Unit,
-    onToggleEnabled: () -> Unit,
-    onToggleRemove: () -> Unit,
-    onUpdate: (OnlineModule?) -> Unit,
-    onAction: () -> Unit
-) {
-    val isEnabled = module.enabled && !module.removed
-    val transition = updateTransition(targetState = module.expanded, label = "cardTransition")
-
-    val elevation by transition.animateDp(
-        transitionSpec = {
-            spring(
-                dampingRatio = MotionTokens.DampingNoBounce,
-                stiffness = MotionTokens.StiffnessMediumLow
-            )
-        },
-        label = "elevation"
-    ) { if (it) 10.dp else 2.dp }
-    val rotation by transition.animateFloat(
-        transitionSpec = {
-            spring(
-                dampingRatio = MotionTokens.DampingLowBouncy,
-                stiffness = MotionTokens.StiffnessMediumLow
-            )
-        },
-        label = "rotation"
-    ) { if (it) 90f else 0f }
-    val cardScale by transition.animateFloat(
-        transitionSpec = {
-            spring(
-                dampingRatio = MotionTokens.DampingNoBounce,
-                stiffness = MotionTokens.StiffnessMediumLow
-            )
-        },
-        label = "cardScale"
-    ) { if (it) 1f else 0.992f }
-    val containerColor by animateColorAsState(
-        targetValue = when {
-            module.removed -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-            module.updated -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.65f)
-            module.updateReady -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
-            !isEnabled -> MaterialTheme.colorScheme.surfaceContainerLow
-            else -> if (module.expanded) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        animationSpec = tween(
-            durationMillis = MotionTokens.DurationEmphasized,
-            easing = FastOutSlowInEasing
-        ),
-        label = "color"
-    )
-    val stateDotColor = if (module.updateReady) {
-        MaterialTheme.colorScheme.tertiary
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
-
-    ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = MotionTokens.DampingNoBounce,
-                    stiffness = MotionTokens.StiffnessMediumLow
-                )
-            )
-            .scale(cardScale),
-        shape = RoundedCornerShape(
-            topEnd = 48.dp,
-            bottomStart = 48.dp,
-            topStart = 16.dp,
-            bottomEnd = 16.dp
-        ),
-        onClick = onToggleExpanded,
-        colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = elevation)
-    ) {
-        Box {
-            Icon(
-                painter = painterResource(id = CoreR.drawable.ic_magisk_outline),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(140.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 40.dp, y = (-30).dp)
-                    .alpha(0.04f),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            if (module.removed || module.updated) {
-                Icon(
-                    imageVector = if (module.removed) Icons.Rounded.DeleteForever else Icons.Rounded.SystemUpdateAlt,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(128.dp)
-                        .align(Alignment.CenterEnd)
-                        .offset(x = 24.dp)
-                        .alpha(0.08f),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Column(modifier = Modifier.padding(24.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        Surface(
-                            modifier = Modifier.size(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 4.dp
-                        ) {
-                            Icon(
-                                Icons.Rounded.Extension,
-                                null,
-                                modifier = Modifier.padding(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        if (isEnabled) {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(CircleShape)
-                                    .background(stateDotColor)
-                                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                            )
-                        }
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        Text(
-                            text = module.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textDecoration = if (module.removed) TextDecoration.LineThrough else null,
-                            color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = 0.6f
-                            )
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = module.versionAuthor,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Black,
-                                textDecoration = if (module.removed) TextDecoration.LineThrough else null,
-                                modifier = Modifier
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                                    .alpha(if (isEnabled) 1f else 0.7f)
-                            )
-                        }
-                        if (module.badges.isNotEmpty()) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = module.badges.joinToString(" | "),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = module.expanded,
-                        enter = fadeIn(
-                            animationSpec = tween(
-                                durationMillis = MotionTokens.DurationMedium,
-                                delayMillis = MotionTokens.DelaySm
-                            )
-                        ) +
-                                scaleIn(
-                                    initialScale = 0.85f,
-                                    animationSpec = spring(
-                                        dampingRatio = MotionTokens.DampingNoBounce,
-                                        stiffness = MotionTokens.StiffnessMediumLow
-                                    )
-                                ),
-                        exit = fadeOut(animationSpec = tween(durationMillis = MotionTokens.DurationQuick)) +
-                                scaleOut(
-                                    targetScale = 0.85f,
-                                    animationSpec = tween(durationMillis = MotionTokens.DurationQuick)
-                                )
-                    ) {
-                        Switch(
-                            checked = isEnabled,
-                            onCheckedChange = { onToggleEnabled() },
-                            thumbContent = if (isEnabled) {
-                                { Icon(Icons.Rounded.Check, null, Modifier.size(16.dp)) }
-                            } else null
-                        )
-                    }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.NavigateNext,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .rotate(rotation)
-                            .padding(start = 12.dp),
-                        tint = MaterialTheme.colorScheme.outline
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = module.expanded,
-                    enter = expandVertically(
-                        expandFrom = Alignment.Top,
-                        animationSpec = spring(
-                            dampingRatio = MotionTokens.DampingNoBounce,
-                            stiffness = MotionTokens.StiffnessLow
-                        )
-                    ) + slideInVertically(
-                        initialOffsetY = { it / 10 },
-                        animationSpec = tween(
-                            durationMillis = MotionTokens.DurationExpand,
-                            easing = FastOutSlowInEasing
-                        )
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = MotionTokens.DurationStandard,
-                            delayMillis = MotionTokens.DelayXs
-                        )
-                    ),
-                    exit = shrinkVertically(
-                        shrinkTowards = Alignment.Top,
-                        animationSpec = tween(
-                            durationMillis = MotionTokens.DurationCollapse,
-                            easing = FastOutLinearInEasing
-                        )
-                    ) + fadeOut(animationSpec = tween(durationMillis = MotionTokens.DurationQuick)),
-                    label = "moduleCardDetails"
-                ) {
-                    Column {
-                        if (module.description.isNotBlank()) {
-                            Spacer(Modifier.height(20.dp))
-                            Text(
-                                text = module.description,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                lineHeight = 24.sp,
-                                textDecoration = if (module.removed) TextDecoration.LineThrough else null,
-                                modifier = Modifier.alpha(if (isEnabled) 1f else 0.8f)
-                            )
-                        }
-
-                        if (module.noticeText != null) {
-                            Spacer(Modifier.height(20.dp))
-                            Surface(
-                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Warning,
-                                        null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    Text(
-                                        module.noticeText,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(32.dp))
-
-                        // ALL BUTTONS ALWAYS AT RIGHT
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
-                        ) {
-                            if (module.showAction) {
-                                FilledTonalIconButton(
-                                    onClick = onAction,
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .animateEnterExit(
-                                            enter = slideInHorizontally(
-                                                initialOffsetX = { fullWidth -> fullWidth / 3 },
-                                                animationSpec = tween(
-                                                    durationMillis = MotionTokens.DurationStandard,
-                                                    delayMillis = MotionTokens.Stagger1,
-                                                    easing = FastOutSlowInEasing
-                                                )
-                                            ) + fadeIn(
-                                                animationSpec = tween(
-                                                    durationMillis = MotionTokens.DurationMedium,
-                                                    delayMillis = MotionTokens.Stagger1
-                                                )
-                                            ),
-                                            exit = slideOutHorizontally(
-                                                targetOffsetX = { fullWidth -> fullWidth / 3 },
-                                                animationSpec = tween(
-                                                    durationMillis = MotionTokens.DurationQuick,
-                                                    easing = FastOutLinearInEasing
-                                                )
-                                            ) + fadeOut(animationSpec = tween(durationMillis = MotionTokens.DurationTiny))
-                                        ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Settings,
-                                        null,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-
-                            if (module.showUpdate) {
-                                Button(
-                                    onClick = { onUpdate(module.update) },
-                                    enabled = module.updateReady,
-                                    shape = RoundedCornerShape(16.dp),
-                                    modifier = Modifier
-                                        .height(52.dp)
-                                        .animateEnterExit(
-                                            enter = slideInHorizontally(
-                                                initialOffsetX = { fullWidth -> fullWidth / 3 },
-                                                animationSpec = tween(
-                                                    durationMillis = MotionTokens.DurationStandard,
-                                                    delayMillis = MotionTokens.Stagger2,
-                                                    easing = FastOutSlowInEasing
-                                                )
-                                            ) + fadeIn(
-                                                animationSpec = tween(
-                                                    durationMillis = MotionTokens.DurationMedium,
-                                                    delayMillis = MotionTokens.Stagger2
-                                                )
-                                            ),
-                                            exit = slideOutHorizontally(
-                                                targetOffsetX = { fullWidth -> fullWidth / 3 },
-                                                animationSpec = tween(
-                                                    durationMillis = MotionTokens.DurationQuick,
-                                                    easing = FastOutLinearInEasing
-                                                )
-                                            ) + fadeOut(animationSpec = tween(durationMillis = MotionTokens.DurationTiny))
-                                        )
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.SystemUpdateAlt,
-                                        null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        stringResource(id = CoreR.string.update),
-                                        fontWeight = FontWeight.Black
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                onClick = onToggleRemove,
-                                enabled = !module.updated,
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .alpha(if (module.updated) 0.45f else 1f)
-                                    .animateEnterExit(
-                                        enter = slideInHorizontally(
-                                            initialOffsetX = { fullWidth -> fullWidth / 3 },
-                                            animationSpec = tween(
-                                                durationMillis = MotionTokens.DurationStandard,
-                                                delayMillis = MotionTokens.Stagger3,
-                                                easing = FastOutSlowInEasing
-                                            )
-                                        ) + fadeIn(
-                                            animationSpec = tween(
-                                                durationMillis = MotionTokens.DurationMedium,
-                                                delayMillis = MotionTokens.Stagger3
-                                            )
-                                        ),
-                                        exit = slideOutHorizontally(
-                                            targetOffsetX = { fullWidth -> fullWidth / 3 },
-                                            animationSpec = tween(
-                                                durationMillis = MotionTokens.DurationQuick,
-                                                easing = FastOutLinearInEasing
-                                            )
-                                        ) + fadeOut(animationSpec = tween(durationMillis = MotionTokens.DurationTiny))
-                                    ),
-                                shape = CircleShape,
-                                color = when {
-                                    module.updated -> MaterialTheme.colorScheme.surfaceVariant
-                                    module.removed -> MaterialTheme.colorScheme.primaryContainer
-                                    else -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
-                                }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = if (module.removed) Icons.Rounded.SettingsBackupRestore else Icons.Rounded.DeleteForever,
-                                        contentDescription = null,
-                                        tint = when {
-                                            module.updated -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            module.removed -> MaterialTheme.colorScheme.primary
-                                            else -> MaterialTheme.colorScheme.error
-                                        },
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyStateView() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            modifier = Modifier.size(140.dp),
-            shape = RoundedCornerShape(48.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Rounded.ExtensionOff,
-                    null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                )
-            }
-        }
-        Spacer(Modifier.height(32.dp))
-        Text(
-            stringResource(id = CoreR.string.module_empty),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.outline
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(id = CoreR.string.module_action_install_external),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                .padding(bottom = MagiskUiDefaults.SnackbarBottomPaddingWithBar)
         )
     }
 }
@@ -831,15 +350,10 @@ private fun OnlineModuleDialog(
         value = if (text.length > 1000) text.substring(0, 1000) else text
     }
 
-    AlertDialog(
+    MagiskDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black
-            )
-        },
+        title = title,
+        icon = Icons.Rounded.Extension,
         text = {
             Text(
                 text = changelog,
@@ -858,9 +372,7 @@ private fun OnlineModuleDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(android.R.string.cancel))
-            }
+            MagiskDialogDismissButton(onClick = onDismiss)
         }
     )
 }

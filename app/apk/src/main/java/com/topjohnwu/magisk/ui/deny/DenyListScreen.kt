@@ -3,24 +3,8 @@ package com.topjohnwu.magisk.ui.deny
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.os.SystemClock
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,7 +13,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,8 +38,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -64,7 +45,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -99,9 +79,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.core.AppContext
-import com.topjohnwu.magisk.ui.animation.MotionTokens
 import com.topjohnwu.magisk.ui.MATCH_UNINSTALLED_PACKAGES_COMPAT
 import com.topjohnwu.magisk.ui.RefreshOnResume
+import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
+import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
+import com.topjohnwu.magisk.ui.component.MagiskEmptyState
+import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -132,9 +116,9 @@ fun DenyListScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 140.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding),
+            contentPadding = MagiskUiDefaults.verticalContentPadding(),
+            verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.ListItemSpacing)
         ) {
             item {
                 DenyListSearchSection(
@@ -164,13 +148,20 @@ fun DenyListScreen(
 
                 state.items.isEmpty() -> {
                     item {
-                        EmptyDenyListState()
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxWidth()
+                                .fillParentMaxHeight(0.7f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            EmptyDenyListState()
+                        }
                     }
                 }
 
                 else -> {
                     items(state.items, key = { it.packageName }) { item ->
-                        StylishDenyListCard(
+                        DenyListCard(
                             item = item,
                             onToggleExpanded = { viewModel.toggleExpanded(item.packageName) },
                             onToggleApp = {
@@ -192,11 +183,11 @@ fun DenyListScreen(
             }
         }
 
-        SnackbarHost(
+        MagiskSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 110.dp)
+                .padding(bottom = MagiskUiDefaults.SnackbarBottomPadding)
         )
     }
 }
@@ -253,21 +244,17 @@ private fun DenyListSearchSection(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                DropdownMenu(
+                MagiskDropdownMenu(
                     expanded = showSortMenu,
                     onDismissRequest = { showSortMenu = false }
                 ) {
                     DenyListSortMethod.entries.forEach { method ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(id = method.labelRes)) },
+                        MagiskDropdownMenuItem(
+                            text = stringResource(id = method.labelRes),
+                            selected = method == sortMethod,
                             onClick = {
                                 onSortMethodSelected(method)
                                 showSortMenu = false
-                            },
-                            leadingIcon = if (method == sortMethod) {
-                                { Icon(Icons.Rounded.Check, contentDescription = null) }
-                            } else {
-                                null
                             }
                         )
                     }
@@ -325,304 +312,11 @@ private fun DenyListSearchSection(
 }
 
 @Composable
-private fun StylishDenyListCard(
-    item: DenyListAppUi,
-    onToggleExpanded: () -> Unit,
-    onToggleApp: () -> Unit,
-    onToggleProcess: (DenyListProcessUi) -> Unit
-) {
-    val isAnyChecked = item.checkedCount > 0
-    val transition = updateTransition(targetState = item.expanded, label = "cardTransition")
-
-    val elevation by transition.animateDp(
-        transitionSpec = {
-            spring(
-                dampingRatio = MotionTokens.DampingNoBounce,
-                stiffness = MotionTokens.StiffnessMediumLow
-            )
-        },
-        label = "elevation"
-    ) { if (it) 10.dp else 2.dp }
-    val rotation by transition.animateFloat(
-        transitionSpec = {
-            spring(
-                dampingRatio = MotionTokens.DampingLowBouncy,
-                stiffness = MotionTokens.StiffnessMediumLow
-            )
-        },
-        label = "rotation"
-    ) { if (it) 90f else 0f }
-    val cardScale by transition.animateFloat(
-        transitionSpec = {
-            spring(
-                dampingRatio = MotionTokens.DampingNoBounce,
-                stiffness = MotionTokens.StiffnessMediumLow
-            )
-        },
-        label = "cardScale"
-    ) { if (it) 1f else 0.992f }
-
-    val containerColor by animateColorAsState(
-        targetValue = when {
-            item.expanded -> MaterialTheme.colorScheme.surfaceContainerHighest
-            isAnyChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-            else -> MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        animationSpec = tween(
-            durationMillis = MotionTokens.DurationEmphasized,
-            easing = FastOutSlowInEasing
-        ),
-        label = "color"
-    )
-
-    ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(
-                spring(
-                    dampingRatio = MotionTokens.DampingNoBounce,
-                    stiffness = MotionTokens.StiffnessMediumLow
-                )
-            )
-            .scale(cardScale),
-        shape = RoundedCornerShape(
-            topEnd = 48.dp,
-            bottomStart = 48.dp,
-            topStart = 16.dp,
-            bottomEnd = 16.dp
-        ),
-        onClick = onToggleExpanded,
-        colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = elevation)
-    ) {
-        Box {
-            Icon(
-                painter = painterResource(id = CoreR.drawable.ic_magisk_outline),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(140.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 40.dp, y = (-30).dp)
-                    .alpha(0.04f),
-                tint = MaterialTheme.colorScheme.primary
-            )
-
-            Column(modifier = Modifier.padding(24.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        Surface(
-                            modifier = Modifier.size(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 4.dp
-                        ) {
-                            val iconPainter = remember(item.packageName, item.icon) {
-                                BitmapPainter(item.icon.toBitmap().asImageBitmap())
-                            }
-                            Image(
-                                painter = iconPainter,
-                                contentDescription = null,
-                                modifier = Modifier.padding(8.dp)
-                            )
-                        }
-                        if (isAnyChecked) {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                            )
-                        }
-                    }
-
-                    Column(modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp)) {
-                        Text(
-                            text = item.label,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = item.packageName,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Black,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        if (isAnyChecked) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = "${item.checkedCount}/${item.processes.size} ATTIVI",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = item.expanded,
-                        enter = fadeIn(
-                            animationSpec = tween(
-                                durationMillis = MotionTokens.DurationMedium,
-                                delayMillis = MotionTokens.DelaySm
-                            )
-                        ) + scaleIn(
-                            initialScale = 0.85f,
-                            animationSpec = spring(
-                                dampingRatio = MotionTokens.DampingNoBounce,
-                                stiffness = MotionTokens.StiffnessMediumLow
-                            )
-                        ),
-                        exit = fadeOut(animationSpec = tween(durationMillis = MotionTokens.DurationQuick)) +
-                                scaleOut(
-                                    targetScale = 0.85f,
-                                    animationSpec = tween(durationMillis = MotionTokens.DurationQuick)
-                                )
-                    ) {
-                        TriStateCheckbox(
-                            state = item.selectionState,
-                            onClick = onToggleApp,
-                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
-                        )
-                    }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.NavigateNext,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .rotate(rotation)
-                            .padding(start = 12.dp),
-                        tint = MaterialTheme.colorScheme.outline
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = item.expanded,
-                    enter = expandVertically(
-                        expandFrom = Alignment.Top,
-                        animationSpec = spring(
-                            dampingRatio = MotionTokens.DampingNoBounce,
-                            stiffness = MotionTokens.StiffnessLow
-                        )
-                    ) + slideInVertically(
-                        initialOffsetY = { it / 10 },
-                        animationSpec = tween(
-                            durationMillis = MotionTokens.DurationExpand,
-                            easing = FastOutSlowInEasing
-                        )
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = MotionTokens.DurationStandard,
-                            delayMillis = MotionTokens.DelayXs
-                        )
-                    ),
-                    exit = shrinkVertically(
-                        shrinkTowards = Alignment.Top,
-                        animationSpec = tween(
-                            durationMillis = MotionTokens.DurationCollapse,
-                            easing = FastOutLinearInEasing
-                        )
-                    ) + fadeOut(animationSpec = tween(durationMillis = MotionTokens.DurationQuick))
-                ) {
-                    Column {
-                        Spacer(Modifier.height(24.dp))
-                        item.processes.forEach { process ->
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { onToggleProcess(process) },
-                                color = if (process.enabled) MaterialTheme.colorScheme.primary.copy(
-                                    alpha = 0.08f
-                                )
-                                else Color.Transparent,
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = process.enabled,
-                                        onCheckedChange = { onToggleProcess(process) }
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            text = process.displayName,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = if (process.enabled) FontWeight.Black else FontWeight.Medium,
-                                            color = if (process.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        if (process.packageName != item.packageName) {
-                                            Text(
-                                                text = process.packageName,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                    alpha = 0.6f
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun EmptyDenyListState() {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 64.dp)
-    ) {
-        Surface(
-            modifier = Modifier.size(140.dp),
-            shape = RoundedCornerShape(48.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Rounded.SettingsSuggest,
-                    null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                )
-            }
-        }
-        Spacer(Modifier.height(32.dp))
-        Text(
-            AppContext.getString(CoreR.string.log_data_none),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.outline
-        )
-    }
+    MagiskEmptyState(
+        icon = Icons.Rounded.SettingsSuggest,
+        title = AppContext.getString(CoreR.string.log_data_none)
+    )
 }
 
 // Logic components remain identical
@@ -705,7 +399,7 @@ data class DenyListAppUi(
     }
 }
 
-enum class DenyListSortMethod(@StringRes val labelRes: Int) {
+enum class DenyListSortMethod(@param:StringRes val labelRes: Int) {
     ActiveFirst(CoreR.string.denylist_sort_active_first),
     NameAsc(CoreR.string.denylist_sort_name_asc),
     NameDesc(CoreR.string.denylist_sort_name_desc)
@@ -728,8 +422,14 @@ class DenyListComposeViewModel : ViewModel() {
     private var allApps: List<DenyListAppUi> = emptyList()
     private var refreshJob: Job? = null
     private var queryApplyJob: Job? = null
+    private var lastRefreshAt = 0L
 
-    fun refresh() {
+    fun refresh(force: Boolean = false) {
+        val now = SystemClock.elapsedRealtime()
+        if (!force && allApps.isNotEmpty() && now - lastRefreshAt < MIN_REFRESH_INTERVAL_MS) {
+            return
+        }
+        lastRefreshAt = now
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             _state.update { it.copy(loading = true) }
@@ -948,6 +648,7 @@ class DenyListComposeViewModel : ViewModel() {
     }
 
     companion object {
+        private const val MIN_REFRESH_INTERVAL_MS = 1200L
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")

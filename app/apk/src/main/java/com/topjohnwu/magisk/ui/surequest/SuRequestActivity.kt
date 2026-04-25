@@ -13,6 +13,7 @@ import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeProvider
+import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -65,12 +66,15 @@ open class SuRequestActivity : AppCompatActivity(), UntrackedActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             window.setHideOverlayWindows(true)
         }
-        setTheme(Theme.selected.themeRes)
+        setTheme(R.style.Theme_Foundation)
         super.onCreate(savedInstanceState)
 
         viewModel.finishActivity = { finish() }
         viewModel.authenticate = { onSuccess ->
             extension.withAuthentication { if (it) onSuccess() }
+        }
+        onBackPressedDispatcher.addCallback(this) {
+            viewModel.denyPressed()
         }
 
         if (intent.action == Intent.ACTION_VIEW) {
@@ -117,11 +121,6 @@ open class SuRequestActivity : AppCompatActivity(), UntrackedActivity {
         val theme = super.getTheme()
         theme.applyStyle(R.style.Foundation_Floating, true)
         return theme
-    }
-
-    @Deprecated("Use OnBackPressedDispatcher")
-    override fun onBackPressed() {
-        viewModel.denyPressed()
     }
 
     override fun finish() {

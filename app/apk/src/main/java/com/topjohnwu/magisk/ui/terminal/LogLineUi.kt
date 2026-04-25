@@ -30,8 +30,6 @@ fun StyledLogLine(
 ) {
     val normalized = line.replace("\u0000", "").trimEnd()
     val severity = detectSeverity(normalized)
-    val startsWithStepPrefix = normalized.trimStart().startsWith("-")
-    if (severity == LogSeverity.INFO && startsWithStepPrefix) return
 
     val contentColor = when (severity) {
         LogSeverity.ERROR -> colors.error

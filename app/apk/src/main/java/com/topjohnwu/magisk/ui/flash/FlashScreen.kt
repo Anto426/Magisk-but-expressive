@@ -2,57 +2,24 @@ package com.topjohnwu.magisk.ui.flash
 
 import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.RestartAlt
-import androidx.compose.material.icons.rounded.Save
-import androidx.compose.material.icons.rounded.Terminal
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.net.toFile
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.core.net.toFile
 import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.Info
@@ -66,11 +33,14 @@ import com.topjohnwu.magisk.core.utils.MediaStoreUtils.displayName
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.inputStream
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.outputStream
 import com.topjohnwu.magisk.ui.RouteProcessTopBarState
-import com.topjohnwu.magisk.ui.terminal.StyledLogLine
-import com.topjohnwu.superuser.CallbackList
+import com.topjohnwu.magisk.ui.component.TerminalCloseButton
+import com.topjohnwu.magisk.ui.component.TerminalRebootButton
+import com.topjohnwu.magisk.ui.component.TerminalRunningActionSlot
+import com.topjohnwu.magisk.ui.component.TerminalSaveLogButton
+import com.topjohnwu.magisk.ui.component.TerminalScreenScaffold
+import com.topjohnwu.magisk.ui.terminal.TerminalLogBuffer
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -83,9 +53,7 @@ import timber.log.Timber
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.util.Collections
 import com.topjohnwu.magisk.core.R as CoreR
-import androidx.core.net.toUri
 
 @Composable
 fun FlashScreen(
@@ -113,16 +81,6 @@ fun FlashScreen(
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
     }
-    LaunchedEffect(lines.size) {
-        val last = lines.lastIndex
-        if (last >= 0) {
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            val shouldStickToBottom = lastVisible >= last - 3 || !listState.canScrollForward
-            if (shouldStickToBottom) {
-                listState.scrollToItem(last)
-            }
-        }
-    }
     LaunchedEffect(state.running, state.success, lines.size) {
         if (state.running || hasLogs) {
             hasStarted = true
@@ -148,179 +106,25 @@ fun FlashScreen(
         onDispose { onTitleStateChange(null, null, RouteProcessTopBarState()) }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            LogContainer(
-                lines = lines,
-                listState = listState,
-                modifier = Modifier.weight(1f)
-            )
-
-            ActionButtons(
-                state = state,
-                hasLogs = hasLogs,
-                onSaveLog = viewModel::saveLog,
-                onReboot = viewModel::rebootNow,
-                onClose = onBack
-            )
-        }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 110.dp)
-        )
-    }
-}
-
-@Composable
-private fun LogContainer(
-    lines: List<String>,
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
-        ) {
-            Icon(
-                Icons.Rounded.Terminal,
-                null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = AppContext.getString(CoreR.string.logs),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.2.sp,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                if (lines.isEmpty()) {
-                    Text(
-                        text = AppContext.getString(CoreR.string.waiting_for_logs),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        itemsIndexed(
-                            items = lines,
-                            key = { index, _ -> index }
-                        ) { _, line ->
-                            StyledLogLine(
-                                line = line,
-                                colors = MaterialTheme.colorScheme,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionButtons(
-    state: FlashUiState,
-    hasLogs: Boolean,
-    onSaveLog: () -> Unit,
-    onReboot: () -> Unit,
-    onClose: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    TerminalScreenScaffold(
+        lines = lines,
+        listState = listState,
+        snackbarHostState = snackbarHostState,
+        emptyText = AppContext.getString(CoreR.string.waiting_for_logs)
     ) {
-        OutlinedButton(
-            onClick = onSaveLog,
-            enabled = hasLogs,
-            modifier = Modifier
-                .weight(1f)
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            border = ButtonDefaults.outlinedButtonBorder(hasLogs).copy(width = 1.dp)
+        TerminalSaveLogButton(
+            hasLogs = hasLogs,
+            onClick = viewModel::saveLog,
+            modifier = Modifier.weight(1f)
+        )
+        TerminalRunningActionSlot(
+            isRunning = state.running,
+            modifier = Modifier.weight(1f)
         ) {
-            Icon(Icons.Rounded.Save, null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(AppContext.getString(CoreR.string.menuSaveLog), fontWeight = FontWeight.Bold)
-        }
-
-        AnimatedContent(
-            targetState = !state.running,
-            modifier = Modifier.weight(1f),
-            label = "actionBtn"
-        ) { isFinished ->
-            if (isFinished) {
-                if (state.showReboot) {
-                    Button(
-                        onClick = onReboot,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Icon(Icons.Rounded.RestartAlt, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            AppContext.getString(CoreR.string.reboot),
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = onClose,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            AppContext.getString(CoreR.string.close),
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                }
+            if (state.showReboot) {
+                TerminalRebootButton(onClick = viewModel::rebootNow)
             } else {
-                Button(
-                    onClick = { },
-                    enabled = false,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text(AppContext.getString(CoreR.string.running), fontWeight = FontWeight.Bold)
-                }
+                TerminalCloseButton(onClick = onBack)
             }
         }
     }
@@ -337,31 +141,14 @@ private class FlashComposeViewModel : ViewModel() {
     val state: StateFlow<FlashUiState> = _state
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
-    val lines = mutableStateListOf<String>()
-    private val logs = Collections.synchronizedList(mutableListOf<String>())
-    private val lineChannel = Channel<String>(Channel.UNLIMITED)
+    private val terminal = TerminalLogBuffer()
+    val lines = terminal.lines
+    private val logs = terminal.logs
+    private val outItems = terminal.console
     private var started = false
 
     init {
-        viewModelScope.launch(Dispatchers.Main.immediate) {
-            for (line in lineChannel) {
-                lines.add(line)
-            }
-        }
-    }
-
-    private val outItems = object : CallbackList<String>() {
-        override fun onAddElement(e: String?) {
-            e ?: return
-            logs.add(e)
-            if (!isStepLine(e)) {
-                lineChannel.trySend(e)
-            }
-        }
-    }
-
-    private fun isStepLine(line: String): Boolean {
-        return line.replace("\u0000", "").trimStart().startsWith("-")
+        terminal.bind(viewModelScope)
     }
 
     fun start(action: String, uri: Uri?) {
@@ -473,9 +260,7 @@ private class FlashComposeViewModel : ViewModel() {
                 )
                 val file = MediaStoreUtils.getFile(name)
                 file.uri.outputStream().bufferedWriter()
-                    .use { writer ->
-                        synchronized(logs) { logs.forEach { writer.write(it); writer.newLine() } }
-                    }
+                    .use(terminal::writeTo)
                 file.toString()
             }.onSuccess { path -> _messages.emit(path) }
                 .onFailure { _messages.emit(AppContext.getString(CoreR.string.failure)) }
@@ -487,7 +272,8 @@ private class FlashComposeViewModel : ViewModel() {
     }
 
     override fun onCleared() {
-        lineChannel.close(); super.onCleared()
+        terminal.close()
+        super.onCleared()
     }
 
     private fun requiresRoot(action: String): Boolean =

@@ -1,53 +1,15 @@
 package com.topjohnwu.magisk.ui.theme
 
 import android.os.Build
-import com.topjohnwu.magisk.R
 import com.topjohnwu.magisk.core.Config
 
-enum class Theme(
-    private val baseThemeName: String,
-    val themeRes: Int
-) {
-    Piplup(
-        baseThemeName = "Piplup",
-        themeRes = R.style.ThemeFoundationMD2_Piplup
-    ),
-    PiplupAmoled(
-        baseThemeName = "AMOLED",
-        themeRes = R.style.ThemeFoundationMD2_Amoled
-    ),
-    Rayquaza(
-        baseThemeName = "Rayquaza",
-        themeRes = R.style.ThemeFoundationMD2_Rayquaza
-    ),
-    Zapdos(
-        baseThemeName = "Zapdos",
-        themeRes = R.style.ThemeFoundationMD2_Zapdos
-    ),
-    Charmeleon(
-        baseThemeName = "Charmeleon",
-        themeRes = R.style.ThemeFoundationMD2_Charmeleon
-    ),
-    Mew(
-        baseThemeName = "Mew",
-        themeRes = R.style.ThemeFoundationMD2_Mew
-    ),
-    Salamence(
-        baseThemeName = "Salamence",
-        themeRes = R.style.ThemeFoundationMD2_Salamence
-    ),
-    Fraxure(
-        baseThemeName = "Fraxure (Legacy)",
-        themeRes = R.style.ThemeFoundationMD2_Fraxure
-    ),
-    Default(
-        baseThemeName = "Default (Dynamic)",
-        themeRes = R.style.ThemeFoundationMD2_Piplup
-    ),
-    Custom(
-        baseThemeName = "Custom",
-        themeRes = R.style.ThemeFoundationMD2_Piplup
-    );
+enum class Theme(private val baseThemeName: String) {
+    Ruby("Ruby Hoshino"),
+    MemCho("Mem-Cho"),
+    Aqua("Aqua"),
+    SungJinWoo("Sung Jin-Woo"),
+    Default("Default (Dynamic)"),
+    Custom("Custom");
 
     val themeName: String
         get() = when {
@@ -57,15 +19,30 @@ enum class Theme(
 
     val isSelected get() = selected == this
 
+    fun windowBackgroundColor(darkTheme: Boolean): Int {
+        return when {
+            this == Custom && darkTheme -> Config.themeCustomDarkSurface
+            this == Custom -> Config.themeCustomLightSurface
+            darkTheme && Config.darkTheme == Config.Value.DARK_THEME_AMOLED -> 0xFF000000.toInt()
+            this == Ruby && darkTheme -> 0xFF211017.toInt()
+            this == Ruby -> 0xFFFFF5F8.toInt()
+            this == MemCho && darkTheme -> 0xFF211E10.toInt()
+            this == MemCho -> 0xFFFFFBEA.toInt()
+            this == Aqua && darkTheme -> 0xFF0D1820.toInt()
+            this == Aqua -> 0xFFF0FBFF.toInt()
+            this == SungJinWoo && darkTheme -> 0xFF12101F.toInt()
+            this == SungJinWoo -> 0xFFF6F1FF.toInt()
+            darkTheme -> 0xFF0D0D0D.toInt()
+            else -> 0xFFFFF5F8.toInt()
+        }
+    }
+
     companion object {
         val supportsMonet: Boolean
             get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
         val selected
-            get() = when (val stored = values().getOrNull(Config.themeOrdinal) ?: Default) {
-                PiplupAmoled -> Piplup
-                else -> stored
-            }
+            get() = values().getOrNull(Config.themeOrdinal) ?: Default
 
         val shouldUseDynamicColor: Boolean
             get() = supportsMonet && selected == Default
@@ -74,7 +51,7 @@ enum class Theme(
             get() = buildList {
                 add(Default)
                 add(Custom)
-                addAll(values().filterNot { it == Default || it == Custom || it == PiplupAmoled })
+                addAll(values().filterNot { it == Default || it == Custom })
             }
     }
 

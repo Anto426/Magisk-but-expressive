@@ -28,11 +28,7 @@ import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +57,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.topjohnwu.magisk.core.Config
+import com.topjohnwu.magisk.core.ktx.toast
+import com.topjohnwu.magisk.ui.component.MagiskCard
+import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
+import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
 import com.topjohnwu.magisk.ui.theme.magiskComposeColorScheme
 import com.topjohnwu.magisk.core.R as CoreR
 
@@ -95,8 +96,7 @@ fun SuRequestScreen(
             val obscured = (event.flags and MotionEvent.FLAG_WINDOW_IS_OBSCURED != 0) ||
                 partiallyObscured
             if (obscured && event.action == MotionEvent.ACTION_UP) {
-                Toast.makeText(context, CoreR.string.touch_filtered_warning, Toast.LENGTH_SHORT)
-                    .show()
+                context.toast(CoreR.string.touch_filtered_warning, Toast.LENGTH_SHORT)
             }
             obscured && Config.suTapjack
         }
@@ -121,18 +121,13 @@ fun SuRequestScreen(
 
         var dropdownExpanded by remember { mutableStateOf(false) }
 
-        ElevatedCard(
+        MagiskCard(
             modifier = Modifier
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding)
                 .fillMaxWidth(),
-            shape = RoundedCornerShape(
-                topStart = 48.dp,
-                bottomEnd = 48.dp,
-                topEnd = 16.dp,
-                bottomStart = 16.dp
-            ),
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 12.dp)
+            shape = MagiskUiDefaults.OrganicShape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            elevation = MagiskUiDefaults.ExpandedCardElevation
         ) {
             Box {
                 Icon(
@@ -154,8 +149,8 @@ fun SuRequestScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.size(32.dp)
+                            shape = MagiskUiDefaults.SmallShape,
+                            modifier = Modifier.size(MagiskUiDefaults.SmallIconContainerSize)
                         ) {
                             Icon(
                                 Icons.Rounded.Security, null,
@@ -243,8 +238,8 @@ fun SuRequestScreen(
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(56.dp),
-                                shape = RoundedCornerShape(16.dp),
+                                    .height(MagiskUiDefaults.ActionHeight),
+                                shape = MagiskUiDefaults.SmallShape,
                                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
                                 enabled = grantEnabled
                             ) {
@@ -276,32 +271,17 @@ fun SuRequestScreen(
                                 }
                             }
 
-                            DropdownMenu(
+                            MagiskDropdownMenu(
                                 expanded = dropdownExpanded,
-                                onDismissRequest = { dropdownExpanded = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                                shape = RoundedCornerShape(16.dp)
+                                onDismissRequest = { dropdownExpanded = false }
                             ) {
                                 timeoutItems.forEachIndexed { index, item ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = item,
-                                                fontWeight = if (index == selectedTimeout) FontWeight.Black else FontWeight.Medium
-                                            )
-                                        },
+                                    MagiskDropdownMenuItem(
+                                        text = item,
+                                        selected = index == selectedTimeout,
                                         onClick = {
                                             dropdownExpanded = false
                                             onTimeoutSelected(index)
-                                        },
-                                        leadingIcon = {
-                                            if (index == selectedTimeout) {
-                                                Icon(
-                                                    Icons.Rounded.Check,
-                                                    null,
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
                                         }
                                     )
                                 }
@@ -348,8 +328,8 @@ fun SuRequestScreen(
                             onClick = onDeny,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(60.dp),
-                            shape = RoundedCornerShape(20.dp),
+                                .height(MagiskUiDefaults.PrimaryActionHeight),
+                            shape = MagiskUiDefaults.MediumShape,
                             color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -367,9 +347,9 @@ fun SuRequestScreen(
                             enabled = grantEnabled,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(60.dp)
+                                .height(MagiskUiDefaults.PrimaryActionHeight)
                                 .pointerInteropFilter { grantTouchFilter(it) },
-                            shape = RoundedCornerShape(20.dp),
+                            shape = MagiskUiDefaults.MediumShape,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary

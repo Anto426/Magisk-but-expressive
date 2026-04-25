@@ -34,7 +34,6 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -77,6 +76,8 @@ import com.topjohnwu.magisk.core.repository.LogRepository
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.outputStream
 import com.topjohnwu.magisk.ui.RefreshOnResume
+import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -108,7 +109,7 @@ fun SuperuserLogsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding, vertical = 12.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -180,11 +181,11 @@ fun SuperuserLogsScreen(
             )
         }
 
-        SnackbarHost(
+        MagiskSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 120.dp)
+                .padding(bottom = MagiskUiDefaults.SnackbarBottomPaddingWithBar)
         )
     }
 }
@@ -202,9 +203,9 @@ private fun SuperuserLogActionButtons(
         Surface(
             onClick = onClear,
             modifier = Modifier
-                .height(56.dp)
+                .height(MagiskUiDefaults.ActionHeight)
                 .weight(0.3f),
-            shape = RoundedCornerShape(16.dp),
+            shape = MagiskUiDefaults.SmallShape,
             color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.65f)
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -221,8 +222,8 @@ private fun SuperuserLogActionButtons(
             onClick = onSave,
             modifier = Modifier
                 .weight(1f)
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp)
+                .height(MagiskUiDefaults.ActionHeight),
+            shape = MagiskUiDefaults.SmallShape
         ) {
             Icon(Icons.Rounded.SaveAlt, null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(12.dp))

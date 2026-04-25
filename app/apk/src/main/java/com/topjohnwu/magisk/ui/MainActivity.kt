@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.res.Resources
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -19,9 +20,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.content.res.use
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import com.topjohnwu.magisk.R
 import androidx.lifecycle.lifecycleScope
 import com.topjohnwu.magisk.arch.UIActivity
 import com.topjohnwu.magisk.core.Config
@@ -76,7 +77,7 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
             clz.reflectField("mActivityHandlesConfigFlags").set(delegate, 0)
         }
 
-        setTheme(Theme.selected.themeRes)
+        setTheme(R.style.Theme_Foundation)
         splashController.preOnCreate()
         super.onCreate(savedInstanceState)
         splashController.onCreate(savedInstanceState)
@@ -95,11 +96,14 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
     }
 
     private fun setupWindow() {
-        obtainStyledAttributes(intArrayOf(android.R.attr.windowBackground))
-            .use { it.getDrawable(0) }
-            .also { window.setBackgroundDrawable(it) }
+        val darkMode = resolvedDarkTheme()
+        window.setBackgroundDrawable(ColorDrawable(Theme.selected.windowBackgroundColor(darkMode)))
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !darkMode
+            isAppearanceLightNavigationBars = !darkMode
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             window.decorView.post {
@@ -146,13 +150,7 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
         }
 
         setContent {
-            val darkMode = when (Config.darkTheme) {
-                AppCompatDelegate.MODE_NIGHT_YES,
-                Config.Value.DARK_THEME_AMOLED -> true
-
-                AppCompatDelegate.MODE_NIGHT_NO -> false
-                else -> androidx.compose.foundation.isSystemInDarkTheme()
-            }
+            val darkMode = resolvedDarkTheme(androidx.compose.foundation.isSystemInDarkTheme())
             MagiskAppContainer(
                 useDynamicColor = Theme.shouldUseDynamicColor,
                 darkTheme = darkMode,
@@ -234,6 +232,16 @@ class MainActivity : UIActivity<Any>(), SplashScreenHost {
         ) {
             Config.askedHome = true
             showShortcutPrompt.value = true
+        }
+    }
+
+    private fun resolvedDarkTheme(systemDark: Boolean = false): Boolean {
+        return when (Config.darkTheme) {
+            AppCompatDelegate.MODE_NIGHT_YES,
+            Config.Value.DARK_THEME_AMOLED -> true
+
+            AppCompatDelegate.MODE_NIGHT_NO -> false
+            else -> systemDark
         }
     }
 }

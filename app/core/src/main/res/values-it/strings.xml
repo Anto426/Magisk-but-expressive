@@ -85,8 +85,25 @@
     <string name="menuSaveLog">Salva registro eventi</string>
     <string name="menuClearLog">Svuota il registro eventi</string>
     <string name="logs_cleared">Registro eventi svuotato correttamente.</string>
+    <string name="refresh_log">Aggiorna registro eventi</string>
+    <string name="log_entries">Eventi</string>
+    <string name="log_issues">Critici</string>
+    <string name="log_sources">Origini</string>
+    <string name="log_filter_all">Tutti</string>
+    <string name="log_filter_magisk">Magisk</string>
+    <string name="log_filter_su">SU</string>
+    <string name="log_filter_issues">Critici</string>
+    <string name="log_source_magisk">Magisk</string>
+    <string name="log_source_su">SU</string>
+    <string name="log_source_system">Sistema</string>
+    <string name="log_search_hint">Cerca eventi</string>
+    <string name="log_filtered_empty_title">Nessun evento trovato</string>
+    <string name="log_filtered_empty_subtitle">Prova con un filtro o una ricerca diversa.</string>
+    <string name="log_clear_confirm_title">Svuotare il registro?</string>
+    <string name="log_clear_confirm_msg">Il registro eventi di Magisk verra svuotato.</string>
     <string name="pid">PID: %1$d</string>
     <string name="target_uid">Target UID: %1$d</string>
+    <string name="uid_label">[UID] %1$d</string>
 
     <!-- MagiskHide -->
     <string name="show_system_app">Mostra app di sistema</string>

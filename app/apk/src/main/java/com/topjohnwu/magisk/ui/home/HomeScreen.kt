@@ -1,99 +1,26 @@
 package com.topjohnwu.magisk.ui.home
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.core.net.toUri
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AppShortcut
-import androidx.compose.material.icons.rounded.ArrowOutward
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.BrowserUpdated
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.DeleteForever
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.GppMaybe
-import androidx.compose.material.icons.rounded.Groups
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.PowerSettingsNew
-import androidx.compose.material.icons.rounded.RestartAlt
-import androidx.compose.material.icons.rounded.SettingsBackupRestore
-import androidx.compose.material.icons.rounded.SystemUpdateAlt
-import androidx.compose.material.icons.rounded.Terminal
-import androidx.compose.material.icons.rounded.Verified
-import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -102,8 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -126,15 +52,18 @@ import com.topjohnwu.magisk.core.tasks.AppMigration
 import com.topjohnwu.magisk.core.tasks.MagiskInstaller
 import com.topjohnwu.magisk.ui.MainActivity
 import com.topjohnwu.magisk.ui.RefreshOnResume
+import com.topjohnwu.magisk.ui.component.MagiskBottomSheet
+import com.topjohnwu.magisk.ui.component.MagiskDialog
+import com.topjohnwu.magisk.ui.component.MagiskDialogConfirmButton
+import com.topjohnwu.magisk.ui.component.MagiskDialogDismissButton
+import com.topjohnwu.magisk.ui.component.MagiskDialogOption
+import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
+import com.topjohnwu.magisk.ui.component.SectionHeader
 import com.topjohnwu.magisk.ui.component.rememberLoadingDialog
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -194,31 +123,32 @@ fun HomeScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 140.dp),
-            verticalArrangement = Arrangement.spacedBy(28.dp)
+            contentPadding = MagiskUiDefaults.verticalContentPadding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.ListItemSpacing)
         ) {
             item {
-                ExpressiveHeader(envActive = state.envActive)
+                HomeStatusHeroCard(envActive = state.envActive)
             }
 
             if (state.noticeVisible) {
                 item {
-                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                        NoticeCard(onHide = viewModel::hideNotice)
+                    Box(modifier = Modifier.padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding)) {
+                        HomeNotice(onHide = viewModel::hideNotice)
                     }
                 }
             }
 
             item {
                 Column(
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding),
+                    verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.SectionSpacing)
                 ) {
                     SectionHeader(
-                        stringResource(id = CoreR.string.home_section_magisk_core),
-                        Icons.Rounded.VerifiedUser
+                        title = stringResource(id = CoreR.string.home_section_magisk_core),
+                        icon = Icons.Rounded.VerifiedUser,
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     )
-                    MagiskOrganicCard(
+                    HomeMagiskCoreCard(
                         magiskState = state.magiskState,
                         magiskInstalledVersion = state.magiskInstalledVersion,
                         onAction = onOpenInstall
@@ -228,14 +158,15 @@ fun HomeScreen(
 
             item {
                 Column(
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding),
+                    verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.SectionSpacing)
                 ) {
                     SectionHeader(
-                        stringResource(id = CoreR.string.home_section_application),
-                        Icons.Rounded.AppShortcut
+                        title = stringResource(id = CoreR.string.home_section_application),
+                        icon = Icons.Rounded.AppShortcut,
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     )
-                    AppOrganicCardXL(
+                    HomeAppCard(
                         appState = state.appState,
                         managerInstalledVersion = state.managerInstalledVersion,
                         managerRemoteVersion = state.managerRemoteVersion,
@@ -254,22 +185,23 @@ fun HomeScreen(
 
             if (state.envActive) {
                 item {
-                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                        UninstallAction(onClick = { showUninstallDialog = true })
+                    Box(modifier = Modifier.padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding)) {
+                        HomeUninstallCard(onClick = { showUninstallDialog = true })
                     }
                 }
             }
 
             item {
                 Column(
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding),
+                    verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.SectionSpacing)
                 ) {
                     SectionHeader(
-                        stringResource(id = CoreR.string.home_section_contributors),
-                        Icons.Rounded.Groups
+                        title = stringResource(id = CoreR.string.home_section_contributors),
+                        icon = Icons.Rounded.Groups,
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     )
-                    ContributorsExpressiveList(
+                    HomeContributorsList(
                         state.contributors,
                         state.contributorsLoading,
                         onOpen = { viewModel.openLink(context, it) }
@@ -279,14 +211,15 @@ fun HomeScreen(
 
             item {
                 Column(
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding),
+                    verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.SectionSpacing)
                 ) {
                     SectionHeader(
-                        stringResource(id = CoreR.string.home_support_title),
-                        Icons.Rounded.Favorite
+                        title = stringResource(id = CoreR.string.home_support_title),
+                        icon = Icons.Rounded.Favorite,
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     )
-                    SupportOrganicSection(
+                    HomeSupportCard(
                         onPatreon = { viewModel.openLink(context, Const.Url.PATREON_URL) },
                         onPaypal = { viewModel.openLink(context, Const.Url.PAYPAL_URL) }
                     )
@@ -294,11 +227,11 @@ fun HomeScreen(
             }
         }
 
-        SnackbarHost(
+        MagiskSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 120.dp)
+                .padding(bottom = MagiskUiDefaults.SnackbarBottomPaddingWithBar)
         )
     }
 
@@ -402,63 +335,62 @@ private fun ManagerInstallSheet(
     onDismiss: () -> Unit,
     onInstall: () -> Unit
 ) {
-    ModalBottomSheet(
+    MagiskBottomSheet(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .imePadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = MagiskUiDefaults.ScreenHorizontalPadding, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.SectionSpacing)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Surface(
                     color = MaterialTheme.colorScheme.secondaryContainer,
                     shape = CircleShape,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
-                    Icon(
-                        Icons.Rounded.SystemUpdateAlt,
-                        contentDescription = null,
-                        modifier = Modifier.padding(8.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Rounded.SystemUpdateAlt,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(id = CoreR.string.install),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Black
                     )
                     Text(
                         text = stringResource(id = CoreR.string.release_notes),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
             }
 
             Surface(
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 160.dp, max = 420.dp)
+                    .heightIn(min = 160.dp, max = 400.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(14.dp)
+                        .padding(20.dp)
                 ) {
                     HomeMarkdownText(
                         markdown = notes.ifBlank { AppContext.getString(CoreR.string.not_available) },
@@ -469,14 +401,14 @@ private fun ManagerInstallSheet(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp),
-                    shape = RoundedCornerShape(16.dp)
+                        .height(MagiskUiDefaults.ActionHeight),
+                    shape = MagiskUiDefaults.PillShape
                 ) {
                     Text(stringResource(id = android.R.string.cancel), fontWeight = FontWeight.Bold)
                 }
@@ -484,15 +416,15 @@ private fun ManagerInstallSheet(
                     onClick = onInstall,
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp),
-                    shape = RoundedCornerShape(16.dp)
+                        .height(MagiskUiDefaults.ActionHeight),
+                    shape = MagiskUiDefaults.PillShape
                 ) {
-                    Icon(Icons.Rounded.DownloadDone, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.DownloadDone, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(id = CoreR.string.install), fontWeight = FontWeight.Black)
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -522,1146 +454,168 @@ private fun HomeMarkdownText(
 }
 
 @Composable
-private fun ExpressiveHeader(envActive: Boolean) {
-    val isInstalled = envActive
-    val primaryColor =
-        if (isInstalled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-    val containerColor =
-        if (isInstalled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
-    val title =
-        stringResource(id = if (isInstalled) CoreR.string.home_status_ready else CoreR.string.home_status_inactive)
-    val subtitle =
-        stringResource(id = if (isInstalled) CoreR.string.home_status_ready_subtitle else CoreR.string.home_status_inactive_subtitle)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(260.dp),
-            shape = RoundedCornerShape(
-                topStart = 48.dp,
-                topEnd = 120.dp,
-                bottomStart = 120.dp,
-                bottomEnd = 48.dp
-            ),
-            colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Icon(
-                    painter = painterResource(id = CoreR.drawable.ic_magisk_outline),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(240.dp)
-                        .align(Alignment.CenterEnd)
-                        .offset(x = 60.dp, y = 30.dp)
-                        .alpha(0.12f),
-                    tint = primaryColor
-                )
-
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(32.dp)
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = primaryColor.copy(alpha = 0.15f),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isInstalled) Icons.Rounded.Verified else Icons.Rounded.GppMaybe,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = primaryColor
-                            )
-                            Text(
-                                text = stringResource(
-                                    id = if (isInstalled) {
-                                        CoreR.string.home_state_up_to_date
-                                    } else {
-                                        CoreR.string.home_state_inactive
-                                    }
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp,
-                                color = primaryColor
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(20.dp))
-
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Black,
-                        color = primaryColor,
-                        lineHeight = 40.sp
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = primaryColor.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-            }
-        }
-    }
-}
-
-@Composable
-private fun MagiskOrganicCard(
-    magiskState: HomeViewModel.State,
-    magiskInstalledVersion: String,
-    onAction: () -> Unit
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(
-            topStart = 48.dp,
-            bottomEnd = 48.dp,
-            topEnd = 16.dp,
-            bottomStart = 16.dp
-        ),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Box {
-            Icon(
-                painter = painterResource(id = CoreR.drawable.ic_magisk_outline),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(160.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 40.dp, y = (-30).dp)
-                    .alpha(0.04f),
-                tint = MaterialTheme.colorScheme.primary
-            )
-
-            Column(modifier = Modifier.padding(28.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_magisk),
-                            null,
-                            modifier = Modifier.padding(14.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                    Spacer(Modifier.width(20.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            stringResource(id = CoreR.string.magisk),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Black
-                        )
-                        StatusBadge(magiskState)
-                    }
-                }
-                Spacer(Modifier.height(28.dp))
-                BentoInfoGrid(
-                    listOf(
-                        stringResource(id = CoreR.string.home_installed_version) to magiskInstalledVersion,
-                        stringResource(id = CoreR.string.zygisk) to stringResource(id = if (Info.isZygiskEnabled) CoreR.string.yes else CoreR.string.no),
-                        stringResource(id = CoreR.string.home_ramdisk) to stringResource(id = if (Info.ramdisk) CoreR.string.yes else CoreR.string.no)
-                    )
-                )
-                Spacer(Modifier.height(28.dp))
-                Button(
-                    onClick = onAction,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Icon(Icons.Rounded.Bolt, null)
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        stringResource(
-                            id = if (magiskState == HomeViewModel.State.OUTDATED) {
-                                CoreR.string.update
-                            } else {
-                                CoreR.string.install
-                            }
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AppOrganicCardXL(
-    appState: HomeViewModel.State,
-    managerInstalledVersion: String,
-    managerRemoteVersion: String,
-    updateChannelName: String,
-    packageName: String,
-    isHidden: Boolean,
-    onAction: () -> Unit,
-    onHideRestore: () -> Unit
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(
-            topStart = 16.dp,
-            bottomEnd = 16.dp,
-            topEnd = 64.dp,
-            bottomStart = 64.dp
-        ),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Column(modifier = Modifier.padding(32.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.size(72.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.AppShortcut,
-                        null,
-                        modifier = Modifier.padding(18.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                Spacer(Modifier.width(20.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        stringResource(id = CoreR.string.home_app_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    if (appState != HomeViewModel.State.INVALID && appState != HomeViewModel.State.LOADING) {
-                        StatusBadge(appState)
-                    }
-                }
-                Spacer(Modifier.weight(1f))
-                if (Info.env.isActive) {
-                    IconButton(onClick = onHideRestore) {
-                        Icon(
-                            imageVector = if (isHidden) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(32.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BentoInfoItem(
-                    label = stringResource(id = CoreR.string.home_installed_version),
-                    value = managerInstalledVersion,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    BentoInfoItem(
-                        label = stringResource(id = CoreR.string.home_latest_version),
-                        value = managerRemoteVersion,
-                        modifier = Modifier.weight(1f)
-                    )
-                    BentoInfoItem(
-                        label = stringResource(id = CoreR.string.home_channel),
-                        value = updateChannelName,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                BentoInfoItem(
-                    label = stringResource(id = CoreR.string.home_package),
-                    value = packageName,
-                    modifier = Modifier.fillMaxWidth(),
-                    valueMaxLines = 2
-                )
-            }
-            if (appState != HomeViewModel.State.INVALID && appState != HomeViewModel.State.LOADING) {
-                Spacer(Modifier.height(32.dp))
-                if (appState == HomeViewModel.State.OUTDATED) {
-                    Button(
-                        onClick = onAction,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(64.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Icon(Icons.Rounded.BrowserUpdated, null)
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            stringResource(id = CoreR.string.update),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                } else {
-                    TextButton(
-                        onClick = onAction,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Icon(Icons.Rounded.SystemUpdateAlt, null)
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            stringResource(id = CoreR.string.install),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BentoInfoGrid(items: List<Pair<String, String>>) {
-    if (items.isEmpty()) return
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        val first = items.first()
-        BentoInfoItem(
-            label = first.first,
-            value = first.second,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        val remaining = items.drop(1)
-        remaining.chunked(2).forEach { rowItems ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                rowItems.forEach { (label, value) ->
-                    BentoInfoItem(
-                        label = label,
-                        value = value,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                if (rowItems.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BentoInfoItem(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    valueMaxLines: Int = 1
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(16.dp)
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Black
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            value,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = valueMaxLines,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun ContributorsExpressiveList(
-    contributors: List<Contributor>,
-    loading: Boolean,
-    onOpen: (String) -> Unit
-) {
-    if (loading && contributors.isEmpty()) {
-        LinearProgressIndicator(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 24.dp)
-                .clip(CircleShape),
-            strokeCap = StrokeCap.Round
-        )
-        return
-    }
-
-    if (contributors.isEmpty()) return
-
-    val shapes = listOf(
-        RoundedCornerShape(
-            topStart = 64.dp,
-            topEnd = 16.dp,
-            bottomStart = 16.dp,
-            bottomEnd = 64.dp
-        ),
-        RoundedCornerShape(
-            topStart = 16.dp,
-            topEnd = 64.dp,
-            bottomStart = 64.dp,
-            bottomEnd = 16.dp
-        ),
-        RoundedCornerShape(
-            topStart = 48.dp,
-            topEnd = 48.dp,
-            bottomStart = 12.dp,
-            bottomEnd = 48.dp
-        ),
-        RoundedCornerShape(topStart = 12.dp, topEnd = 56.dp, bottomStart = 56.dp, bottomEnd = 56.dp)
-    )
-
-    val maintainerHandles = MAINTAINER_LINKS.keys
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        contributors.forEachIndexed { index, user ->
-            val shape = shapes[index % shapes.size]
-            val isMaintainer = maintainerHandles.contains(user.login.lowercase(Locale.US))
-            ElevatedCard(
-                modifier = Modifier
-                    .width(170.dp)
-                    .height(210.dp)
-                    .clip(shape)
-                    .clickable { onOpen(user.htmlUrl) },
-                shape = shape,
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            border = androidx.compose.foundation.BorderStroke(
-                                2.dp,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                            ),
-                            modifier = Modifier.size(72.dp)
-                        ) {
-                            AsyncImage(
-                                model = user.avatarUrl,
-                                contentDescription = null,
-                                modifier = Modifier.clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                user.login,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Black,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (isMaintainer) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(id = CoreR.string.home_maintainer).uppercase(),
-                                        modifier = Modifier.padding(
-                                            horizontal = 8.dp,
-                                            vertical = 2.dp
-                                        ),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Black
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.weight(1f))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            user.links.take(3).forEach { link ->
-                                Surface(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .clickable { onOpen(link.url) },
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = link.iconRes),
-                                        contentDescription = stringResource(id = link.labelRes),
-                                        modifier = Modifier.padding(9.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SupportOrganicSection(onPatreon: () -> Unit, onPaypal: () -> Unit) {
-    val patreonAccent = MaterialTheme.colorScheme.tertiary
-    val paypalAccent = MaterialTheme.colorScheme.primary
-
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Text(
-                text = stringResource(id = CoreR.string.home_support_content),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 22.sp
-            )
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val compact = maxWidth < 420.dp
-                if (compact) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SupportLinkButton(
-                            label = stringResource(id = CoreR.string.patreon),
-                            iconRes = CoreR.drawable.ic_patreon,
-                            accentColor = patreonAccent,
-                            onClick = onPatreon,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        SupportLinkButton(
-                            label = stringResource(id = CoreR.string.paypal),
-                            iconRes = CoreR.drawable.ic_paypal,
-                            accentColor = paypalAccent,
-                            onClick = onPaypal,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        SupportLinkButton(
-                            label = stringResource(id = CoreR.string.patreon),
-                            iconRes = CoreR.drawable.ic_patreon,
-                            accentColor = patreonAccent,
-                            onClick = onPatreon,
-                            modifier = Modifier.weight(1f)
-                        )
-                        SupportLinkButton(
-                            label = stringResource(id = CoreR.string.paypal),
-                            iconRes = CoreR.drawable.ic_paypal,
-                            accentColor = paypalAccent,
-                            onClick = onPaypal,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SupportLinkButton(
-    label: String,
-    @DrawableRes iconRes: Int,
-    accentColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f)
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(58.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = containerColor,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        ),
-        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.28f)),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp
-        ),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Surface(
-            color = accentColor.copy(alpha = 0.16f),
-            shape = CircleShape,
-            modifier = Modifier.size(28.dp)
-        ) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                modifier = Modifier.padding(6.dp),
-                tint = accentColor
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = label.uppercase(Locale.ROOT),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            letterSpacing = 0.4.sp
-        )
-        Spacer(Modifier.weight(1f))
-        Icon(
-            imageVector = Icons.Rounded.ArrowOutward,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = accentColor
-        )
-    }
-}
-
-@Composable
-private fun SectionHeader(title: String, icon: ImageVector) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-    ) {
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                icon, null,
-                modifier = Modifier.padding(6.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-        Spacer(Modifier.width(16.dp))
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.2.sp,
-            color = MaterialTheme.colorScheme.outline
-        )
-    }
-}
-
-@Composable
-private fun StatusBadge(state: HomeViewModel.State) {
-    val (text, color) = when (state) {
-        HomeViewModel.State.UP_TO_DATE -> stringResource(id = CoreR.string.home_state_up_to_date) to Color(
-            0xFF4CAF50
-        )
-
-        HomeViewModel.State.OUTDATED -> stringResource(id = CoreR.string.home_state_update_ready) to Color(
-            0xFFFF9800
-        )
-
-        else -> stringResource(id = CoreR.string.home_state_inactive) to MaterialTheme.colorScheme.error
-    }
-    Surface(color = color.copy(alpha = 0.15f), shape = RoundedCornerShape(8.dp)) {
-        Text(
-            text = text.uppercase(),
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 0.5.sp
-        )
-    }
-}
-
-@Composable
-private fun UninstallAction(onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
-        onClick = onClick
-    ) {
-        Row(modifier = Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-                color = MaterialTheme.colorScheme.error,
-                shape = CircleShape,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    Icons.Rounded.DeleteForever,
-                    null,
-                    modifier = Modifier.padding(10.dp),
-                    tint = MaterialTheme.colorScheme.onError
-                )
-            }
-            Spacer(Modifier.width(20.dp))
-            Text(
-                stringResource(id = CoreR.string.home_uninstall_environment),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.error
-            )
-            Spacer(Modifier.weight(1f))
-            Icon(
-                Icons.Rounded.ChevronRight,
-                null,
-                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun NoticeCard(onHide: () -> Unit) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(
-                alpha = 0.7f
-            )
-        )
-    ) {
-        Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Info, null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
-            Spacer(Modifier.width(16.dp))
-            Text(
-                stringResource(id = CoreR.string.home_notice_content),
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Medium
-            )
-            IconButton(onClick = onHide) {
-                Icon(
-                    Icons.Rounded.Close,
-                    null,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun RebootExpressiveDialog(onDismiss: () -> Unit, onReboot: (String) -> Unit) {
-    AlertDialog(
+    MagiskDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = CircleShape,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.RestartAlt,
-                        null,
-                        modifier = Modifier.padding(8.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                Spacer(Modifier.width(16.dp))
-                Text(stringResource(id = CoreR.string.reboot), fontWeight = FontWeight.Black)
-            }
-        },
+        title = stringResource(id = CoreR.string.reboot),
+        icon = Icons.Rounded.RestartAlt,
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ExpressiveOptionCard(
-                    Icons.Rounded.PowerSettingsNew,
-                    stringResource(id = CoreR.string.reboot),
-                    subtitle = null,
-                    accentColor = MaterialTheme.colorScheme.primary
-                ) { onReboot("") }
-                ExpressiveOptionCard(
-                    Icons.Rounded.History,
-                    stringResource(id = CoreR.string.reboot_recovery),
-                    subtitle = null,
-                    accentColor = MaterialTheme.colorScheme.secondary
-                ) { onReboot("recovery") }
-                ExpressiveOptionCard(
-                    Icons.Rounded.Terminal,
-                    stringResource(id = CoreR.string.reboot_bootloader),
-                    subtitle = null,
-                    accentColor = MaterialTheme.colorScheme.tertiary
-                ) { onReboot("bootloader") }
-                ExpressiveOptionCard(
-                    Icons.Rounded.Download,
-                    stringResource(id = CoreR.string.reboot_download),
-                    subtitle = null,
-                    accentColor = MaterialTheme.colorScheme.inversePrimary
-                ) { onReboot("download") }
-                ExpressiveOptionCard(
-                    Icons.Rounded.Bolt,
-                    stringResource(id = CoreR.string.reboot_userspace),
-                    subtitle = null,
-                    accentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ) { onReboot("userspace") }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    stringResource(id = CoreR.string.close),
-                    fontWeight = FontWeight.Bold
+                MagiskDialogOption(
+                    icon = Icons.Rounded.PowerSettingsNew,
+                    title = stringResource(id = CoreR.string.reboot),
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    onClick = { onReboot("") }
+                )
+                MagiskDialogOption(
+                    icon = Icons.Rounded.History,
+                    title = stringResource(id = CoreR.string.reboot_recovery),
+                    accentColor = MaterialTheme.colorScheme.secondary,
+                    onClick = { onReboot("recovery") }
+                )
+                MagiskDialogOption(
+                    icon = Icons.Rounded.Terminal,
+                    title = stringResource(id = CoreR.string.reboot_bootloader),
+                    accentColor = MaterialTheme.colorScheme.tertiary,
+                    onClick = { onReboot("bootloader") }
+                )
+                MagiskDialogOption(
+                    icon = Icons.Rounded.Bolt,
+                    title = stringResource(id = CoreR.string.reboot_userspace),
+                    accentColor = MaterialTheme.colorScheme.outline,
+                    onClick = { onReboot("userspace") }
                 )
             }
         },
-        shape = RoundedCornerShape(32.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        confirmButton = {},
+        dismissButton = {
+            MagiskDialogDismissButton(
+                onClick = onDismiss,
+                text = stringResource(id = CoreR.string.close)
+            )
+        }
     )
 }
 
 @Composable
-private fun ExpressiveOptionCard(
-    icon: ImageVector,
-    title: String,
-    subtitle: String?,
-    accentColor: Color,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-                color = accentColor.copy(alpha = 0.15f),
-                shape = CircleShape,
-                modifier = Modifier.size(44.dp)
-            ) {
-                Icon(icon, null, modifier = Modifier.padding(10.dp), tint = accentColor)
-            }
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                if (subtitle != null) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun UninstallExpressiveDialog(
-    onDismiss: () -> Unit,
-    onRestoreImages: () -> Unit,
-    onCompleteUninstall: () -> Unit
-) {
-    AlertDialog(
+private fun UninstallExpressiveDialog(onDismiss: () -> Unit, onRestoreImages: () -> Unit, onCompleteUninstall: () -> Unit) {
+    MagiskDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    shape = CircleShape,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.DeleteSweep,
-                        null,
-                        modifier = Modifier.padding(8.dp),
-                        tint = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
-                Spacer(Modifier.width(16.dp))
-                Text(
-                    stringResource(id = CoreR.string.uninstall_magisk_title),
-                    fontWeight = FontWeight.Black
-                )
-            }
-        },
-        text = { Text(stringResource(id = CoreR.string.uninstall_magisk_msg)) },
-        confirmButton = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
-            ) {
-                ExpressiveOptionCard(
+        title = stringResource(id = CoreR.string.uninstall_magisk_title),
+        icon = Icons.Rounded.DeleteSweep,
+        iconTint = MaterialTheme.colorScheme.error,
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(id = CoreR.string.uninstall_magisk_msg))
+                MagiskDialogOption(
                     icon = Icons.Rounded.SettingsBackupRestore,
                     title = stringResource(id = CoreR.string.restore_img),
                     subtitle = stringResource(id = CoreR.string.uninstall_restore_images_subtitle),
-                    accentColor = MaterialTheme.colorScheme.primary
-                ) { onRestoreImages() }
-                ExpressiveOptionCard(
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    onClick = onRestoreImages
+                )
+                MagiskDialogOption(
                     icon = Icons.Rounded.DeleteForever,
                     title = stringResource(id = CoreR.string.complete_uninstall),
                     subtitle = stringResource(id = CoreR.string.uninstall_complete_subtitle),
-                    accentColor = MaterialTheme.colorScheme.error
-                ) { onCompleteUninstall() }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(id = CoreR.string.close)) } },
-        shape = RoundedCornerShape(32.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    )
-}
-
-@Composable
-private fun EnvFixExpressiveDialog(
-    code: Int,
-    onDismiss: () -> Unit,
-    onFix: () -> Unit
-) {
-    val needsFullFix = code == 2 ||
-            Info.env.versionCode != BuildConfig.APP_VERSION_CODE ||
-            Info.env.versionString != BuildConfig.APP_VERSION_NAME
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(id = CoreR.string.env_fix_title),
-                fontWeight = FontWeight.Black
-            )
-        },
-        text = {
-            Text(
-                text = stringResource(
-                    id = if (needsFullFix) CoreR.string.env_full_fix_msg else CoreR.string.env_fix_msg
+                    accentColor = MaterialTheme.colorScheme.error,
+                    onClick = onCompleteUninstall
                 )
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onFix) {
-                Text(text = stringResource(id = android.R.string.ok), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(id = android.R.string.cancel))
-            }
-        },
-        shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            MagiskDialogDismissButton(
+                onClick = onDismiss,
+                text = stringResource(id = CoreR.string.close)
+            )
+        }
     )
 }
 
 @Composable
-private fun HideAppExpressiveDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
-) {
-    var appName by remember { mutableStateOf("Settings") }
-    val isError = appName.length > AppMigration.MAX_LABEL_LENGTH || appName.isBlank()
-
-    AlertDialog(
+private fun EnvFixExpressiveDialog(code: Int, onDismiss: () -> Unit, onFix: () -> Unit) {
+    val needsFullFix = code == 2 || Info.env.versionCode != BuildConfig.APP_VERSION_CODE || Info.env.versionString != BuildConfig.APP_VERSION_NAME
+    MagiskDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(id = CoreR.string.settings_hide_app_title),
-                fontWeight = FontWeight.Black
-            )
+        title = stringResource(id = CoreR.string.env_fix_title),
+        icon = Icons.Rounded.BuildCircle,
+        text = { Text(stringResource(id = if (needsFullFix) CoreR.string.env_full_fix_msg else CoreR.string.env_fix_msg)) },
+        confirmButton = {
+            MagiskDialogConfirmButton(onClick = onFix)
         },
+        dismissButton = {
+            MagiskDialogDismissButton(onClick = onDismiss)
+        }
+    )
+}
+
+@Composable
+private fun HideAppExpressiveDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    val defaultAppName = stringResource(id = CoreR.string.settings)
+    var appName by remember(defaultAppName) { mutableStateOf(defaultAppName) }
+    val isError = appName.length > AppMigration.MAX_LABEL_LENGTH || appName.isBlank()
+    MagiskDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(id = CoreR.string.settings_hide_app_title),
+        icon = Icons.Rounded.Masks,
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(text = stringResource(id = CoreR.string.settings_hide_app_summary))
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(stringResource(id = CoreR.string.settings_hide_app_summary))
                 OutlinedTextField(
-                    value = appName,
-                    onValueChange = { appName = it },
-                    label = { Text(text = stringResource(id = CoreR.string.settings_app_name_hint)) },
-                    singleLine = true,
-                    isError = isError
+                    value = appName, onValueChange = { appName = it },
+                    label = { Text(stringResource(id = CoreR.string.settings_app_name_hint)) },
+                    singleLine = true, isError = isError, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            TextButton(
+            MagiskDialogConfirmButton(
                 onClick = { onConfirm(appName) },
                 enabled = !isError
-            ) {
-                Text(text = stringResource(id = android.R.string.ok), fontWeight = FontWeight.Bold)
-            }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(id = android.R.string.cancel))
-            }
-        },
-        shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            MagiskDialogDismissButton(onClick = onDismiss)
+        }
     )
 }
 
 @Composable
-private fun RestoreAppExpressiveDialog(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
+private fun RestoreAppExpressiveDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    MagiskDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(id = CoreR.string.settings_restore_app_title),
-                fontWeight = FontWeight.Black
-            )
-        },
-        text = {
-            Text(text = stringResource(id = CoreR.string.restore_app_confirmation))
-        },
+        title = stringResource(id = CoreR.string.settings_restore_app_title),
+        icon = Icons.Rounded.RestorePage,
+        text = { Text(stringResource(id = CoreR.string.restore_app_confirmation)) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(text = stringResource(id = android.R.string.ok), fontWeight = FontWeight.Bold)
-            }
+            MagiskDialogConfirmButton(onClick = onConfirm)
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(id = android.R.string.cancel))
-            }
-        },
-        shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            MagiskDialogDismissButton(onClick = onDismiss)
+        }
     )
 }
 
-// Logic components
+// Logic components - Mantengo questi per compatibilità
 data class ContributorLink(
-    @StringRes val labelRes: Int,
-    @DrawableRes val iconRes: Int,
+    @param:StringRes val labelRes: Int,
+    @param:DrawableRes val iconRes: Int,
     val url: String
 )
-
-data class Contributor(
-    val login: String,
-    val avatarUrl: String,
-    val htmlUrl: String,
-    val links: List<ContributorLink> = emptyList()
-)
-
+data class Contributor(val login: String, val avatarUrl: String, val htmlUrl: String, val links: List<ContributorLink> = emptyList())
 private val MAINTAINER_LINKS: Map<String, List<ContributorLink>> = mapOf(
-    "topjohnwu" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/topjohnwu"),
-        ContributorLink(
-            CoreR.string.github,
-            CoreR.drawable.ic_github,
-            "https://github.com/topjohnwu/Magisk"
-        )
-    ),
-    "vvb2060" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/vvb2060"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/vvb2060")
-    ),
-    "yujincheng08" to listOf(
-        ContributorLink(
-            CoreR.string.twitter,
-            CoreR.drawable.ic_twitter,
-            "https://x.com/yujincheng08"
-        ),
-        ContributorLink(
-            CoreR.string.github,
-            CoreR.drawable.ic_github,
-            "https://github.com/yujincheng08"
-        ),
-        ContributorLink(
-            CoreR.string.github,
-            CoreR.drawable.ic_favorite,
-            "https://github.com/sponsors/yujincheng08"
-        )
-    ),
-    "rikkaw" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/rikkaw_"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/RikkaW")
-    ),
-    "canyie" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/canyieq"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/canyie")
-    ),
-    "anto426" to listOf(
-        ContributorLink(
-            CoreR.string.github,
-            CoreR.drawable.ic_github,
-            "https://github.com/Anto426"
-        )
-    )
+    "topjohnwu" to listOf(ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/topjohnwu"), ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/topjohnwu/Magisk")),
+    "vvb2060" to listOf(ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/vvb2060"), ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/vvb2060")),
+    "yujincheng08" to listOf(ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/yujincheng08"), ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/yujincheng08"), ContributorLink(CoreR.string.github, CoreR.drawable.ic_favorite, "https://github.com/sponsors/yujincheng08")),
+    "rikkaw" to listOf(ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/rikkaw_"), ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/RikkaW")),
+    "canyie" to listOf(ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/canyieq"), ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/canyie")),
+    "anto426" to listOf(ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/Anto426"))
 )
-
 private fun createContributor(login: String, avatarUrl: String, htmlUrl: String): Contributor {
     val normalized = login.lowercase(Locale.US)
-    return Contributor(
-        login = login,
-        avatarUrl = avatarUrl,
-        htmlUrl = htmlUrl,
-        links = MAINTAINER_LINKS[normalized].orEmpty()
-    )
+    return Contributor(login = login, avatarUrl = avatarUrl, htmlUrl = htmlUrl, links = MAINTAINER_LINKS[normalized].orEmpty())
 }
-
-private val FORK_MAINTAINER = createContributor(
-    login = "Anto426",
-    avatarUrl = "https://github.com/Anto426.png",
-    htmlUrl = "https://github.com/Anto426"
-)
+private val FORK_MAINTAINER = createContributor(login = "Anto426", avatarUrl = "https://github.com/Anto426.png", htmlUrl = "https://github.com/Anto426")
 
 interface GitHubService {
     @GET("repos/topjohnwu/Magisk/contributors")
@@ -1692,18 +646,15 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
     private var refreshJob: Job? = null
+    private var lastRefreshAt = 0L
     private val gitHubService: GitHubService by lazy {
-        Retrofit.Builder().baseUrl("https://api.github.com/")
-            .addConverterFactory(MoshiConverterFactory.create()).build()
-            .create(GitHubService::class.java)
+        Retrofit.Builder().baseUrl("https://api.github.com/").addConverterFactory(MoshiConverterFactory.create()).build().create(GitHubService::class.java)
     }
 
     private fun cachedContributors(): List<Contributor>? {
         val cached = contributorsCache
         val cachedAt = contributorsCacheTimestamp
-        return cached.takeIf {
-            cached.isNotEmpty() && System.currentTimeMillis() - cachedAt < CONTRIBUTORS_CACHE_TTL_MS
-        }
+        return cached.takeIf { cached.isNotEmpty() && System.currentTimeMillis() - cachedAt < CONTRIBUTORS_CACHE_TTL_MS }
     }
 
     private fun cacheContributors(list: List<Contributor>) {
@@ -1712,16 +663,18 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
     }
 
     private fun withPinnedContributors(list: List<Contributor>): List<Contributor> {
-        return (listOf(FORK_MAINTAINER) + list)
-            .distinctBy { it.login.lowercase(Locale.US) }
+        return (listOf(FORK_MAINTAINER) + list).distinctBy { it.login.lowercase(Locale.US) }
     }
 
-    fun refresh() {
+    fun refresh(force: Boolean = false) {
+        val now = SystemClock.elapsedRealtime()
+        if (!force && _state.value.appState != HomeViewModel.State.LOADING && now - lastRefreshAt < MIN_REFRESH_INTERVAL_MS) {
+            return
+        }
+        lastRefreshAt = now
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            _state.update {
-                if (it.contributors.isEmpty()) it.copy(contributorsLoading = true) else it
-            }
+            _state.update { if (it.contributors.isEmpty()) it.copy(contributorsLoading = true) else it }
             val cached = cachedContributors()
             if (cached != null) {
                 _state.update { it.copy(contributors = cached, contributorsLoading = false) }
@@ -1731,35 +684,16 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
                         .onSuccess { raw ->
                             val fetched = raw.mapNotNull { item ->
                                 val login = item["login"] as? String ?: return@mapNotNull null
-                                createContributor(
-                                    login = login,
-                                    avatarUrl = item["avatar_url"] as? String ?: "",
-                                    htmlUrl = item["html_url"] as? String ?: ""
-                                )
+                                createContributor(login = login, avatarUrl = item["avatar_url"] as? String ?: "", htmlUrl = item["html_url"] as? String ?: "")
                             }
-
-                            val priorityOrder =
-                                listOf("topjohnwu", "vvb2060", "yujincheng08", "rikkaw", "canyie")
+                            val priorityOrder = listOf("topjohnwu", "vvb2060", "yujincheng08", "rikkaw", "canyie")
                             val fetchedMap = fetched.associateBy { it.login.lowercase(Locale.US) }
                             val ordered = priorityOrder.mapNotNull { handle -> fetchedMap[handle] }
                             val finalList = withPinnedContributors(ordered.ifEmpty { fetched })
                             cacheContributors(finalList)
-
-                            _state.update {
-                                it.copy(
-                                    contributors = finalList,
-                                    contributorsLoading = false
-                                )
-                            }
+                            _state.update { it.copy(contributors = finalList, contributorsLoading = false) }
                         }
-                        .onFailure {
-                            _state.update {
-                                it.copy(
-                                    contributors = withPinnedContributors(emptyList()),
-                                    contributorsLoading = false
-                                )
-                            }
-                        }
+                        .onFailure { _state.update { it.copy(contributors = withPinnedContributors(emptyList()), contributorsLoading = false) } }
                 }
             }
             val remote = Info.fetchUpdate(svc)
@@ -1774,29 +708,16 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
                 Info.env.versionCode < BuildConfig.APP_VERSION_CODE -> HomeViewModel.State.OUTDATED
                 else -> HomeViewModel.State.UP_TO_DATE
             }
-            val managerInstalled =
-                "${BuildConfig.APP_VERSION_NAME} (${BuildConfig.APP_VERSION_CODE})" +
-                        if (BuildConfig.DEBUG) " (D)" else ""
-
+            val managerInstalled = "${BuildConfig.APP_VERSION_NAME} (${BuildConfig.APP_VERSION_CODE})" + if (BuildConfig.DEBUG) " (D)" else ""
             _state.update {
                 it.copy(
                     magiskState = magiskState,
-                    magiskInstalledVersion = Info.env.run {
-                        if (isActive) {
-                            "$versionString ($versionCode)" + if (isDebug) " (D)" else ""
-                        } else {
-                            AppContext.getString(CoreR.string.not_available)
-                        }
-                    },
+                    magiskInstalledVersion = Info.env.run { if (isActive) "$versionString ($versionCode)" + if (isDebug) " (D)" else "" else AppContext.getString(CoreR.string.not_available) },
                     appState = appState,
                     managerInstalledVersion = managerInstalled,
-                    managerRemoteVersion = remote?.run {
-                        val isDebug = Config.updateChannel == Config.Value.DEBUG_CHANNEL
-                        "$version ($versionCode)" + if (isDebug) " (D)" else ""
-                    } ?: AppContext.getString(CoreR.string.not_available),
+                    managerRemoteVersion = remote?.run { val isDebug = Config.updateChannel == Config.Value.DEBUG_CHANNEL; "$version ($versionCode)" + if (isDebug) " (D)" else "" } ?: AppContext.getString(CoreR.string.not_available),
                     managerReleaseNotes = remote?.note.orEmpty(),
-                    updateChannelName = AppContext.resources.getStringArray(CoreR.array.update_channel)
-                        .getOrElse(Config.updateChannel) { AppContext.getString(CoreR.string.settings_update_stable) },
+                    updateChannelName = AppContext.resources.getStringArray(CoreR.array.update_channel).getOrElse(Config.updateChannel) { AppContext.getString(CoreR.string.settings_update_stable) },
                     packageName = AppContext.packageName,
                     envActive = Info.env.isActive,
                     noticeVisible = Config.safetyNotice
@@ -1806,40 +727,18 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
         }
     }
 
-    fun hideNotice() {
-        Config.safetyNotice = false; _state.update { it.copy(noticeVisible = false) }
-    }
-
-    fun checkForMagiskUpdates() {
-        refresh()
-    }
-
-    fun onHideRestorePressed() {
-        _state.update { it.copy(showHideRestore = true) }
-    }
-
-    fun onHideRestoreConsumed() {
-        _state.update { it.copy(showHideRestore = false) }
-    }
-
-    fun onEnvFixConsumed() {
-        _state.update { it.copy(envFixCode = 0) }
-    }
-
+    fun hideNotice() { Config.safetyNotice = false; _state.update { it.copy(noticeVisible = false) } }
+    fun checkForMagiskUpdates() { refresh() }
+    fun onHideRestorePressed() { _state.update { it.copy(showHideRestore = true) } }
+    fun onHideRestoreConsumed() { _state.update { it.copy(showHideRestore = false) } }
+    fun onEnvFixConsumed() { _state.update { it.copy(envFixCode = 0) } }
     fun onManagerPressed(onShowInstallSheet: () -> Unit) {
         when (_state.value.appState) {
-            HomeViewModel.State.LOADING -> {
-                _messages.tryEmit(AppContext.getString(CoreR.string.loading))
-            }
-
-            HomeViewModel.State.INVALID -> {
-                _messages.tryEmit(AppContext.getString(CoreR.string.no_connection))
-            }
-
+            HomeViewModel.State.LOADING -> _messages.tryEmit(AppContext.getString(CoreR.string.loading))
+            HomeViewModel.State.INVALID -> _messages.tryEmit(AppContext.getString(CoreR.string.no_connection))
             else -> onShowInstallSheet()
         }
     }
-
     fun restoreImages() {
         viewModelScope.launch {
             _messages.tryEmit(AppContext.getString(CoreR.string.restore_img_msg))
@@ -1847,37 +746,24 @@ class HomeComposeViewModel(private val svc: NetworkService) : ViewModel() {
             _messages.emit(AppContext.getString(if (success) CoreR.string.restore_done else CoreR.string.restore_fail))
         }
     }
-
     fun openLink(c: android.content.Context, l: String) {
-        try {
-            c.startActivity(
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse(l)
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-        } catch (_: Exception) {
-            _messages.tryEmit(AppContext.getString(CoreR.string.open_link_failed_toast))
-        }
+        try { c.startActivity(Intent(Intent.ACTION_VIEW, l.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        catch (_: Exception) { _messages.tryEmit(AppContext.getString(CoreR.string.open_link_failed_toast)) }
     }
-
     private suspend fun ensureEnv(magiskState: HomeViewModel.State) {
         if (magiskState == HomeViewModel.State.INVALID || checkedEnv) return
         val cmd = "env_check ${Info.env.versionString} ${Info.env.versionCode}"
         val code = runCatching { Shell.cmd(cmd).await().code }.getOrDefault(0)
-        if (code != 0) {
-            _state.update { it.copy(envFixCode = code) }
-        }
+        if (code != 0) _state.update { it.copy(envFixCode = code) }
         checkedEnv = true
     }
-
     companion object {
+        private const val MIN_REFRESH_INTERVAL_MS = 1200L
         private const val CONTRIBUTORS_CACHE_TTL_MS = 30L * 60_000L
         private var contributorsCache: List<Contributor> = emptyList()
         private var contributorsCacheTimestamp: Long = 0
         private var checkedEnv = false
     }
-
     object Factory : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST") return HomeComposeViewModel(ServiceLocator.networkService) as T

@@ -3,85 +3,23 @@ package com.topjohnwu.magisk.ui.settings
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Reply
-import androidx.compose.material.icons.rounded.AddLink
-import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Dns
-import androidx.compose.material.icons.rounded.Fingerprint
-import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.Key
-import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.Layers
-import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Masks
-import androidx.compose.material.icons.rounded.NotificationAdd
-import androidx.compose.material.icons.rounded.NotificationsActive
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.People
-import androidx.compose.material.icons.rounded.Public
-import androidx.compose.material.icons.rounded.RestorePage
-import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.TouchApp
-import androidx.compose.material.icons.rounded.Update
-import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -100,14 +38,19 @@ import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.RootUtils
 import com.topjohnwu.magisk.ui.POST_NOTIFICATIONS_PERMISSION
 import com.topjohnwu.magisk.ui.RefreshOnResume
+import com.topjohnwu.magisk.ui.component.ExpressiveSection
+import com.topjohnwu.magisk.ui.component.MagiskDialog
+import com.topjohnwu.magisk.ui.component.MagiskDialogConfirmButton
+import com.topjohnwu.magisk.ui.component.MagiskDialogDismissButton
+import com.topjohnwu.magisk.ui.component.MagiskDialogOption
+import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
 import com.topjohnwu.magisk.ui.theme.Theme
 import com.topjohnwu.magisk.view.Shortcuts
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.topjohnwu.magisk.core.R as CoreR
@@ -135,9 +78,13 @@ fun SettingsScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 140.dp, top = 8.dp, start = 20.dp, end = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(28.dp)
+            contentPadding = MagiskUiDefaults.screenContentPadding(),
+            verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.ListItemSpacing)
         ) {
+            item {
+                SettingsExpressiveHeader()
+            }
+
             item {
                 OrganicSettingsSection(
                     stringResource(id = CoreR.string.settings_customization),
@@ -481,73 +428,51 @@ fun SettingsScreen(
             }
         }
 
-        SnackbarHost(
+        MagiskSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 110.dp)
+                .padding(bottom = MagiskUiDefaults.SnackbarBottomPadding)
         )
     }
 
     selector?.let { spec ->
-        AlertDialog(
+        MagiskDialog(
             onDismissRequest = { selector = null },
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(spec.icon, null, tint = MaterialTheme.colorScheme.primary); Text(
-                    spec.title,
-                    fontWeight = FontWeight.Black
-                )
-                }
-            },
+            title = spec.title,
+            icon = spec.icon,
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     spec.options.forEachIndexed { index, label ->
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (index == spec.selectedIndex) MaterialTheme.colorScheme.primaryContainer.copy(
-                                alpha = 0.5f
-                            ) else Color.Transparent,
-                            onClick = { spec.onSelect(index); selector = null }) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = index == spec.selectedIndex,
-                                    onClick = null
-                                ); Spacer(Modifier.width(16.dp)); Text(
-                                label,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (index == spec.selectedIndex) FontWeight.Bold else FontWeight.Normal
-                            )
+                        MagiskDialogOption(
+                            title = label,
+                            selected = index == spec.selectedIndex,
+                            showRadio = true,
+                            onClick = {
+                                spec.onSelect(index)
+                                selector = null
                             }
-                        }
+                        )
                     }
                 }
             },
-            confirmButton = {},
-            shape = RoundedCornerShape(32.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            confirmButton = {}
         )
     }
 
     input?.let { spec ->
         var value by remember(spec.initialValue) { mutableStateOf(spec.initialValue) }
-        AlertDialog(
+        MagiskDialog(
             onDismissRequest = { input = null },
-            title = { Text(spec.title, fontWeight = FontWeight.Black) },
+            title = spec.title,
+            icon = Icons.Rounded.Edit,
             text = {
                 OutlinedTextField(
                     value = value,
                     onValueChange = { value = it },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = MagiskUiDefaults.SmallShape,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
@@ -555,53 +480,70 @@ fun SettingsScreen(
                 )
             },
             confirmButton = {
-                Button(onClick = {
-                    spec.onConfirm(value.trim()); input = null
-                }) { Text(stringResource(id = android.R.string.ok), fontWeight = FontWeight.Bold) }
+                MagiskDialogConfirmButton(
+                    onClick = {
+                        spec.onConfirm(value.trim())
+                        input = null
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = {
-                    input = null
-                }) { Text(stringResource(id = android.R.string.cancel)) }
-            },
-            shape = RoundedCornerShape(32.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                MagiskDialogDismissButton(onClick = { input = null })
+            }
         )
     }
 
     if (confirmRestore) {
-        AlertDialog(
+        MagiskDialog(
             onDismissRequest = { confirmRestore = false },
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(Icons.Rounded.Warning, null, tint = MaterialTheme.colorScheme.error); Text(
-                    stringResource(id = CoreR.string.settings_restore_app_title),
-                    fontWeight = FontWeight.Black
-                )
-                }
-            },
+            title = stringResource(id = CoreR.string.settings_restore_app_title),
+            icon = Icons.Rounded.Warning,
+            iconTint = MaterialTheme.colorScheme.error,
             text = { Text(stringResource(id = CoreR.string.restore_app_confirmation)) },
             confirmButton = {
-                Button(
+                MagiskDialogConfirmButton(
                     onClick = {
-                        confirmRestore = false; viewModel.restoreApp(
-                        activity
-                    )
+                        confirmRestore = false
+                        viewModel.restoreApp(activity)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text(stringResource(id = android.R.string.ok), fontWeight = FontWeight.Bold) }
+                    destructive = true
+                )
             },
             dismissButton = {
-                TextButton(onClick = {
-                    confirmRestore = false
-                }) { Text(stringResource(id = android.R.string.cancel)) }
-            },
-            shape = RoundedCornerShape(32.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                MagiskDialogDismissButton(onClick = { confirmRestore = false })
+            }
         )
+    }
+}
+
+@Composable
+private fun SettingsExpressiveHeader() {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MagiskUiDefaults.HeroShape,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Configura l'ambiente e l'app",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Settings, null, tint = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -611,39 +553,16 @@ private fun OrganicSettingsSection(
     icon: ImageVector,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(modifier = Modifier.animateContentSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    icon,
-                    null,
-                    modifier = Modifier.padding(6.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Spacer(Modifier.width(16.dp))
-            Text(
-                text = title.uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.2.sp,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-        ) { Column(modifier = Modifier.padding(vertical = 8.dp), content = content) }
-    }
+    ExpressiveSection(
+        title = title,
+        icon = icon,
+        iconContainerSize = 38.dp,
+        iconPadding = 9.dp,
+        iconShape = MagiskUiDefaults.SmallShape,
+        iconContainerAlpha = 0.85f,
+        cardShape = MagiskUiDefaults.ExtraLargeShape,
+        content = content
+    )
 }
 
 @Composable
@@ -670,12 +589,14 @@ private fun ExpressiveSettingItem(
                     shape = CircleShape,
                     modifier = Modifier.size(44.dp)
                 ) {
-                    Icon(
-                        icon,
-                        null,
-                        modifier = Modifier.padding(11.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            icon,
+                            null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
                 Spacer(Modifier.width(20.dp))
             }
@@ -728,12 +649,14 @@ private fun ExpressiveToggleItem(
                     shape = CircleShape,
                     modifier = Modifier.size(44.dp)
                 ) {
-                    Icon(
-                        icon,
-                        null,
-                        modifier = Modifier.padding(11.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            icon,
+                            null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
                 Spacer(Modifier.width(20.dp))
             }

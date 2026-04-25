@@ -1,83 +1,34 @@
 package com.topjohnwu.magisk.ui.settings
 
-import androidx.annotation.RawRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BrightnessAuto
-import androidx.compose.material.icons.rounded.Brush
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.LightMode
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import androidx.compose.ui.unit.*
 import com.topjohnwu.magisk.core.Config
+import com.topjohnwu.magisk.ui.animation.MagiskMotion
+import com.topjohnwu.magisk.ui.component.MagiskBottomSheet
+import com.topjohnwu.magisk.ui.component.MagiskDialog
+import com.topjohnwu.magisk.ui.component.MagiskDialogConfirmButton
+import com.topjohnwu.magisk.ui.component.MagiskDialogDismissButton
+import com.topjohnwu.magisk.ui.component.MagiskDialogOption
+import com.topjohnwu.magisk.ui.component.MagiskUiDefaults
 import com.topjohnwu.magisk.ui.theme.Theme
 import com.topjohnwu.magisk.core.R as CoreR
 
@@ -97,23 +48,24 @@ fun ThemeScreen(
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             contentPadding = PaddingValues(
-                start = 20.dp,
-                end = 20.dp,
-                top = 12.dp,
-                bottom = 140.dp
+                start = MagiskUiDefaults.SectionSpacing,
+                end = MagiskUiDefaults.SectionSpacing,
+                top = MagiskUiDefaults.ScreenTopPadding,
+                bottom = MagiskUiDefaults.ScreenBottomPadding
             ),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(MagiskUiDefaults.SectionSpacing),
+            verticalArrangement = Arrangement.spacedBy(MagiskUiDefaults.SectionSpacing),
             modifier = Modifier.fillMaxSize()
         ) {
             item(span = { GridItemSpan(2) }) {
-                ThemeHeader()
+                ThemeExpressiveHeader()
             }
+
             item(span = { GridItemSpan(2) }) {
-                DarkModeSection(
+                DarkModeExpressiveSection(
                     currentDarkMode = currentDarkMode,
                     onDarkModeSelected = { mode ->
-                        if (currentDarkMode == mode) return@DarkModeSection
+                        if (currentDarkMode == mode) return@DarkModeExpressiveSection
                         val previousMode = currentDarkMode
                         currentDarkMode = mode
                         Config.darkTheme = mode
@@ -133,8 +85,19 @@ fun ThemeScreen(
                 )
             }
 
-            items(themes) { theme ->
-                ThemeCard(
+            item(span = { GridItemSpan(2) }) {
+                Text(
+                    text = stringResource(id = CoreR.string.theme_custom_themes).uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.2.sp,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                )
+            }
+
+            items(themes, key = { it.ordinal }) { theme ->
+                ThemeOrganicCard(
                     theme = theme,
                     isSelected = theme == currentTheme,
                     customColors = if (theme == Theme.Custom) customColors else null,
@@ -144,12 +107,12 @@ fun ThemeScreen(
                                 customDraftColors = customColors
                                 showCustomEditorSheet = true
                             }
-                            return@ThemeCard
+                            return@ThemeOrganicCard
                         }
                         if (theme == Theme.Custom) {
                             customDraftColors = customColors
                             showCustomEditorSheet = true
-                            return@ThemeCard
+                            return@ThemeOrganicCard
                         }
                         currentTheme = theme
                         Config.themeOrdinal = if (theme == Theme.Default) -1 else theme.ordinal
@@ -160,14 +123,11 @@ fun ThemeScreen(
         }
 
         if (showCustomEditorSheet) {
-            ModalBottomSheet(
+            MagiskBottomSheet(
                 onDismissRequest = {
                     customDraftColors = customColors
                     showCustomEditorSheet = false
-                },
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                dragHandle = { BottomSheetDefaults.DragHandle() }
+                }
             ) {
                 Column(
                     modifier = Modifier
@@ -175,6 +135,7 @@ fun ThemeScreen(
                         .navigationBarsPadding()
                         .imePadding()
                         .verticalScroll(rememberScrollState())
+                        .padding(bottom = 16.dp)
                 ) {
                     CustomThemeEditor(
                         colors = customDraftColors,
@@ -185,8 +146,8 @@ fun ThemeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
                             onClick = {
@@ -195,8 +156,8 @@ fun ThemeScreen(
                             },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(52.dp),
-                            shape = RoundedCornerShape(16.dp)
+                                .height(MagiskUiDefaults.ActionHeight),
+                            shape = MagiskUiDefaults.PillShape
                         ) {
                             Text(
                                 stringResource(id = android.R.string.cancel),
@@ -214,8 +175,8 @@ fun ThemeScreen(
                             },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(52.dp),
-                            shape = RoundedCornerShape(16.dp)
+                                .height(MagiskUiDefaults.ActionHeight),
+                            shape = MagiskUiDefaults.PillShape
                         ) {
                             Text(
                                 stringResource(id = CoreR.string.apply),
@@ -223,7 +184,6 @@ fun ThemeScreen(
                             )
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
                 }
             }
         }
@@ -231,7 +191,38 @@ fun ThemeScreen(
 }
 
 @Composable
-private fun DarkModeSection(
+private fun ThemeExpressiveHeader() {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MagiskUiDefaults.HeroShape,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(id = CoreR.string.theme_personalize_experience),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Palette, null, tint = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DarkModeExpressiveSection(
     currentDarkMode: Int,
     onDarkModeSelected: (Int) -> Unit
 ) {
@@ -267,186 +258,85 @@ private fun DarkModeSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp),
+            .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = stringResource(id = CoreR.string.settings_dark_mode_title).uppercase(),
+            text = stringResource(id = CoreR.string.theme_mode).uppercase(),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.2.sp,
             color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(horizontal = 8.dp)
         )
-        ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .clickable { showModeMenu = true },
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        Surface(
+            onClick = { showModeMenu = true },
+            shape = MagiskUiDefaults.ExtraLargeShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f),
-                    modifier = Modifier.size(34.dp)
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    modifier = Modifier.size(MagiskUiDefaults.IconContainerSize)
                 ) {
                     Icon(
                         imageVector = selected.icon,
                         contentDescription = null,
-                        modifier = Modifier.padding(7.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        modifier = Modifier.padding(12.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = selected.label,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Black
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
                     )
                     Text(
                         text = selected.subtitle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                ) {
-                    Text(
-                        text = stringResource(id = CoreR.string.theme_mode).uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Spacer(Modifier.width(6.dp))
                 Icon(
                     imageVector = Icons.Rounded.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.outline
                 )
             }
         }
 
         if (showModeMenu) {
-            AlertDialog(
+            MagiskDialog(
                 onDismissRequest = { showModeMenu = false },
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = selected.icon,
-                                contentDescription = null,
-                                modifier = Modifier.padding(6.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            stringResource(id = CoreR.string.settings_dark_mode_title),
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                },
+                title = stringResource(id = CoreR.string.settings_dark_mode_title),
+                icon = Icons.Rounded.DarkMode,
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         options.forEach { option ->
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                color = if (option.mode == currentDarkMode) {
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
-                                },
+                            val isSelected = option.mode == currentDarkMode
+                            MagiskDialogOption(
+                                title = option.label,
+                                subtitle = option.subtitle,
+                                selected = isSelected,
+                                showRadio = true,
                                 onClick = {
                                     showModeMenu = false
                                     onDarkModeSelected(option.mode)
                                 }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(
-                                        horizontal = 12.dp,
-                                        vertical = 10.dp
-                                    ),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = if (option.mode == currentDarkMode) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.surfaceContainerHighest
-                                        },
-                                        modifier = Modifier.size(30.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = option.icon,
-                                            contentDescription = null,
-                                            modifier = Modifier.padding(6.dp),
-                                            tint = if (option.mode == currentDarkMode) {
-                                                MaterialTheme.colorScheme.onPrimary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            }
-                                        )
-                                    }
-                                    Spacer(Modifier.width(10.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = option.label,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = if (option.mode == currentDarkMode) {
-                                                FontWeight.Black
-                                            } else {
-                                                FontWeight.Medium
-                                            }
-                                        )
-                                        Text(
-                                            text = option.subtitle,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    if (option.mode == currentDarkMode) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(22.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Check,
-                                                contentDescription = null,
-                                                modifier = Modifier.padding(4.dp),
-                                                tint = MaterialTheme.colorScheme.onPrimary
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                            )
                         }
                     }
                 },
-                confirmButton = {},
-                shape = RoundedCornerShape(24.dp),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                confirmButton = {}
             )
         }
     }
@@ -460,69 +350,7 @@ private data class DarkModeMenuOption(
 )
 
 @Composable
-private fun ThemeHeader() {
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    Icons.Rounded.Palette, null,
-                    modifier = Modifier.padding(6.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Spacer(Modifier.width(16.dp))
-            Text(
-                text = stringResource(id = CoreR.string.theme_appearance).uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.2.sp,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Rounded.Brush, null,
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(20.dp))
-                Column {
-                    Text(
-                        stringResource(id = CoreR.string.theme_custom_themes),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black
-                    )
-                    Text(
-                        stringResource(id = CoreR.string.theme_personalize_experience),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemeCard(
+private fun ThemeOrganicCard(
     theme: Theme,
     isSelected: Boolean,
     customColors: CustomThemeColors? = null,
@@ -530,16 +358,12 @@ private fun ThemeCard(
 ) {
     val defaultUsesStaticFallback = theme == Theme.Default && !Theme.supportsMonet
     val previewGradient = when (theme) {
-        Theme.Piplup -> listOf(Color(0xFF0061A4), Color(0xFF7AC8FF))
-        Theme.PiplupAmoled -> listOf(Color(0xFF050505), Color(0xFF0B6AAE))
-        Theme.Rayquaza -> listOf(Color(0xFF006D3B), Color(0xFF38B46C))
-        Theme.Zapdos -> listOf(Color(0xFF7A6500), Color(0xFFFFD447))
-        Theme.Charmeleon -> listOf(Color(0xFFBF0000), Color(0xFFFF8A5A))
-        Theme.Mew -> listOf(Color(0xFF924271), Color(0xFFD07AB4))
-        Theme.Salamence -> listOf(Color(0xFF006782), Color(0xFF4CA8C7))
-        Theme.Fraxure -> listOf(Color(0xFF3D5467), Color(0xFF93A9BD))
+        Theme.Ruby -> listOf(Color(0xFFE91E63), Color(0xFFFF80AB))
+        Theme.MemCho -> listOf(Color(0xFFFFC107), Color(0xFFFFD54F))
+        Theme.Aqua -> listOf(Color(0xFF03A9F4), Color(0xFF81D4FA))
+        Theme.SungJinWoo -> listOf(Color(0xFF5E35B1), Color(0xFFB39DDB))
         Theme.Default -> if (defaultUsesStaticFallback) {
-            listOf(Color(0xFF0061A4), Color(0xFF7AC8FF))
+            listOf(Color(0xFFE91E63), Color(0xFFFF4081))
         } else {
             listOf(
                 Color(0xFFE85CF0),
@@ -550,42 +374,75 @@ private fun ThemeCard(
                 Color(0xFFB6EF64)
             )
         }
-
         Theme.Custom -> listOf(
             Color(customColors?.lightPrimary ?: Config.themeCustomLightPrimary),
             Color(customColors?.darkPrimary ?: Config.themeCustomDarkPrimary)
         )
     }
     val accentColor = previewGradient.first()
-    val watermarkAlpha = if (theme == Theme.Default) 0.34f else 0.24f
-    val iconContainerColor = when (theme) {
-        Theme.Piplup -> Color(0xFFD1E4FF)
-        Theme.PiplupAmoled -> Color(0xFF0D2B47)
-        Theme.Rayquaza -> Color(0xFF96F7B4)
-        Theme.Zapdos -> Color(0xFFFFE264)
-        Theme.Charmeleon -> Color(0xFFFFDAD4)
-        Theme.Mew -> Color(0xFFFFD8E9)
-        Theme.Salamence -> Color(0xFFBBE9FF)
-        Theme.Fraxure -> Color(0xFFD8E7F3)
-        Theme.Default -> if (defaultUsesStaticFallback) Color(0xFFD1E4FF) else Color(0xFFD9E2EA)
-        Theme.Custom -> Color(customColors?.lightSecondary ?: Config.themeCustomLightSecondary)
+    val watermarkAlpha = when (theme) {
+        Theme.Default,
+        Theme.Custom -> 0.34f
+        else -> 0.92f
     }
-    val iconTint = if (iconContainerColor.luminance() > 0.45f) Color(0xFF111827) else Color.White
-    val containerColor = if (isSelected) {
-        MaterialTheme.colorScheme.surfaceContainerHighest
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerHigh
+    val cardScale by MagiskMotion.animateSelectionScale(
+        selected = isSelected,
+        selectedScale = 1.035f,
+        label = "themeCardScale"
+    )
+    val selectionBorderWidth by MagiskMotion.animateSelectionBorderWidth(
+        selected = isSelected,
+        selectedWidth = 2.dp,
+        label = "themeCardBorder"
+    )
+    val containerColor by MagiskMotion.animateColor(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        animationSpec = MagiskMotion.quickColorSpec(),
+        label = "themeCardContainer"
+    )
+
+    val shape = remember(theme) {
+        val index = theme.ordinal
+        when (index % 3) {
+            0 -> RoundedCornerShape(topStart = 32.dp, bottomEnd = 32.dp, topEnd = 12.dp, bottomStart = 12.dp)
+            1 -> RoundedCornerShape(topStart = 12.dp, bottomEnd = 12.dp, topEnd = 32.dp, bottomStart = 32.dp)
+            else -> RoundedCornerShape(24.dp)
+        }
     }
 
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .height(180.dp)
+            .scale(cardScale)
+            .then(
+                if (selectionBorderWidth > 0.dp) {
+                    Modifier.border(
+                        width = selectionBorderWidth,
+                        color = accentColor.copy(alpha = 0.78f),
+                        shape = shape
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .clip(shape)
             .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = if (isSelected) 8.dp else 2.dp)
+        shape = shape,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = containerColor
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = if (isSelected) {
+                MagiskUiDefaults.ExpandedCardElevation
+            } else {
+                MagiskUiDefaults.CardElevation
+            }
+        )
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -596,78 +453,62 @@ private fun ThemeCard(
                         .background(Brush.verticalGradient(previewGradient)),
                     contentAlignment = Alignment.Center
                 ) {
-                    ThemeWatermark(
+                    AnimeThemeWatermark(
                         theme = theme,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .padding(16.dp)
                             .alpha(watermarkAlpha)
                     )
-                    Surface(
-                        color = iconContainerColor,
-                        shape = RoundedCornerShape(10.dp),
+
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 6.dp, bottom = 8.dp)
-                            .size(24.dp)
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_magisk),
-                            contentDescription = null,
-                            modifier = Modifier.padding(5.dp),
-                            tint = iconTint
-                        )
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = isSelected,
+                            enter = MagiskMotion.selectionIndicatorEnter(),
+                            exit = MagiskMotion.selectionIndicatorExit()
+                        ) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                shape = CircleShape,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Rounded.Check,
+                                        null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = accentColor
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                )
-
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Text(
                         text = if (defaultUsesStaticFallback) "Default (Magisk)" else theme.themeName,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Black,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        overflow = TextOverflow.Ellipsis
                     )
                     if (defaultUsesStaticFallback) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                        ) {
-                            Text(
-                                text = "STATIC",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Surface(
-                        shape = CircleShape,
-                        color = accentColor,
-                        modifier = Modifier.size(10.dp)
-                    ) {}
-                    Spacer(Modifier.width(8.dp))
-                    if (isSelected) {
-                        Icon(
-                            Icons.Rounded.CheckCircle, null,
-                            modifier = Modifier.size(20.dp),
-                            tint = accentColor
+                        Text(
+                            text = "STATIC",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.alpha(0.7f)
                         )
                     }
                 }
@@ -684,40 +525,31 @@ private fun CustomThemeEditor(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = stringResource(id = CoreR.string.theme_custom_palette).uppercase(),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.1.sp,
-            color = MaterialTheme.colorScheme.outline,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = stringResource(id = CoreR.string.theme_custom_palette_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = stringResource(id = CoreR.string.theme_custom_palette).uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.1.sp,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = stringResource(id = CoreR.string.theme_custom_palette_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        CustomColorSlot.entries.forEach { slot ->
+            key(slot) {
+                CustomColorRow(
+                    label = stringResource(id = slot.labelRes),
+                    colorInt = colors.value(slot),
+                    onColorChange = { onColorChanged(slot, it) }
                 )
-                CustomColorSlot.entries.forEach { slot ->
-                    key(slot) {
-                        CustomColorRow(
-                            label = stringResource(id = slot.labelRes),
-                            colorInt = colors.value(slot),
-                            onColorChange = { onColorChanged(slot, it) }
-                        )
-                    }
-                }
             }
         }
     }
@@ -732,43 +564,40 @@ private fun CustomColorRow(
     var showEditor by remember { mutableStateOf(false) }
     Surface(
         onClick = { showEditor = true },
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 shape = CircleShape,
                 color = Color(colorInt),
-                modifier = Modifier.size(18.dp)
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                modifier = Modifier.size(32.dp)
             ) {}
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold
                 )
                 Text(
                     colorInt.toColorHex(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = FontFamily.Monospace
                 )
             }
-            TextButton(
-                onClick = { showEditor = true },
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = stringResource(id = CoreR.string.edit).uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            Icon(
+                Icons.Rounded.Brush,
+                null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
     }
     if (showEditor) {
@@ -791,50 +620,41 @@ private fun ColorHexDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
-    var alpha by remember(initialColor) {
-        mutableIntStateOf(
-            android.graphics.Color.alpha(
-                initialColor
-            )
-        )
-    }
+    var alpha by remember(initialColor) { mutableIntStateOf(android.graphics.Color.alpha(initialColor)) }
     var red by remember(initialColor) { mutableIntStateOf(android.graphics.Color.red(initialColor)) }
-    var green by remember(initialColor) {
-        mutableIntStateOf(
-            android.graphics.Color.green(
-                initialColor
-            )
-        )
-    }
+    var green by remember(initialColor) { mutableIntStateOf(android.graphics.Color.green(initialColor)) }
     var blue by remember(initialColor) { mutableIntStateOf(android.graphics.Color.blue(initialColor)) }
     val currentColorInt = remember(alpha, red, green, blue) {
         android.graphics.Color.argb(alpha, red, green, blue)
     }
 
-    AlertDialog(
+    MagiskDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Black) },
+        title = title,
+        icon = Icons.Rounded.Brush,
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Surface(
                         shape = CircleShape,
                         color = Color(currentColorInt),
-                        modifier = Modifier.size(24.dp)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                        modifier = Modifier.size(40.dp)
                     ) {}
                     Text(
                         text = currentColorInt.toColorHex(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
                     )
                 }
                 ColorChannelSlider(
                     label = stringResource(id = CoreR.string.color_channel_alpha),
                     value = alpha,
-                    activeColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    activeColor = MaterialTheme.colorScheme.primary,
                     onValueChange = { alpha = it }
                 )
                 ColorChannelSlider(
@@ -855,15 +675,14 @@ private fun ColorHexDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = { onConfirm(currentColorInt) }
-            ) {
-                Text(stringResource(id = CoreR.string.apply), fontWeight = FontWeight.Bold)
-            }
+            MagiskDialogConfirmButton(
+                onClick = { onConfirm(currentColorInt) },
+                text = stringResource(id = CoreR.string.apply)
+            )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(id = android.R.string.cancel)) } },
-        shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        dismissButton = {
+            MagiskDialogDismissButton(onClick = onDismiss)
+        }
     )
 }
 
@@ -887,8 +706,9 @@ private fun ColorChannelSlider(
             )
             Text(
                 text = value.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = FontFamily.Monospace
             )
         }
         Slider(
@@ -898,13 +718,14 @@ private fun ColorChannelSlider(
             steps = 254,
             colors = SliderDefaults.colors(
                 thumbColor = activeColor,
-                activeTrackColor = activeColor
+                activeTrackColor = activeColor,
+                inactiveTrackColor = activeColor.copy(alpha = 0.2f)
             )
         )
     }
 }
 
-private enum class CustomColorSlot(@StringRes val labelRes: Int) {
+private enum class CustomColorSlot(@param:StringRes val labelRes: Int) {
     LightPrimary(CoreR.string.theme_color_light_primary),
     DarkPrimary(CoreR.string.theme_color_dark_primary),
     LightSecondary(CoreR.string.theme_color_light_secondary),
@@ -987,35 +808,49 @@ private data class CustomThemeColors(
 private fun Int.toColorHex(): String = String.format("#%08X", this)
 
 @Composable
-private fun ThemeWatermark(theme: Theme, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val watermarkRes = themeWatermarkRes(theme) ?: return
-    AsyncImage(
-        model = ImageRequest.Builder(context)
-            .data(androidResourceUri(context.packageName, watermarkRes))
-            .decoderFactory(SvgDecoder.Factory())
-            .crossfade(false)
-            .build(),
-        contentDescription = null,
-        modifier = modifier,
-        contentScale = ContentScale.Fit
-    )
-}
+private fun AnimeThemeWatermark(theme: Theme, modifier: Modifier = Modifier) {
+    val characterRes = when (theme) {
+        Theme.Ruby -> CoreR.drawable.theme_ruby
+        Theme.MemCho -> CoreR.drawable.theme_memcho
+        Theme.Aqua -> CoreR.drawable.theme_aqua
+        Theme.SungJinWoo -> CoreR.drawable.theme_sung_jinwoo
+        Theme.Default,
+        Theme.Custom -> null
+    }
 
-@RawRes
-private fun themeWatermarkRes(theme: Theme): Int? = when (theme) {
-    Theme.Piplup -> CoreR.raw.piplup
-    Theme.PiplupAmoled -> CoreR.raw.piplup
-    Theme.Rayquaza -> CoreR.raw.rayquaza
-    Theme.Zapdos -> CoreR.raw.zapdos
-    Theme.Charmeleon -> CoreR.raw.charmeleon
-    Theme.Mew -> CoreR.raw.mew
-    Theme.Salamence -> CoreR.raw.salamence
-    Theme.Fraxure -> CoreR.raw.fraxure
-    Theme.Default -> if (Theme.supportsMonet) CoreR.raw.dynamic_default else CoreR.raw.piplup
-    Theme.Custom -> CoreR.raw.custom_pokeball
-}
+    if (characterRes != null) {
+        Image(
+            painter = painterResource(id = characterRes),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = modifier.padding(4.dp)
+        )
+        return
+    }
 
-private fun androidResourceUri(packageName: String, @RawRes resId: Int): String {
-    return "android.resource://$packageName/$resId"
+    val icon = when (theme) {
+        Theme.Default -> Icons.Rounded.AutoAwesome
+        Theme.Custom -> Icons.Rounded.Brush
+        else -> Icons.Rounded.AutoAwesome
+    }
+    val accent = Color.White.copy(alpha = 0.76f)
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(18.dp),
+            tint = accent
+        )
+        Icon(
+            imageVector = Icons.Rounded.AutoAwesome,
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(42.dp),
+            tint = Color.White.copy(alpha = 0.58f)
+        )
+    }
 }
