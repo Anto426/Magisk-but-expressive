@@ -23,16 +23,23 @@ Magisk is an open-source suite for Android customization with systemless root, m
 
 ## <img src="./asset/icon2.gif" width="48px" /> Highlights
 
-- **MagiskSU**: root access management for apps.
-- **Magisk Modules**: systemless modifications on read-only partitions.
-- **MagiskBoot**: advanced unpack/repack support for Android boot images.
-- **Zygisk**: code injection in app processes via Zygote.
-
 <p align="center">
   <img src="./asset/divider.gif" width="440" height="40" />
 </p>
 
 ## Downloads
+
+## <img src="./asset/icon2.gif" width="48px" /> Screenshots
+
+<p align="center">
+  <img src="./asset/images/Screenshot_20260425-020051_Magisk.png" alt="Screenshot 1" width="240" />
+  <img src="./asset/images/Screenshot_20260425-024253_Magisk.png" alt="Screenshot 2" width="240" />
+  <img src="./asset/images/Screenshot_20260425-024255_Magisk.png" alt="Screenshot 3" width="240" />
+  <img src="./asset/images/Screenshot_20260425-024257_Magisk.png" alt="Screenshot 4" width="240" />
+  <img src="./asset/images/Screenshot_20260425-024302_Magisk.png" alt="Screenshot 5" width="240" />
+  <img src="./asset/images/Screenshot_20260425-024317_Magisk.png" alt="Screenshot 6" width="240" />
+  <img src="./asset/images/Screenshot_20260425-024420_Magisk.png" alt="Screenshot 7" width="240" />
+</p>
 
 [GitHub Releases](https://github.com/anto426/Magisk/releases).
 
