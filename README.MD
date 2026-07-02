@@ -15,7 +15,6 @@ magisk@android:~$ echo "repo"
 https://github.com/Anto426/Magisk
 ```
 
-
 Magisk is an open-source suite for Android customization with systemless root, module support, boot image tooling, and process-level runtime extensions.
 
 <p align="center">
@@ -49,13 +48,16 @@ For installation steps, follow the official Magisk installation guide linked bel
 ## <img src="./asset/icon2.gif" width="48px" /> Screenshots
 
 <p align="center">
-  <img src="./asset/images/Screenshot_20260425-020051_Magisk.png" alt="Screenshot 1" width="240" />
-  <img src="./asset/images/Screenshot_20260425-024253_Magisk.png" alt="Screenshot 2" width="240" />
-  <img src="./asset/images/Screenshot_20260425-024255_Magisk.png" alt="Screenshot 3" width="240" />
-  <img src="./asset/images/Screenshot_20260425-024257_Magisk.png" alt="Screenshot 4" width="240" />
-  <img src="./asset/images/Screenshot_20260425-024302_Magisk.png" alt="Screenshot 5" width="240" />
-  <img src="./asset/images/Screenshot_20260425-024317_Magisk.png" alt="Screenshot 6" width="240" />
-  <img src="./asset/images/Screenshot_20260425-024420_Magisk.png" alt="Screenshot 7" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180512_Magisk.png" alt="Screenshot 1" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180515_Magisk.png" alt="Screenshot 2" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180518_Magisk.png" alt="Screenshot 3" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180520_Magisk.png" alt="Screenshot 4" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180535_Magisk.png" alt="Screenshot 5" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180542_Magisk.png" alt="Screenshot 6" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180554_Magisk.png" alt="Screenshot 7" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180719_Magisk.png" alt="Screenshot 8" width="240" />
+  <img src="./asset/images/Screenshot_20260702-180737_Magisk.png" alt="Screenshot 9" width="240" />
+
 </p>
 
 <p align="center">
