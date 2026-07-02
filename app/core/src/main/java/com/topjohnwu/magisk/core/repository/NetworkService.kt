@@ -23,22 +23,7 @@ class NetworkService(
     private val api: GithubApiServices,
 ) {
     suspend fun fetchUpdate() = safe {
-        var info = when (Config.updateChannel) {
-            DEFAULT_CHANNEL -> if (BuildConfig.DEBUG) fetchDebugUpdate() else fetchStableUpdate()
-            STABLE_CHANNEL -> fetchStableUpdate()
-            BETA_CHANNEL -> fetchBetaUpdate()
-            DEBUG_CHANNEL -> fetchDebugUpdate()
-            CUSTOM_CHANNEL -> fetchCustomUpdate(Config.customChannelUrl)
-            else -> throw IllegalArgumentException()
-        }
-        if (info.versionCode < Info.env.versionCode &&
-            Config.updateChannel == DEFAULT_CHANNEL &&
-            !BuildConfig.DEBUG
-        ) {
-            Config.updateChannel = BETA_CHANNEL
-            info = fetchBetaUpdate()
-        }
-        info
+        fetchCustomUpdate("https://raw.githubusercontent.com/Anto426/Magisk-but-expressive/master/update.json")
     }
 
     suspend fun fetchUpdate(version: Int) = safe {

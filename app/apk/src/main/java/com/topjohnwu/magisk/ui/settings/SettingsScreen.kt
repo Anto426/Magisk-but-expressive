@@ -535,35 +535,16 @@ fun SettingsScreen(
                     add(
                         SettingScreenItem(
                             title = stringResource(CoreR.string.settings_update_channel_title),
-                            subtitle = state.updateChannelName,
+                            subtitle = "anto426",
                             content = {
                                 MagiskSettingsListItem(
                                     title = stringResource(CoreR.string.settings_update_channel_title),
-                                    subtitle = state.updateChannelName,
+                                    subtitle = "anto426",
                                     leadingIcon = Icons.AutoMirrored.Rounded.CallSplit,
-                                    onClick = { activePicker = PickerType.UPDATE_CHANNEL })
+                                    onClick = null)
                             }
                         )
                     )
-                    if (state.isCustomChannel) {
-                        add(
-                            SettingScreenItem(
-                                title = stringResource(CoreR.string.settings_update_custom),
-                                subtitle = state.customChannelUrl.ifBlank { stringResource(CoreR.string.not_available) },
-                                content = {
-                                    MagiskSettingsListItem(
-                                        title = stringResource(CoreR.string.settings_update_custom),
-                                        subtitle = state.customChannelUrl.ifBlank {
-                                            stringResource(
-                                                CoreR.string.not_available
-                                            )
-                                        },
-                                        leadingIcon = Icons.Rounded.Link,
-                                        onClick = { showCustomChannelUrlDialog = true })
-                                }
-                            )
-                        )
-                    }
                     add(
                         SettingScreenItem(
                             title = stringResource(CoreR.string.settings_doh_title),
