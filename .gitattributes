@@ -21,3 +21,4 @@ tools/elf-cleaner/** -binary
 *.jpg binary
 *.gif binary
 *.ttf binary
+asset/binaries/releases/** binary
