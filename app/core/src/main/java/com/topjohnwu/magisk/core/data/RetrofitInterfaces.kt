@@ -1,5 +1,6 @@
 package com.topjohnwu.magisk.core.data
 
+import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.model.ModuleJson
 import com.topjohnwu.magisk.core.model.Release
 import com.topjohnwu.magisk.core.model.UpdateJson
@@ -33,8 +34,8 @@ interface GithubApiServices {
     @GET("/repos/{owner}/{repo}/releases")
     @Headers("Accept: application/vnd.github+json")
     suspend fun fetchReleases(
-        @Path("owner") owner: String = "topjohnwu",
-        @Path("repo") repo: String = "Magisk",
+        @Path("owner") owner: String = Const.Url.UPDATE_REPO_OWNER,
+        @Path("repo") repo: String = Const.Url.UPDATE_REPO_NAME,
         @Query("per_page") per: Int = 10,
         @Query("page") page: Int = 1,
     ): Response<MutableList<Release>>
@@ -42,7 +43,7 @@ interface GithubApiServices {
     @GET("/repos/{owner}/{repo}/releases/latest")
     @Headers("Accept: application/vnd.github+json")
     suspend fun fetchLatestRelease(
-        @Path("owner") owner: String = "topjohnwu",
-        @Path("repo") repo: String = "Magisk",
+        @Path("owner") owner: String = Const.Url.UPDATE_REPO_OWNER,
+        @Path("repo") repo: String = Const.Url.UPDATE_REPO_NAME,
     ): Release
 }
