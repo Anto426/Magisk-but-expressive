@@ -35,8 +35,7 @@ fun MagiskSettingsGroup(
     if (items.isEmpty()) return
 
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+        modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -99,9 +98,7 @@ fun MagiskSettingsListItem(
             .fillMaxWidth()
             .heightIn(min = if (subtitle.isNullOrBlank()) 56.dp else 72.dp)
             .clickable(
-                enabled = onClick != null,
-                role = Role.Button,
-                onClick = { onClick?.invoke() })
+                enabled = onClick != null, role = Role.Button, onClick = { onClick?.invoke() })
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -156,9 +153,7 @@ fun MagiskSettingsSwitchItem(
         onClick = { onCheckedChange(!checked) },
         trailingContent = {
             Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
+                checked = checked, onCheckedChange = onCheckedChange
             )
-        }
-    )
+        })
 }

@@ -50,10 +50,10 @@ data class SettingsUiState(
     val useLocaleManager: Boolean = LocaleSetting.useLocaleManager,
     val languageSystemName: String = LocaleSetting.instance.appLocale?.let { it.getDisplayName(it) }
         ?: AppContext.getString(CoreR.string.system_default),
-    val languageIndex: Int = LocaleSetting.available.tags.indexOf(Config.locale)
+    val languageIndex: Int = LocaleSetting.available.tags.indexOf(currentLanguageTag())
         .let { if (it < 0) 0 else it },
     val languageName: String = LocaleSetting.available.names.getOrElse(
-        LocaleSetting.available.tags.indexOf(Config.locale)
+        LocaleSetting.available.tags.indexOf(currentLanguageTag())
             .let { if (it < 0) 0 else it }) { AppContext.getString(CoreR.string.system_default) },
     val canAddShortcut: Boolean = isRunningAsStub && ShortcutManagerCompat.isRequestPinShortcutSupported(
         AppContext
@@ -112,7 +112,9 @@ data class SettingsUiState(
     val suRestrict: Boolean = Config.suRestrict,
     val showRestrict: Boolean = Const.Version.atLeast_30_1(),
     val languageSearchQuery: String = "",
-    val languageSearchVisible: Boolean = false
+    val languageSearchVisible: Boolean = false,
+    val settingsSearchQuery: String = "",
+    val settingsSearchVisible: Boolean = false
 )
 
 class SettingsViewModel : ViewModel() {
@@ -153,7 +155,6 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setLanguageByIndex(index: Int) {
-        if (_state.value.useLocaleManager) return
         val tags = LocaleSetting.available.tags
         if (tags.isEmpty()) return
         Config.locale = tags[index.coerceIn(0, tags.lastIndex)]
@@ -309,6 +310,14 @@ class SettingsViewModel : ViewModel() {
         _state.update { it.copy(languageSearchQuery = query) }
     }
 
+    fun toggleSettingsSearch() {
+        _state.update { it.copy(settingsSearchVisible = !it.settingsSearchVisible, settingsSearchQuery = "") }
+    }
+
+    fun setSettingsSearchQuery(query: String) {
+        _state.update { it.copy(settingsSearchQuery = query) }
+    }
+
     fun setMessageRes(res: Int) {
         _messages.tryEmit(uiText(res))
     }
@@ -317,7 +326,9 @@ class SettingsViewModel : ViewModel() {
         _state.update {
             SettingsUiState(
                 languageSearchQuery = it.languageSearchQuery,
-                languageSearchVisible = it.languageSearchVisible
+                languageSearchVisible = it.languageSearchVisible,
+                settingsSearchQuery = it.settingsSearchQuery,
+                settingsSearchVisible = it.settingsSearchVisible
             )
         }
     }
@@ -332,3 +343,7 @@ class SettingsViewModel : ViewModel() {
 }
 
 val SU_TIMEOUT_VALUES = listOf(10, 15, 20, 30, 45, 60)
+
+private fun currentLanguageTag(): String {
+    return LocaleSetting.instance.appLocale?.toLanguageTag() ?: Config.locale
+}

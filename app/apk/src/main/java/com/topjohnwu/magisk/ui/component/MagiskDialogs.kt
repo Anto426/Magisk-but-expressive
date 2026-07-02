@@ -1,45 +1,30 @@
 package com.topjohnwu.magisk.ui.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -77,7 +62,7 @@ fun MagiskDialog(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = MagiskComponentDefaults.PrimaryText
             )
         },
@@ -92,6 +77,7 @@ fun MagiskDialog(
                     )
                 }
             }
+
             else -> null
         },
         confirmButton = {
@@ -213,116 +199,60 @@ fun MagiskDropdownMenuItem(
                     modifier = Modifier.size(20.dp)
                 )
             }
-        } ?: if (selected) {
-            {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = null,
-                    tint = contentColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        } else null,
+        },
         trailingIcon = trailingContent
     )
 }
 
+/**
+ * Componente unico per pannelli bottom-sheet con lista opzioni.
+ *
+ * Usato come picker (con radio button) quando [selectedIndex] >= 0,
+ * o come menu azioni (senza radio) quando [selectedIndex] < 0.
+ */
 @Composable
-fun MagiskItemPicker(
+fun MagiskOptionsSheet(
     title: String,
-    options: List<String>,
-    selectedIndex: Int,
-    onSelected: (Int) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    selectedIndex: Int = -1,
+    items: List<Triple<ImageVector?, String, () -> Unit>>
 ) {
-    AlertDialog(
-        modifier = modifier,
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MagiskComponentDefaults.PanelContainer,
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MagiskComponentDefaults.PrimaryText
-            )
-        },
-        text = {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MagiskComponentDefaults.CardContainer,
-                border = MagiskComponentDefaults.CardBorder
-            ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 400.dp)
-                ) {
-                    items(options.size) { index ->
-                        val isSelected = index == selectedIndex
-                        val contentColor = if (isSelected) {
-                            MagiskComponentDefaults.PrimaryIconTint
-                        } else {
-                            MagiskComponentDefaults.PrimaryText
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = isSelected,
-                                    onClick = {
-                                        onSelected(index)
-                                        onDismiss()
-                                    }
-                                )
-                                .padding(vertical = 12.dp, horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = {
-                                    onSelected(index)
-                                    onDismiss()
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = MagiskComponentDefaults.PrimaryIconTint,
-                                    unselectedColor = MagiskComponentDefaults.SecondaryIconTint
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = options[index],
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = contentColor
-                            )
-                        }
-                        if (index < options.size - 1) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MagiskComponentDefaults.DividerColor
-                            )
-                        }
+    MagiskBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
+        ) {
+            MagiskSettingsGroup(
+                title = title,
+                icon = icon,
+                items = items.mapIndexed { index, (itemIcon, label, action) ->
+                    {
+                        val isSelected = selectedIndex >= 0 && index == selectedIndex
+                        MagiskSettingsListItem(
+                            title = label,
+                            selected = isSelected,
+                            leadingIcon = itemIcon,
+                            trailingContent = if (selectedIndex >= 0) {
+                                {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { action(); onDismiss() },
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = MagiskComponentDefaults.PrimaryIconTint,
+                                            unselectedColor = MagiskComponentDefaults.SecondaryIconTint
+                                        )
+                                    )
+                                }
+                            } else null,
+                            onClick = { action(); if (selectedIndex < 0) onDismiss() }
+                        )
                     }
                 }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                colors = ButtonDefaults.textButtonColors(contentColor = MagiskComponentDefaults.PrimaryIconTint)
-            ) {
-                Text(
-                    text = stringResource(android.R.string.cancel),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            )
         }
-    )
+    }
 }

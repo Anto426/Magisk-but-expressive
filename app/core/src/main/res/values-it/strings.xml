@@ -90,6 +90,8 @@
     <string name="menuSaveLog">Salva registro eventi</string>
     <string name="menuClearLog">Svuota il registro eventi</string>
     <string name="logs_cleared">Registro eventi svuotato correttamente.</string>
+    <string name="log_save_summary">Esporta il file di log nella memoria</string>
+    <string name="log_clear_summary">Svuota la cronologia attuale</string>
     <string name="refresh_log">Aggiorna registro eventi</string>
     <string name="log_entries">Eventi</string>
     <string name="log_issues">Critici</string>
@@ -113,6 +115,8 @@
     <!-- MagiskHide -->
     <string name="show_system_app">Mostra app di sistema</string>
     <string name="show_os_app">Mostra app del sistema operativo</string>
+    <string name="denylist_show_system_summary">Includi le app preinstallate</string>
+    <string name="denylist_show_os_summary">Mostra i componenti core di Android</string>
     <string name="hide_filter_hint">Filtra per nome</string>
     <string name="hide_search">Cerca</string>
 
@@ -123,10 +127,26 @@
     <string name="reboot_bootloader">Riavvia in bootloader</string>
     <string name="reboot_download">Riavvia in modalità download</string>
     <string name="reboot_edl">Riavvia in modalità EDL</string>
+    <string name="reboot_system_summary">Riavvio completo del sistema</string>
+    <string name="reboot_userspace_summary">Riavvio veloce dei servizi Android</string>
+    <string name="reboot_recovery_summary">Avvia in modalita recovery</string>
+    <string name="reboot_bootloader_summary">Avvia in modalita Fastboot</string>
+    <string name="reboot_download_summary">Avvia in modalita Download sui dispositivi supportati</string>
+    <string name="reboot_edl_summary">Avvia in Emergency Download mode Qualcomm</string>
     <string name="module_version_author">%1$s di %2$s</string>
     <string name="module_state_remove">Rimuovi</string>
     <string name="module_state_restore">Ripristina</string>
     <string name="module_action_install_external">Installa dal dispositivo</string>
+    <string name="module_updates_title">Aggiornamenti moduli</string>
+    <string name="module_updates_available_count">Aggiornamenti disponibili: %1$d</string>
+    <string name="module_updates_checking">Controllo aggiornamenti moduli...</string>
+    <string name="module_updates_empty">Tutti i moduli sono aggiornati</string>
+    <string name="module_updates_install_all">Aggiorna tutto</string>
+    <string name="module_updates_install_one">Aggiorna</string>
+    <string name="module_updates_latest_version">Ultima: %1$s</string>
+    <string name="module_updates_confirm_all_title">Aggiornare tutti i moduli?</string>
+    <string name="module_updates_confirm_all">Installare gli aggiornamenti per %1$d moduli?</string>
+    <string name="module_update_failed">Fallito: %1$s</string>
     <string name="update_available">Aggiornamento disponibile</string>
     <string name="suspend_text_riru">Modulo sospeso perché %1$s è abilitato</string>
     <string name="suspend_text_zygisk">Modulo sospeso perché %1$s non è abilitato</string>
@@ -278,4 +298,5 @@
     <string name="theme_option_default_automatic">Predefinito (automatico)</string>
     <string name="theme_option_custom">Personalizzato</string>
     <string name="settings_search">Cerca impostazioni</string>
+    <string name="home_contributor">Contributore</string>
 </resources>

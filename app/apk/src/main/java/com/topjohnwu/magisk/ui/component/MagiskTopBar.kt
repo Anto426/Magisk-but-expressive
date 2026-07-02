@@ -1,17 +1,15 @@
 package com.topjohnwu.magisk.ui.component
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.lerp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -20,12 +18,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -34,6 +45,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import com.github.yohannestz.iconsax_compose.iconsax.Iconsax
 
 data class MagiskTopBarAction(
@@ -79,6 +92,7 @@ fun MagiskTopBar(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    subtitleContent: (@Composable () -> Unit)? = null,
     showNavigationIcon: Boolean = false,
     onNavigationClick: (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
@@ -107,7 +121,7 @@ fun MagiskTopBar(
                 fontWeight = FontWeight.SemiBold
             )
         },
-        subtitle = subtitle?.let {
+        subtitle = subtitleContent ?: subtitle?.let {
             {
                 Text(
                     text = it,
@@ -183,7 +197,7 @@ fun MagiskTopBarIconButton(
             targetState = icon,
             transitionSpec = {
                 (fadeIn() + scaleIn(initialScale = 0.82f)) togetherWith
-                    (fadeOut() + scaleOut(targetScale = 0.82f))
+                        (fadeOut() + scaleOut(targetScale = 0.82f))
             },
             label = "MagiskTopBarIconTransition"
         ) { imageVector ->

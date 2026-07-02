@@ -1,13 +1,14 @@
 package com.topjohnwu.magisk.ui.deny
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
@@ -18,8 +19,6 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -32,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
@@ -39,21 +39,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
-import com.topjohnwu.magisk.ui.component.MagiskEmptyState
-import com.topjohnwu.magisk.ui.component.MagiskExpandableListItem
+import com.topjohnwu.magisk.ui.component.AppIcon
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
+import com.topjohnwu.magisk.ui.component.MagiskEmptyState
+import com.topjohnwu.magisk.ui.component.MagiskExpandableListItem
 import com.topjohnwu.magisk.ui.component.MagiskInfoPill
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskListItem
 import com.topjohnwu.magisk.ui.component.MagiskLoadingState
 import com.topjohnwu.magisk.ui.component.MagiskSearchField
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
+import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.deny.DenyListAppUi
 import com.topjohnwu.magisk.viewmodel.deny.DenyListProcessUi
 import com.topjohnwu.magisk.viewmodel.deny.DenyListSortMethod
 import com.topjohnwu.magisk.viewmodel.deny.DenyListViewModel
-import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.core.R as CoreR
 
 @Composable
@@ -168,7 +169,7 @@ fun DenyListTopBarActions(
         ) {
             MagiskDropdownMenuItem(
                 text = stringResource(CoreR.string.show_system_app),
-                subtitle = "Includi le applicazioni preinstallate",
+                subtitle = stringResource(CoreR.string.denylist_show_system_summary),
                 selected = showSystem,
                 leadingIcon = Icons.Rounded.Android,
                 onClick = {
@@ -178,7 +179,7 @@ fun DenyListTopBarActions(
             )
             MagiskDropdownMenuItem(
                 text = stringResource(CoreR.string.show_os_app),
-                subtitle = "Mostra componenti core di Android",
+                subtitle = stringResource(CoreR.string.denylist_show_os_summary),
                 selected = showOs,
                 enabled = showSystem,
                 leadingIcon = Icons.Rounded.Security,
@@ -231,12 +232,22 @@ private fun DenyListAppItem(
     onToggleProcess: (DenyListProcessUi) -> Unit
 ) {
     val active = app.checkedCount > 0
+    val alpha by animateFloatAsState(
+        targetValue = if (active) 1f else 0.65f,
+        label = "HideCardAlpha"
+    )
     MagiskExpandableListItem(
         title = app.label,
         subtitle = app.packageName,
         expanded = app.expanded,
         onClick = onToggleExpanded,
-        leadingIcon = if (active) Icons.Rounded.Security else Icons.Rounded.Android,
+        modifier = Modifier.graphicsLayer(alpha = alpha),
+        leadingContent = {
+            AppIcon(
+                packageName = app.packageName,
+                modifier = Modifier.size(40.dp)
+            )
+        },
         headerTrailingContent = {
             DenyListAppTrailing(app = app, onToggleApp = onToggleApp)
         }

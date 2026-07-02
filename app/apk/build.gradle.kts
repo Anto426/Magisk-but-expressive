@@ -30,6 +30,7 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    implementation(libs.foundation.layout)
     implementation(libs.navigation.runtime.ktx)
     implementation(libs.runtime)
     implementation(libs.ui.text)

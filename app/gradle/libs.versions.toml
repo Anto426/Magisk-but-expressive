@@ -2,7 +2,7 @@
 kotlin = "2.4.0"
 android = "9.2.1"
 android-tools = "32.2.1"
-ksp = "2.3.6"
+ksp = "2.3.9"
 navigation = "2.9.8"
 libsu = "6.0.0"
 okhttp = "5.4.0"
@@ -10,16 +10,17 @@ retrofit = "3.0.0"
 room = "2.8.4"
 coil-compose = "2.7.0"
 lifecycle = "2.11.0"
-compose-ui = "1.11.3"
-compose-m3 = "1.5.0-alpha22"
+compose-ui = "1.11.4"
+compose-m3 = "1.5.0-alpha23"
 wire = "6.4.5"
 iconsax-compose = "1.0.1"
 material-kolor = "4.1.1"
 haze = "0.7.0"
-backdrop = "1.0.6"
+backdrop = "2.0.0"
 navigation-runtime-ktx = "2.9.8"
-runtime = "1.11.3"
-ui-text = "1.11.3"
+runtime = "1.11.4"
+ui-text = "1.11.4"
+foundation-layout = "1.11.3"
 
 [libraries]
 bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version = "1.84" }
@@ -47,7 +48,7 @@ jdk-libs = { module = "com.android.tools:desugar_jdk_libs_nio", version = "2.1.5
 test-runner = { module = "androidx.test:runner", version = "1.7.0" }
 test-rules = { module = "androidx.test:rules", version = "1.7.0" }
 test-junit = { module = "androidx.test.ext:junit", version = "1.3.0" }
-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version = "2.3.0" }
+test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version = "2.4.0" }
 
 # topjohnwu
 wire-runtime = { module = "com.squareup.wire:wire-runtime", version.ref = "wire" }
@@ -79,6 +80,7 @@ backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigation-runtime-ktx" }
 runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "ui-text" }
+foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundation-layout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android" }

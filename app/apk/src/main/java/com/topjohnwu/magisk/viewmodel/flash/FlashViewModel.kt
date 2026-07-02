@@ -1,7 +1,12 @@
 package com.topjohnwu.magisk.viewmodel.flash
 
+import android.Manifest
+import android.app.Notification.Builder as NotificationBuilder
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.annotation.StringRes
+import androidx.core.content.ContextCompat
 import androidx.core.net.toFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -20,7 +25,10 @@ import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.displayName
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.inputStream
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.outputStream
+import com.topjohnwu.magisk.core.utils.ProgressInputStream
+import com.topjohnwu.magisk.navigation.FlashPayloadStore
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
+import com.topjohnwu.magisk.view.Notifications
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,12 +44,14 @@ import timber.log.Timber
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.net.URL
 import com.topjohnwu.magisk.core.R as CoreR
 
 data class FlashUiState(
     val running: Boolean = false,
     val success: Boolean = false,
-    val showReboot: Boolean = MagiskRuntimeEngine.snapshot().isRooted
+    val showReboot: Boolean = MagiskRuntimeEngine.snapshot().isRooted,
+    val title: String = AppContext.getString(CoreR.string.flash_screen_title)
 )
 
 class FlashViewModel : ViewModel() {
@@ -66,7 +76,8 @@ class FlashViewModel : ViewModel() {
                 it.copy(
                     running = true,
                     success = false,
-                    showReboot = MagiskRuntimeEngine.snapshot().isRooted
+                    showReboot = MagiskRuntimeEngine.snapshot().isRooted,
+                    title = titleFor(action, uri)
                 )
             }
             if (MagiskRuntimeEngine.requiresRoot(action)) {
@@ -80,6 +91,9 @@ class FlashViewModel : ViewModel() {
             }
             val result = when (action) {
                 Const.Value.FLASH_ZIP -> if (uri == null) false else flashZipWithLogs(uri)
+                Const.Value.FLASH_MULTIPLE_ZIPS -> if (uri == null) false else {
+                    flashMultipleZipsWithLogs(uri.toString())
+                }
                 Const.Value.UNINSTALL -> {
                     _state.update { it.copy(showReboot = false) }
                     MagiskInstaller.Uninstall(terminal.console, terminal.logs).exec()
@@ -108,6 +122,41 @@ class FlashViewModel : ViewModel() {
         }
     }
 
+    private suspend fun flashMultipleZipsWithLogs(urisString: String): Boolean {
+        val rawUrls = FlashPayloadStore.takeUrls(urisString) ?: urisString
+            .lineSequence()
+            .flatMap { it.split(",") }
+            .filter { it.isNotBlank() }
+            .toList()
+        val uris = rawUrls.map { Uri.parse(it) }
+        var allSuccess = uris.isNotEmpty()
+        uris.forEachIndexed { index, uri ->
+            terminal.addLine("--- ${AppContext.getString(CoreR.string.download)}: ${index + 1} / ${uris.size} ---")
+            val success = flashZipWithLogs(uri)
+            if (!success) {
+                terminal.addLine(
+                    errorLine(CoreR.string.module_update_failed, uri.flashDisplayName())
+                )
+                allSuccess = false
+            }
+        }
+        return allSuccess
+    }
+
+    private fun titleFor(action: String, uri: Uri?): String {
+        return when (action) {
+            Const.Value.FLASH_ZIP,
+            Const.Value.PATCH_FILE -> uri?.flashDisplayName()?.takeIf { it.isNotBlank() }
+                ?: AppContext.getString(CoreR.string.flash_screen_title)
+
+            Const.Value.FLASH_MULTIPLE_ZIPS -> AppContext.getString(CoreR.string.module_updates_title)
+            Const.Value.FLASH_MAGISK -> AppContext.getString(CoreR.string.home_core_title)
+            Const.Value.FLASH_INACTIVE_SLOT -> AppContext.getString(CoreR.string.install_inactive_slot)
+            Const.Value.UNINSTALL -> AppContext.getString(CoreR.string.uninstall)
+            else -> AppContext.getString(CoreR.string.flash_screen_title)
+        }
+    }
+
     private suspend fun flashZipWithLogs(uri: Uri): Boolean {
         val installDir = File(AppContext.cacheDir, "flash")
         val prep: Pair<Int?, Triple<File, File, String>?> = withContext(Dispatchers.IO) {
@@ -120,9 +169,7 @@ class FlashViewModel : ViewModel() {
                     "http", "https" -> {
                         File(installDir, "install.zip").also {
                             try {
-                                java.net.URL(uri.toString()).openStream().use { input ->
-                                    input.writeTo(it)
-                                }
+                                downloadUrlToFile(uri, it, uri.flashDisplayName())
                             } catch (e: IOException) {
                                 return@withContext CoreR.string.flash_copy_to_cache_failed to null
                             }
@@ -148,7 +195,7 @@ class FlashViewModel : ViewModel() {
                 val binary = File(installDir, "update-binary")
                 AppContext.assets.open("module_installer.sh").use { it.writeTo(binary) }
 
-                val name = uri.displayName
+                val name = uri.flashDisplayName()
                 null to Triple(installDir, zipFile, name)
             } catch (e: Exception) {
                 Timber.e(e)
@@ -175,6 +222,84 @@ class FlashViewModel : ViewModel() {
         return success
     }
 
+    private suspend fun downloadUrlToFile(uri: Uri, file: File, title: String) {
+        val postNotification = canPostProgressNotifications()
+        val notificationId = if (postNotification) Notifications.nextId() else -1
+        val notification = if (postNotification) Notifications.startProgress(title) else null
+
+        fun post(editor: (NotificationBuilder) -> Unit = {}) {
+            val builder = notification ?: return
+            editor(builder)
+            runCatching {
+                Notifications.mgr.notify(notificationId, builder.build())
+            }
+        }
+
+        post()
+        try {
+            val connection = URL(uri.toString()).openConnection()
+            val max = connection.contentLengthLong
+            connection.getInputStream().use { raw ->
+                ProgressInputStream(raw) { downloaded ->
+                    post { builder ->
+                        updateDownloadProgress(builder, downloaded, max)
+                    }
+                }.use { input ->
+                    input.writeTo(file)
+                }
+            }
+            post { builder ->
+                builder
+                    .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                    .setContentText(AppContext.getString(CoreR.string.download_complete))
+                    .setProgress(100, 100, false)
+                    .setOngoing(false)
+                    .setAutoCancel(true)
+                Notifications.run { builder.applyAndroid16ProgressStyle(100) }
+            }
+        } catch (e: IOException) {
+            post { builder ->
+                builder
+                    .setSmallIcon(android.R.drawable.stat_notify_error)
+                    .setContentText(AppContext.getString(CoreR.string.download_file_error))
+                    .setProgress(0, 0, false)
+                    .setOngoing(false)
+                    .setAutoCancel(true)
+                Notifications.run { builder.clearAndroid16ProgressStyle() }
+            }
+            throw e
+        }
+    }
+
+    private fun updateDownloadProgress(
+        builder: NotificationBuilder,
+        downloaded: Long,
+        max: Long
+    ) {
+        val progress = downloaded.toFloat() / 1048576
+        if (max > 0) {
+            val total = max.toFloat() / 1048576
+            val percent = ((downloaded.toDouble() / max) * 100).toInt().coerceIn(0, 100)
+            builder
+                .setProgress(100, percent, false)
+                .setContentText("%.2f / %.2f MB".format(progress, total))
+            Notifications.run { builder.applyAndroid16ProgressStyle(percent) }
+        } else {
+            builder
+                .setProgress(0, 0, true)
+                .setContentText("%.2f MB / ??".format(progress))
+            Notifications.run { builder.applyAndroid16ProgressStyle(null) }
+        }
+    }
+
+    private fun canPostProgressNotifications(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                AppContext,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
     fun saveLog() {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
@@ -193,10 +318,20 @@ class FlashViewModel : ViewModel() {
     }
 
     fun rebootNow() {
-        _effects.tryEmit(UiEffect.Reboot)
+        if (_state.value.running) return
+        viewModelScope.launch {
+            val runtime = MagiskRuntimeEngine.snapshot()
+            if (!runtime.isRooted || !MagiskRuntimeEngine.hasRootShell()) {
+                _messages.emit(uiText(CoreR.string.root_required_operation))
+                return@launch
+            }
+            _effects.emit(UiEffect.Reboot())
+        }
     }
 
-    private fun errorLine(@StringRes res: Int): String = "! ${AppContext.getString(res)}"
+    private fun errorLine(@StringRes res: Int, vararg args: Any): String {
+        return "! ${AppContext.getString(res, *args)}"
+    }
 
     companion object {
         val Factory = object : ViewModelProvider.Factory {
@@ -208,3 +343,16 @@ class FlashViewModel : ViewModel() {
 }
 
 internal fun shellQuote(value: String): String = "'${value.replace("'", "'\\''")}'"
+
+private fun Uri.flashDisplayName(): String {
+    return when (scheme) {
+        "file", "content" -> runCatching { displayName }.getOrDefault(toString())
+        "http", "https" -> lastPathSegment
+            ?.substringAfterLast('/')
+            ?.takeIf { it.isNotBlank() }
+            ?: host
+            ?: toString()
+
+        else -> toString()
+    }
+}

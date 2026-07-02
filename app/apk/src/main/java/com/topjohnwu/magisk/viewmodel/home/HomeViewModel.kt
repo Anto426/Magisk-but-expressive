@@ -177,6 +177,17 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
         }
     }
 
+    fun requestReboot(reason: String = "") {
+        viewModelScope.launch {
+            val runtime = MagiskRuntimeEngine.snapshot()
+            if (!runtime.isRooted || !MagiskRuntimeEngine.hasRootShell()) {
+                _messages.emit(uiText(CoreR.string.root_required_operation))
+                return@launch
+            }
+            _effects.emit(UiEffect.Reboot(reason))
+        }
+    }
+
     fun openLink(link: String) {
         _effects.tryEmit(UiEffect.OpenUri(link.toUri()))
     }

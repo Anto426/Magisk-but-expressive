@@ -23,6 +23,10 @@ sealed interface AppRoute {
         override val id = "modules"
     }
 
+    data object ModuleUpdates : AppRoute {
+        override val id = "module_updates"
+    }
+
     data object Logs : AppRoute {
         override val id = "logs"
     }

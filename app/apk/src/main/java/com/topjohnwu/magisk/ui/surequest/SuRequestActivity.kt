@@ -3,6 +3,7 @@ package com.topjohnwu.magisk.ui.surequest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.MotionEvent
@@ -14,11 +15,10 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeProvider
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import android.content.res.Configuration
-import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,33 +27,45 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.UnfoldMore
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.topjohnwu.magisk.arch.UiEffect
@@ -66,26 +78,13 @@ import com.topjohnwu.magisk.core.ktx.toast
 import com.topjohnwu.magisk.core.su.SuCallbackHandler
 import com.topjohnwu.magisk.core.su.SuCallbackHandler.REQUEST
 import com.topjohnwu.magisk.core.wrap
-import com.topjohnwu.magisk.ui.component.*
+import com.topjohnwu.magisk.ui.component.AppIcon
+import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
+import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
+import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
+import com.topjohnwu.magisk.ui.component.MagiskLoadingState
 import com.topjohnwu.magisk.ui.component.card.MagiskElevatedPanel
 import com.topjohnwu.magisk.ui.theme.MagiskTheme
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.layout
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.UnfoldMore
-import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import com.topjohnwu.magisk.viewmodel.surequest.SuRequestUiState
 import com.topjohnwu.magisk.viewmodel.surequest.SuRequestViewModel
 import kotlinx.coroutines.Dispatchers
@@ -310,7 +309,8 @@ private fun SuRequestPanel(
             )
 
             Column(
-                modifier = Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(20.dp)
+                modifier = Modifier.padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // Header Row with shield icon
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -419,7 +419,8 @@ private fun SuRequestPanel(
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Text(
-                                    text = timeoutItems.getOrNull(state.selectedItemPosition).orEmpty(),
+                                    text = timeoutItems.getOrNull(state.selectedItemPosition)
+                                        .orEmpty(),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.weight(1f)

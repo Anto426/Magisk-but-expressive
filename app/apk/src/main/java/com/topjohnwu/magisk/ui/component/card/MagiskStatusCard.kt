@@ -25,9 +25,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 import com.topjohnwu.magisk.ui.component.MagiskIconBadge
 import com.topjohnwu.magisk.ui.component.MagiskStatusDot
-import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 
 data class MagiskStatusMetric(
     val label: String,
@@ -61,7 +61,8 @@ fun MagiskStatusCard(
     iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     metrics: List<MagiskStatusMetric> = emptyList(),
     primaryAction: MagiskCardAction? = null,
-    secondaryAction: MagiskCardAction? = null
+    secondaryAction: MagiskCardAction? = null,
+    actionsStacked: Boolean = false
 ) {
     MagiskCard(
         modifier = modifier.fillMaxWidth(),
@@ -104,42 +105,55 @@ fun MagiskStatusCard(
 
         if (metrics.isNotEmpty()) {
             HorizontalDivider(color = MagiskComponentDefaults.DividerColor)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                metrics.chunked(2).forEach { rowMetrics ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        rowMetrics.forEach { metric ->
-                            MagiskMetricBlock(
-                                metric = metric,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        if (rowMetrics.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                metrics.forEach { metric ->
+                    MagiskMetricBlock(
+                        metric = metric,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
 
         if (primaryAction != null || secondaryAction != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                primaryAction?.let {
-                    MagiskActionButton(
-                        action = it,
-                        modifier = Modifier.weight(1f)
-                    )
+            if (actionsStacked) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    primaryAction?.let {
+                        MagiskActionButton(
+                            action = it,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    secondaryAction?.let {
+                        MagiskActionButton(
+                            action = it,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
-                secondaryAction?.let {
-                    MagiskActionButton(
-                        action = it,
-                        modifier = Modifier.weight(1f)
-                    )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    primaryAction?.let {
+                        MagiskActionButton(
+                            action = it,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    secondaryAction?.let {
+                        MagiskActionButton(
+                            action = it,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }

@@ -105,8 +105,9 @@ object MagiskRuntimeEngine {
 
     fun requiresRoot(action: String): Boolean {
         return action == Const.Value.FLASH_ZIP ||
-            action == Const.Value.UNINSTALL ||
-            action == Const.Value.FLASH_MAGISK ||
-            action == Const.Value.FLASH_INACTIVE_SLOT
+                action == Const.Value.FLASH_MULTIPLE_ZIPS ||
+                action == Const.Value.UNINSTALL ||
+                action == Const.Value.FLASH_MAGISK ||
+                action == Const.Value.FLASH_INACTIVE_SLOT
     }
 }

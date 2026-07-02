@@ -114,6 +114,8 @@
     <string name="logs_cleared">Log successfully cleared</string>
     <string name="save_log">Save log</string>
     <string name="clear_log">Clear log</string>
+    <string name="log_save_summary">Export the log file to storage</string>
+    <string name="log_clear_summary">Clear the current history</string>
     <string name="refresh_log">Refresh log</string>
     <string name="log_entries">Entries</string>
     <string name="log_issues">Issues</string>
@@ -145,6 +147,8 @@
     <!--MagiskHide-->
     <string name="show_system_app">Show system apps</string>
     <string name="show_os_app">Show OS apps</string>
+    <string name="denylist_show_system_summary">Include preinstalled apps</string>
+    <string name="denylist_show_os_summary">Show Android core components</string>
     <string name="hide_filter_hint">Filter by name</string>
     <string name="sort_by_name">Sort by name</string>
     <string name="sort_by_package_name">Sort by package name</string>
@@ -162,6 +166,12 @@
     <string name="reboot_download">Reboot to Download</string>
     <string name="reboot_edl">Reboot to EDL</string>
     <string name="reboot_safe_mode">Safe mode</string>
+    <string name="reboot_system_summary">Full system reboot</string>
+    <string name="reboot_userspace_summary">Restart Android userspace services</string>
+    <string name="reboot_recovery_summary">Boot into recovery mode</string>
+    <string name="reboot_bootloader_summary">Boot into Fastboot mode</string>
+    <string name="reboot_download_summary">Boot into Download mode on supported devices</string>
+    <string name="reboot_edl_summary">Boot into Qualcomm Emergency Download mode</string>
     <string name="module_version_author">%1$s by %2$s</string>
     <string name="module_state_remove">Remove</string>
     <string name="module_action">Action</string>
@@ -169,6 +179,16 @@
     <string name="module_state_restore">Restore</string>
     <string name="module_action_install_external">Install from storage</string>
     <string name="module_action_install_external_summary">Select and flash a module in zip format</string>
+    <string name="module_updates_title">Module updates</string>
+    <string name="module_updates_available_count">%1$d updates available</string>
+    <string name="module_updates_checking">Checking module updates...</string>
+    <string name="module_updates_empty">All modules are up to date</string>
+    <string name="module_updates_install_all">Update all</string>
+    <string name="module_updates_install_one">Update</string>
+    <string name="module_updates_latest_version">Latest: %1$s</string>
+    <string name="module_updates_confirm_all_title">Update all modules?</string>
+    <string name="module_updates_confirm_all">Install updates for %1$d modules?</string>
+    <string name="module_update_failed">Failed: %1$s</string>
     <string name="superuser_logs_summary">View history of granted or denied requests</string>
     <string name="update_available">Update available</string>
     <string name="suspend_text_riru">Module suspended because %1$s is enabled</string>
@@ -323,6 +343,7 @@
     <string name="home_channel">Channel</string>
     <string name="home_section_contributors">Contributors</string>
     <string name="home_maintainer">Maintainer</string>
+    <string name="home_contributor">Contributor</string>
     <string name="home_status_ready">Magisk is ready</string>
     <string name="home_status_inactive">Magisk inactive</string>
     <string name="home_status_ready_subtitle">System modified and secured</string>

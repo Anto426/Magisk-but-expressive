@@ -75,7 +75,7 @@ object MagiskMotionEngine {
         val profile = profile()
         return if (profile.enabled) {
             fadeIn(tween(profile.duration(MagiskMotionDuration.Short))) +
-                expandVertically(animationSpec = tween(profile.duration(duration)))
+                    expandVertically(animationSpec = tween(profile.duration(duration)))
         } else {
             EnterTransition.None
         }
@@ -86,7 +86,7 @@ object MagiskMotionEngine {
         val profile = profile()
         return if (profile.enabled) {
             fadeOut(tween(profile.duration(duration))) +
-                shrinkVertically(animationSpec = tween(profile.duration(duration)))
+                    shrinkVertically(animationSpec = tween(profile.duration(duration)))
         } else {
             ExitTransition.None
         }
@@ -164,7 +164,8 @@ fun MagiskAutoScrollToLatest(
     LaunchedEffect(itemCount, enabled, profile.enabled) {
         val last = itemCount - 1
         if (!enabled || last < 0) return@LaunchedEffect
-        val closeToEnd = !state.canScrollForward || state.firstVisibleItemIndex >= last - trailingThreshold
+        val closeToEnd =
+            !state.canScrollForward || state.firstVisibleItemIndex >= last - trailingThreshold
         if (closeToEnd) {
             if (profile.enabled) {
                 state.animateScrollToItem(last)

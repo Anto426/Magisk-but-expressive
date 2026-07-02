@@ -4,15 +4,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
@@ -31,8 +29,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +61,7 @@ fun MagiskListItem(
     selected: Boolean = false,
     enabled: Boolean = true,
     clickCenterOnly: Boolean = false,
+    shape: Shape = MagiskComponentDefaults.ControlShape,
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
@@ -66,13 +69,13 @@ fun MagiskListItem(
         modifier
     } else {
         modifier
-            .clip(MagiskComponentDefaults.ControlShape)
+            .clip(shape)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
     }
 
     val centerClickModifier = if (clickCenterOnly && onClick != null) {
         Modifier
-            .clip(MagiskComponentDefaults.ControlShape)
+            .clip(shape)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
     } else {
         Modifier
@@ -80,6 +83,33 @@ fun MagiskListItem(
 
     ListItem(
         modifier = clickModifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+        leadingContent = leadingContent ?: leadingIcon?.let {
+            { MagiskIconBadge(icon = it) }
+        },
+        trailingContent = trailingContent?.let {
+            {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    content = it
+                )
+            }
+        },
+        overlineContent = null,
+        supportingContent = if (!clickCenterOnly) {
+            subtitle?.let {
+                {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        } else {
+            null
+        },
         colors = ListItemDefaults.colors(
             containerColor = if (selected) {
                 MagiskListItemDefaults.SelectedContainerColor
@@ -89,10 +119,8 @@ fun MagiskListItem(
             headlineColor = if (enabled) MagiskComponentDefaults.PrimaryText else MaterialTheme.colorScheme.outline,
             supportingColor = MagiskComponentDefaults.SecondaryText
         ),
-        leadingContent = leadingContent ?: leadingIcon?.let {
-            { MagiskIconBadge(icon = it) }
-        },
-        headlineContent = {
+        elevation = ListItemDefaults.elevation(ListItemDefaults.Elevation),
+        content = {
             Column(modifier = centerClickModifier) {
                 Text(
                     text = title,
@@ -105,34 +133,13 @@ fun MagiskListItem(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
         },
-        supportingContent = if (!clickCenterOnly) {
-            subtitle?.let {
-                {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        } else {
-            null
-        },
-        trailingContent = trailingContent?.let {
-            {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    content = it
-                )
-            }
-        })
+    )
 }
 
 @Composable
@@ -175,18 +182,25 @@ fun MagiskExpandableListItem(
     leadingIcon: ImageVector? = null,
     leadingContent: (@Composable () -> Unit)? = null,
     clickCenterOnly: Boolean = false,
+    showArrow: Boolean = true,
     headerTrailingContent: (@Composable RowScope.() -> Unit)? = null,
     expandedContent: @Composable ColumnScope.() -> Unit
 ) {
+    val headerShape = if (expanded) {
+        RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    } else {
+        MagiskComponentDefaults.CardShape
+    }
+
     MagiskCard(
         modifier = modifier.fillMaxWidth(),
+        shape = MagiskComponentDefaults.CardShape,
         containerColor = MagiskComponentDefaults.CardContainer,
-        border = MagiskComponentDefaults.CardBorder
+        border = MagiskComponentDefaults.CardBorder,
+        contentPadding = PaddingValues(0.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
             MagiskListItem(
                 title = title,
@@ -195,17 +209,25 @@ fun MagiskExpandableListItem(
                 leadingContent = leadingContent,
                 onClick = onClick,
                 clickCenterOnly = clickCenterOnly,
+                shape = headerShape,
                 trailingContent = {
                     headerTrailingContent?.invoke(this)
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MagiskComponentDefaults.SecondaryIconTint
-                    )
+                    if (showArrow) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MagiskComponentDefaults.SecondaryIconTint
+                        )
+                    }
                 })
             MagiskAnimatedVisibility(visible = expanded) {
                 Column(
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    modifier = Modifier.padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = 8.dp,
+                        bottom = 16.dp
+                    ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     content = expandedContent
                 )

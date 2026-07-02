@@ -17,8 +17,6 @@ import androidx.compose.material.icons.rounded.FilterNone
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -37,6 +35,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.ui.component.AppIcon
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
@@ -46,10 +45,9 @@ import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskLoadingState
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
+import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.superuser.SuLogUiItem
 import com.topjohnwu.magisk.viewmodel.superuser.SuperuserLogsViewModel
-import com.topjohnwu.magisk.view.SystemToastManager
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.core.R as CoreR
 
 @Composable

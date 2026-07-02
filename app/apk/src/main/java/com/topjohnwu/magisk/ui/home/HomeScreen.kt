@@ -2,13 +2,40 @@ package com.topjohnwu.magisk.ui.home
 
 import android.R
 import android.content.Intent
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.DeveloperMode
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.SettingsBackupRestore
+import androidx.compose.material.icons.rounded.SettingsInputHdmi
+import androidx.compose.material.icons.rounded.Update
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,10 +60,27 @@ import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.navigation.AppRoute
-import com.topjohnwu.magisk.ui.component.*
-import com.topjohnwu.magisk.ui.component.card.*
-import com.topjohnwu.magisk.viewmodel.home.HomeViewModel
+import com.topjohnwu.magisk.ui.component.MagiskBottomSheet
+import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
+import com.topjohnwu.magisk.ui.component.MagiskDialog
+import com.topjohnwu.magisk.ui.component.MagiskDialogAction
+import com.topjohnwu.magisk.ui.component.MagiskLazyContent
+import com.topjohnwu.magisk.ui.component.MagiskListItem
+import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskOptionsSheet
+import com.topjohnwu.magisk.ui.component.MagiskSection
+import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
+import com.topjohnwu.magisk.ui.component.card.MagiskCard
+import com.topjohnwu.magisk.ui.component.card.MagiskCardAction
+import com.topjohnwu.magisk.ui.component.card.MagiskCardActionStyle
+import com.topjohnwu.magisk.ui.component.card.MagiskStatusCard
+import com.topjohnwu.magisk.ui.component.card.MagiskStatusMetric
+import com.topjohnwu.magisk.ui.component.card.MagiskSupportCard
+import com.topjohnwu.magisk.ui.component.card.MagiskWarningCard
 import com.topjohnwu.magisk.view.SystemToastManager
+import com.topjohnwu.magisk.viewmodel.home.Contributor
+import com.topjohnwu.magisk.viewmodel.home.HomeViewModel
+import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
 
 @Composable
@@ -49,6 +93,7 @@ fun HomeScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var showUninstallDialog by remember { mutableStateOf(false) }
+    var selectedContributorForLinks by remember { mutableStateOf<Contributor?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -72,7 +117,7 @@ fun HomeScreen(
                 }
 
                 is UiEffect.Reboot -> {
-                    com.topjohnwu.magisk.core.ktx.reboot()
+                    com.topjohnwu.magisk.core.ktx.reboot(effect.reason)
                 }
 
                 is UiEffect.Navigate -> {
@@ -96,7 +141,7 @@ fun HomeScreen(
                 MagiskDialogAction(
                     text = stringResource(android.R.string.ok), onClick = {
                         viewModel.onEnvFixConsumed()
-                        com.topjohnwu.magisk.core.ktx.reboot()
+                        viewModel.requestReboot()
                     })
             } else {
                 MagiskDialogAction(
@@ -108,7 +153,8 @@ fun HomeScreen(
             dismissAction = MagiskDialogAction(
                 text = stringResource(android.R.string.cancel),
                 onClick = viewModel::onEnvFixConsumed
-            ))
+            )
+        )
     }
 
     if (state.showHideRestore) {
@@ -124,7 +170,8 @@ fun HomeScreen(
             dismissAction = MagiskDialogAction(
                 text = stringResource(android.R.string.cancel),
                 onClick = viewModel::onHideRestoreConsumed
-            ))
+            )
+        )
     }
 
     if (state.showManagerInstall) {
@@ -140,7 +187,8 @@ fun HomeScreen(
             dismissAction = MagiskDialogAction(
                 text = stringResource(android.R.string.cancel),
                 onClick = viewModel::onManagerInstallConsumed
-            ))
+            )
+        )
     }
 
     if (showUninstallDialog) {
@@ -181,6 +229,124 @@ fun HomeScreen(
                 onClick = { showUninstallDialog = false }
             )
         )
+    }
+
+    selectedContributorForLinks?.let { contributor ->
+        val contributorIndex = state.contributors.indexOfFirst { it.login == contributor.login }
+        val isEven = contributorIndex >= 0 && contributorIndex % 2 == 0
+        val shape = if (isEven) {
+            RoundedCornerShape(
+                topStart = 20.dp,
+                topEnd = 6.dp,
+                bottomStart = 6.dp,
+                bottomEnd = 20.dp
+            )
+        } else {
+            RoundedCornerShape(
+                topStart = 6.dp,
+                topEnd = 20.dp,
+                bottomStart = 20.dp,
+                bottomEnd = 6.dp
+            )
+        }
+
+        MagiskBottomSheet(
+            onDismissRequest = { selectedContributorForLinks = null }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AsyncImage(
+                        model = contributor.avatarUrl,
+                        contentDescription = contributor.login,
+                        modifier = Modifier
+                            .size(72.dp)
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                                shape = shape
+                            )
+                            .padding(4.dp)
+                            .clip(shape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Text(
+                        text = contributor.login,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MagiskComponentDefaults.PrimaryText
+                    )
+                }
+
+                HorizontalDivider(color = MagiskComponentDefaults.DividerColor)
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MagiskListItem(
+                        title = stringResource(CoreR.string.github),
+                        leadingContent = {
+                            Surface(
+                                modifier = Modifier.size(MagiskComponentDefaults.IconBadgeSize),
+                                shape = MagiskComponentDefaults.ControlShape,
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        painter = painterResource(CoreR.drawable.ic_github),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(19.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        },
+                        onClick = {
+                            viewModel.openLink(contributor.htmlUrl)
+                            selectedContributorForLinks = null
+                        }
+                    )
+
+                    contributor.links.forEach { link ->
+                        if (link.url != contributor.htmlUrl) {
+                            MagiskListItem(
+                                title = stringResource(link.labelRes),
+                                leadingContent = {
+                                    Surface(
+                                        modifier = Modifier.size(MagiskComponentDefaults.IconBadgeSize),
+                                        shape = MagiskComponentDefaults.ControlShape,
+                                        color = MaterialTheme.colorScheme.primaryContainer
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                painter = painterResource(link.iconRes),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(19.dp),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.openLink(link.url)
+                                    selectedContributorForLinks = null
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // --- MAIN SCREEN LAYOUT ---
@@ -226,7 +392,12 @@ fun HomeScreen(
                 icon = Icons.Rounded.Security,
                 iconContainerColor = MaterialTheme.colorScheme.primary,
                 iconTint = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 4.dp, bottomStart = 4.dp, bottomEnd = 32.dp),
+                shape = RoundedCornerShape(
+                    topStart = 32.dp,
+                    topEnd = 4.dp,
+                    bottomStart = 4.dp,
+                    bottomEnd = 32.dp
+                ),
                 metrics = listOf(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),
@@ -259,7 +430,8 @@ fun HomeScreen(
                     )
                 } else {
                     null
-                }
+                },
+                actionsStacked = true
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -273,7 +445,12 @@ fun HomeScreen(
                 icon = Icons.Rounded.Android,
                 iconContainerColor = MaterialTheme.colorScheme.secondary,
                 iconTint = MaterialTheme.colorScheme.onSecondary,
-                shape = RoundedCornerShape(topStart = 4.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 4.dp),
+                shape = RoundedCornerShape(
+                    topStart = 4.dp,
+                    topEnd = 32.dp,
+                    bottomStart = 32.dp,
+                    bottomEnd = 4.dp
+                ),
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
                 metrics = listOf(
                     MagiskStatusMetric(
@@ -309,7 +486,8 @@ fun HomeScreen(
                     text = stringResource(CoreR.string.documents),
                     onClick = { viewModel.openLink("https://topjohnwu.github.io/Magisk/") },
                     style = MagiskCardActionStyle.Secondary
-                )
+                ),
+                actionsStacked = true
             )
         }
 
@@ -330,64 +508,88 @@ fun HomeScreen(
                             rowContributors.forEachIndexed { index, contributor ->
                                 val isEven = index % 2 == 0
                                 val cardShape = if (isEven) {
-                                    RoundedCornerShape(topStart = 28.dp, topEnd = 8.dp, bottomStart = 8.dp, bottomEnd = 28.dp)
+                                    RoundedCornerShape(
+                                        topStart = 28.dp,
+                                        topEnd = 8.dp,
+                                        bottomStart = 8.dp,
+                                        bottomEnd = 28.dp
+                                    )
                                 } else {
-                                    RoundedCornerShape(topStart = 8.dp, topEnd = 28.dp, bottomStart = 28.dp, bottomEnd = 8.dp)
+                                    RoundedCornerShape(
+                                        topStart = 8.dp,
+                                        topEnd = 28.dp,
+                                        bottomStart = 28.dp,
+                                        bottomEnd = 8.dp
+                                    )
                                 }
                                 val avatarShape = if (isEven) {
-                                    RoundedCornerShape(topStart = 12.dp, topEnd = 4.dp, bottomStart = 4.dp, bottomEnd = 12.dp)
+                                    RoundedCornerShape(
+                                        topStart = 12.dp,
+                                        topEnd = 4.dp,
+                                        bottomStart = 4.dp,
+                                        bottomEnd = 12.dp
+                                    )
                                 } else {
-                                    RoundedCornerShape(topStart = 4.dp, topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 4.dp)
+                                    RoundedCornerShape(
+                                        topStart = 4.dp,
+                                        topEnd = 12.dp,
+                                        bottomStart = 12.dp,
+                                        bottomEnd = 4.dp
+                                    )
                                 }
 
                                 MagiskCard(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .heightIn(min = 160.dp),
+                                        .height(132.dp),
                                     shape = cardShape,
-                                    contentPadding = PaddingValues(12.dp)
+                                    contentPadding = PaddingValues(12.dp),
+                                    onClick = { selectedContributorForLinks = contributor }
                                 ) {
                                     Column(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier.fillMaxSize(),
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        verticalArrangement = Arrangement.Center
                                     ) {
                                         AsyncImage(
                                             model = contributor.avatarUrl,
                                             contentDescription = contributor.login,
                                             modifier = Modifier
-                                                .size(56.dp)
+                                                .size(52.dp)
+                                                .border(
+                                                    width = 1.5.dp,
+                                                    color = MaterialTheme.colorScheme.primary.copy(
+                                                        alpha = 0.25f
+                                                    ),
+                                                    shape = avatarShape
+                                                )
+                                                .padding(3.dp)
                                                 .clip(avatarShape),
                                             contentScale = ContentScale.Crop
                                         )
-                                        
+
+                                        Spacer(modifier = Modifier.height(6.dp))
+
                                         Text(
                                             text = contributor.login,
-                                            style = MaterialTheme.typography.titleSmall,
+                                            style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MagiskComponentDefaults.PrimaryText,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
 
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            contributor.links.forEach { link ->
-                                                IconButton(
-                                                    onClick = { viewModel.openLink(link.url) },
-                                                    modifier = Modifier.size(32.dp)
-                                                ) {
-                                                    Icon(
-                                                        painter = painterResource(link.iconRes),
-                                                        contentDescription = stringResource(link.labelRes),
-                                                        modifier = Modifier.size(18.dp),
-                                                        tint = MagiskComponentDefaults.PrimaryIconTint
-                                                    )
-                                                }
-                                            }
-                                        }
+                                        Text(
+                                            text = if (contributor.login.lowercase(Locale.US) == "anto426") {
+                                                stringResource(CoreR.string.home_maintainer)
+                                            } else {
+                                                stringResource(CoreR.string.home_contributor)
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MagiskComponentDefaults.SecondaryText,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
                                 }
                             }
@@ -408,74 +610,47 @@ fun HomeTopBarActions(
 ) {
     val state by viewModel.state.collectAsState()
 
-    if (!state.runtime.isInstalled) return
+    if (!state.runtime.isRooted) return
 
-    var expanded by remember { mutableStateOf(false) }
+    var showRebootSheet by remember { mutableStateOf(false) }
 
-    Box {
-        MagiskTopBarIconButton(
+    MagiskTopBarIconButton(
+        icon = Icons.Rounded.RestartAlt,
+        contentDescription = stringResource(CoreR.string.reboot),
+        onClick = { showRebootSheet = true }
+    )
+
+    if (showRebootSheet) {
+        MagiskOptionsSheet(
+            title = stringResource(CoreR.string.reboot),
             icon = Icons.Rounded.RestartAlt,
-            contentDescription = stringResource(CoreR.string.reboot),
-            onClick = { expanded = true }
+            onDismiss = { showRebootSheet = false },
+            items = listOf(
+                Triple(
+                    Icons.Rounded.RestartAlt,
+                    stringResource(CoreR.string.reboot)
+                ) { viewModel.requestReboot() },
+                Triple(
+                    Icons.Rounded.Refresh,
+                    stringResource(CoreR.string.reboot_userspace)
+                ) { viewModel.requestReboot("userspace") },
+                Triple(
+                    Icons.Rounded.SettingsBackupRestore,
+                    stringResource(CoreR.string.reboot_recovery)
+                ) { viewModel.requestReboot("recovery") },
+                Triple(
+                    Icons.Rounded.SettingsInputHdmi,
+                    stringResource(CoreR.string.reboot_bootloader)
+                ) { viewModel.requestReboot("bootloader") },
+                Triple(
+                    Icons.Rounded.Download,
+                    stringResource(CoreR.string.reboot_download)
+                ) { viewModel.requestReboot("download") },
+                Triple(
+                    Icons.Rounded.DeveloperMode,
+                    stringResource(CoreR.string.reboot_edl)
+                ) { viewModel.requestReboot("edl") },
+            )
         )
-        MagiskDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            MagiskDropdownMenuItem(
-                text = stringResource(CoreR.string.reboot),
-                subtitle = "Riavvio completo del sistema",
-                leadingIcon = Icons.Rounded.RestartAlt,
-                onClick = {
-                    expanded = false
-                    com.topjohnwu.magisk.core.ktx.reboot()
-                }
-            )
-            MagiskDropdownMenuItem(
-                text = stringResource(CoreR.string.reboot_userspace),
-                subtitle = "Riavvio veloce dei servizi app",
-                leadingIcon = Icons.Rounded.Refresh,
-                onClick = {
-                    expanded = false
-                    com.topjohnwu.magisk.core.ktx.reboot("userspace")
-                }
-            )
-            MagiskDropdownMenuItem(
-                text = stringResource(CoreR.string.reboot_recovery),
-                subtitle = "Accedi alla modalità di ripristino",
-                leadingIcon = Icons.Rounded.SettingsBackupRestore,
-                onClick = {
-                    expanded = false
-                    com.topjohnwu.magisk.core.ktx.reboot("recovery")
-                }
-            )
-            MagiskDropdownMenuItem(
-                text = stringResource(CoreR.string.reboot_bootloader),
-                subtitle = "Accedi alla modalità Fastboot",
-                leadingIcon = Icons.Rounded.SettingsInputHdmi,
-                onClick = {
-                    expanded = false
-                    com.topjohnwu.magisk.core.ktx.reboot("bootloader")
-                }
-            )
-            MagiskDropdownMenuItem(
-                text = stringResource(CoreR.string.reboot_download),
-                subtitle = "Accedi alla modalità Download (Samsung)",
-                leadingIcon = Icons.Rounded.Download,
-                onClick = {
-                    expanded = false
-                    com.topjohnwu.magisk.core.ktx.reboot("download")
-                }
-            )
-            MagiskDropdownMenuItem(
-                text = stringResource(CoreR.string.reboot_edl),
-                subtitle = "Emergency Download Mode (Qualcomm)",
-                leadingIcon = Icons.Rounded.DeveloperMode,
-                onClick = {
-                    expanded = false
-                    com.topjohnwu.magisk.core.ktx.reboot("edl")
-                }
-            )
-        }
     }
 }

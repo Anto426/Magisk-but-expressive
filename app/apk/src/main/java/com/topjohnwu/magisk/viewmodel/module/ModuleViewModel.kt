@@ -47,6 +47,7 @@ data class ModuleUiItem(
 
 data class ModuleUiState(
     val loading: Boolean = true,
+    val checkingUpdates: Boolean = false,
     val modules: List<ModuleUiItem> = emptyList(),
     val filteredModules: List<ModuleUiItem> = emptyList(),
     val searchQuery: String = "",
@@ -96,18 +97,22 @@ class ModuleViewModel(
             _state.update {
                 it.withModules(
                     modules = list.map { module -> module.toUiItem(expanded.contains(module.id)) },
-                    loading = false
+                    loading = false,
+                    checkingUpdates = false
                 )
             }
-            if (list.isNotEmpty() && now - lastMetadataRefreshAt >= MIN_METADATA_REFRESH_INTERVAL_MS) {
+            if (list.isNotEmpty() && (force || now - lastMetadataRefreshAt >= MIN_METADATA_REFRESH_INTERVAL_MS)) {
                 lastMetadataRefreshAt = now
+                _state.update { it.copy(checkingUpdates = true) }
                 metadataJob = launch(Dispatchers.IO) {
                     list.forEach { runCatching { it.fetch() } }
                     val expandedAfterMetadata =
                         _state.value.modules.filter { it.expanded }.map { it.id }.toSet()
                     val updatedUi = list.map { it.toUiItem(expandedAfterMetadata.contains(it.id)) }
                     withContext(Dispatchers.Main) {
-                        _state.update { st -> st.withModules(updatedUi) }
+                        _state.update { st ->
+                            st.withModules(updatedUi, checkingUpdates = false)
+                        }
                     }
                 }
             }
@@ -192,10 +197,15 @@ class ModuleViewModel(
 }
 
 private fun ModuleUiState.withModules(
-    modules: List<ModuleUiItem>, loading: Boolean = this.loading
+    modules: List<ModuleUiItem>,
+    loading: Boolean = this.loading,
+    checkingUpdates: Boolean = this.checkingUpdates
 ): ModuleUiState {
     return copy(
-        loading = loading, modules = modules, filteredModules = modules.filteredBy(searchQuery)
+        loading = loading,
+        checkingUpdates = checkingUpdates,
+        modules = modules,
+        filteredModules = modules.filteredBy(searchQuery)
     )
 }
 

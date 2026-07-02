@@ -9,11 +9,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Shape
-
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 
 @Composable
@@ -23,7 +22,8 @@ fun MagiskSupportCard(
     primaryAction: MagiskCardAction,
     modifier: Modifier = Modifier,
     shape: Shape = MagiskComponentDefaults.CardShape,
-    secondaryAction: MagiskCardAction? = null
+    secondaryAction: MagiskCardAction? = null,
+    actionsStacked: Boolean = false
 ) {
     MagiskCard(
         modifier = modifier.fillMaxWidth(),
@@ -50,19 +50,37 @@ fun MagiskSupportCard(
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            MagiskActionButton(
-                action = primaryAction,
-                modifier = Modifier.weight(1f)
-            )
-            secondaryAction?.let {
+        if (actionsStacked) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 MagiskActionButton(
-                    action = it,
+                    action = primaryAction,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                secondaryAction?.let {
+                    MagiskActionButton(
+                        action = it,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MagiskActionButton(
+                    action = primaryAction,
                     modifier = Modifier.weight(1f)
                 )
+                secondaryAction?.let {
+                    MagiskActionButton(
+                        action = it,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }

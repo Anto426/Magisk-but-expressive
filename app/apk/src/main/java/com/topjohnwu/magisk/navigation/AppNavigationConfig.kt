@@ -24,13 +24,34 @@ object AppNavigationConfig {
     val startRoute: AppRoute = AppRoute.Home
 
     val routes: List<AppRouteSpec> = listOf(
-        AppRouteSpec(AppRoute.Home, "home", CoreR.string.section_home, AppDestinationType.NavigationBar),
+        AppRouteSpec(
+            AppRoute.Home,
+            "home",
+            CoreR.string.section_home,
+            AppDestinationType.NavigationBar
+        ),
         AppRouteSpec(AppRoute.AppUpdate, "app_update", CoreR.string.update),
-        AppRouteSpec(AppRoute.Superuser, "superuser", CoreR.string.superuser, AppDestinationType.NavigationBar),
+        AppRouteSpec(
+            AppRoute.Superuser,
+            "superuser",
+            CoreR.string.superuser,
+            AppDestinationType.NavigationBar
+        ),
         AppRouteSpec(AppRoute.SuperuserLogs, "superuser_logs", CoreR.string.superuser_logs),
-        AppRouteSpec(AppRoute.Modules, "modules", CoreR.string.modules, AppDestinationType.NavigationBar),
+        AppRouteSpec(
+            AppRoute.Modules,
+            "modules",
+            CoreR.string.modules,
+            AppDestinationType.NavigationBar
+        ),
+        AppRouteSpec(AppRoute.ModuleUpdates, "module_updates", CoreR.string.module_updates_title),
         AppRouteSpec(AppRoute.Logs, "logs", CoreR.string.logs, AppDestinationType.NavigationBar),
-        AppRouteSpec(AppRoute.Settings, "settings", CoreR.string.settings, AppDestinationType.NavigationBar),
+        AppRouteSpec(
+            AppRoute.Settings,
+            "settings",
+            CoreR.string.settings,
+            AppDestinationType.NavigationBar
+        ),
         AppRouteSpec(AppRoute.Install, "install", CoreR.string.install),
         AppRouteSpec(AppRoute.DenyList, "denylist", CoreR.string.denylist),
         AppRouteSpec(AppRoute.Theme, "theme", CoreR.string.section_theme),
@@ -82,6 +103,7 @@ object AppNavigationConfig {
         AppRoute.Superuser -> "superuser"
         AppRoute.SuperuserLogs -> "superuser_logs"
         AppRoute.Modules -> "modules"
+        AppRoute.ModuleUpdates -> "module_updates"
         AppRoute.Logs -> "logs"
         AppRoute.Settings -> "settings"
         AppRoute.Install -> "install"
@@ -93,6 +115,7 @@ object AppNavigationConfig {
             val data = route.additionalData?.let(Uri::encode).orEmpty()
             "flash/$action?data=$data"
         }
+
         is AppRoute.ModuleAction -> {
             val id = Uri.encode(route.idValue)
             val name = Uri.encode(route.name)

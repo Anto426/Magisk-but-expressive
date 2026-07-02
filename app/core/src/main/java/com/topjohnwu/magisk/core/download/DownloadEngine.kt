@@ -183,22 +183,25 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
         return newId
     }
 
-    private fun notifyFail(subject: Subject) = finalNotify(subject.notifyId) {
+    private fun notifyFail(subject: Subject) = finalNotify(subject.notifyId) { notification ->
         broadcast(-2f, subject)
-        it.setContentText(context.getString(R.string.download_file_error))
+        notification.setContentText(context.getString(R.string.download_file_error))
             .setSmallIcon(android.R.drawable.stat_notify_error)
-            .setOngoing(false)
-    }
-
-    private fun notifyFinish(subject: Subject) = finalNotify(subject.notifyId) {
-        broadcast(1f, subject)
-        it.setContentTitle(subject.title)
-            .setContentText(context.getString(R.string.download_complete))
-            .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setProgress(0, 0, false)
             .setOngoing(false)
+        Notifications.run { notification.clearAndroid16ProgressStyle() }
+    }
+
+    private fun notifyFinish(subject: Subject) = finalNotify(subject.notifyId) { notification ->
+        broadcast(1f, subject)
+        notification.setContentTitle(subject.title)
+            .setContentText(context.getString(R.string.download_complete))
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setProgress(100, 100, false)
+            .setOngoing(false)
             .setAutoCancel(true)
-        subject.pendingIntent(context)?.let { intent -> it.setContentIntent(intent) }
+        Notifications.run { notification.applyAndroid16ProgressStyle(100) }
+        subject.pendingIntent(context)?.let { intent -> notification.setContentIntent(intent) }
     }
 
     @Synchronized
@@ -252,13 +255,18 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
             val progress = it.toFloat() / 1048576
             notifyUpdate(id) { notification ->
                 if (max > 0) {
+                    val percent = ((it * 100) / max).toInt().coerceIn(0, 100)
                     broadcast(progress / total, subject)
                     notification
-                        .setProgress(max.toInt(), it.toInt(), false)
+                        .setProgress(100, percent, false)
                         .setContentText("%.2f / %.2f MB".format(progress, total))
+                    Notifications.run { notification.applyAndroid16ProgressStyle(percent) }
                 } else {
                     broadcast(-1f, subject)
-                    notification.setContentText("%.2f MB / ??".format(progress))
+                    notification
+                        .setProgress(0, 0, true)
+                        .setContentText("%.2f MB / ??".format(progress))
+                    Notifications.run { notification.applyAndroid16ProgressStyle(null) }
                 }
             }
         }

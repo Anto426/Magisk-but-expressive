@@ -104,8 +104,14 @@ interface LocaleSetting {
         override val currentLocale: Locale
             get() = appLocale ?: lm.systemLocales[0]
 
-        // These following methods should not be used
-        override fun setLocale(tag: String) {}
+        override fun setLocale(tag: String) {
+            lm.applicationLocales = when {
+                tag.isEmpty() -> LocaleList.getEmptyLocaleList()
+                else -> LocaleList.forLanguageTags(tag)
+            }
+            AppContext.foregroundActivity?.relaunch()
+        }
+
         override fun updateResource(res: Resources) {}
     }
 

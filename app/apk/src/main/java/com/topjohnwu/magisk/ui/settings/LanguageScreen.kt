@@ -59,7 +59,7 @@ fun LanguageScreen(
         } else {
             languages.indices.filter {
                 languages[it].contains(state.languageSearchQuery, ignoreCase = true) ||
-                    tags[it].contains(state.languageSearchQuery, ignoreCase = true)
+                        tags[it].contains(state.languageSearchQuery, ignoreCase = true)
             }
         }
     }
@@ -101,7 +101,8 @@ fun LanguageScreen(
                         val subtitleText = if (isDefault) "Default system language"
                         else {
                             val locale = Locale.forLanguageTag(tag)
-                            val englishName = locale.getDisplayName(Locale.ENGLISH).replaceFirstChar { it.uppercase() }
+                            val englishName = locale.getDisplayName(Locale.ENGLISH)
+                                .replaceFirstChar { it.uppercase() }
                             "$englishName ($tag)"
                         }
 

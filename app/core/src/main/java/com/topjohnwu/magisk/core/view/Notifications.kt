@@ -137,15 +137,42 @@ object Notifications {
             .setVisibility(Notification.VISIBILITY_PRIVATE)
         if (SDK_INT >= Build.VERSION_CODES.S)
             builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+        builder.applyAndroid16ProgressStyle(progress = null)
+        return builder
+    }
+
+    fun Notification.Builder.applyAndroid16ProgressStyle(progress: Int?): Notification.Builder {
         if (SDK_INT >= 36) {
             runCatching {
                 val progressStyleClass = Class.forName("android.app.Notification\$ProgressStyle")
                 val progressStyleInstance = progressStyleClass.getConstructor().newInstance()
-                val setStyleMethod = builder.javaClass.getMethod("setStyle", Class.forName("android.app.Notification\$Style"))
-                setStyleMethod.invoke(builder, progressStyleInstance)
+                if (progress == null) {
+                    progressStyleClass
+                        .getMethod("setProgressIndeterminate", Boolean::class.javaPrimitiveType)
+                        .invoke(progressStyleInstance, true)
+                } else {
+                    progressStyleClass
+                        .getMethod("setProgress", Int::class.javaPrimitiveType)
+                        .invoke(progressStyleInstance, progress.coerceIn(0, 100))
+                }
+                val setStyleMethod = javaClass.getMethod(
+                    "setStyle", Class.forName("android.app.Notification\$Style")
+                )
+                setStyleMethod.invoke(this, progressStyleInstance)
             }
         }
-        return builder
+        return this
+    }
+
+    fun Notification.Builder.clearAndroid16ProgressStyle(): Notification.Builder {
+        if (SDK_INT >= 36) {
+            runCatching {
+                val styleClass = Class.forName("android.app.Notification\$Style")
+                val setStyleMethod = javaClass.getMethod("setStyle", styleClass)
+                setStyleMethod.invoke(this, null)
+            }
+        }
+        return this
     }
 
     private const val SU_NOTIFICATION_TIMEOUT_MS = 3_000L

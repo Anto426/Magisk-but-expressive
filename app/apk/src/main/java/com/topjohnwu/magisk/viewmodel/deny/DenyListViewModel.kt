@@ -113,7 +113,7 @@ class DenyListViewModel : ViewModel() {
                 app
             }
         }
-        applyFilters()
+        applyFilters(shouldSort = false)
     }
 
     fun toggleProcess(packageName: String, processName: String, processPackage: String) {
@@ -143,7 +143,7 @@ class DenyListViewModel : ViewModel() {
                             rebuildAppState(candidate, processes = processes)
                         }
                     }
-                    applyFilters()
+                    applyFilters(shouldSort = false)
                 } else {
                     postFailure()
                 }
@@ -194,7 +194,7 @@ class DenyListViewModel : ViewModel() {
                             rebuildAppState(candidate, processes = processes)
                         }
                     }
-                    applyFilters()
+                    applyFilters(shouldSort = false)
                 } else {
                     postFailure()
                 }
@@ -219,9 +219,18 @@ class DenyListViewModel : ViewModel() {
         )
     }
 
-    private fun applyFilters() {
+    private fun applyFilters(shouldSort: Boolean = true) {
         val current = _state.value
         val query = current.query.trim().lowercase()
+
+        if (!shouldSort) {
+            val updatedItems = current.items.map { item ->
+                allApps.firstOrNull { it.packageName == item.packageName } ?: item
+            }
+            _state.update { it.copy(items = updatedItems) }
+            return
+        }
+
         val filtered = allApps.asSequence().filter { app ->
                 val visible =
                     app.expanded || app.checkedCount > 0 || (current.showSystem || !app.isSystem) && (app.isAppUid || current.showSystem && current.showOs)

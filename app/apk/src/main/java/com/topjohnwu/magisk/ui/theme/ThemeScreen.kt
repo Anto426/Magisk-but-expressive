@@ -4,13 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.ui.component.BottomBarStyleItem
@@ -28,7 +24,6 @@ import com.topjohnwu.magisk.ui.component.CustomThemeBottomSheet
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskSection
 import com.topjohnwu.magisk.ui.component.MagiskSettingsGroup
-import com.topjohnwu.magisk.ui.component.MagiskSettingsItemContent
 import com.topjohnwu.magisk.ui.component.ThemeCardGrid
 import com.topjohnwu.magisk.ui.component.ThemeModeItem
 import com.topjohnwu.magisk.ui.component.bottomBarStyleOptions
@@ -53,7 +48,12 @@ fun ThemeScreen(
     Column(modifier = modifier.fillMaxSize()) {
         MagiskLazyContent(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 120.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 12.dp,
+                end = 16.dp,
+                bottom = 120.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             item {

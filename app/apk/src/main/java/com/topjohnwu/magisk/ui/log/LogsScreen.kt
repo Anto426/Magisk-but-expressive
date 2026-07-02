@@ -5,11 +5,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteSweep
@@ -18,28 +20,35 @@ import androidx.compose.material.icons.rounded.FilterNone
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.navigation.AppRoute
-import com.topjohnwu.magisk.ui.component.*
-import com.topjohnwu.magisk.ui.component.card.MagiskCard
-import com.topjohnwu.magisk.viewmodel.log.LogDisplayFilter
-import com.topjohnwu.magisk.viewmodel.log.MagiskLogLevel
-import com.topjohnwu.magisk.viewmodel.log.MagiskLogScreenUiState
-import com.topjohnwu.magisk.viewmodel.log.MagiskLogUiItem
-import com.topjohnwu.magisk.viewmodel.log.MagiskLogViewModel
+import com.topjohnwu.magisk.ui.component.LogItem
+import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
+import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
+import com.topjohnwu.magisk.ui.component.MagiskEmptyState
+import com.topjohnwu.magisk.ui.component.MagiskLazyContent
+import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskSearchField
+import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.view.SystemToastManager
+import com.topjohnwu.magisk.viewmodel.log.LogDisplayFilter
+import com.topjohnwu.magisk.viewmodel.log.MagiskLogViewModel
 import com.topjohnwu.magisk.core.R as CoreR
 
 @Composable
@@ -159,7 +168,7 @@ fun LogsTopBarActions(
         ) {
             MagiskDropdownMenuItem(
                 text = stringResource(CoreR.string.save_log),
-                subtitle = "Esporta il file di log sulla memoria",
+                subtitle = stringResource(CoreR.string.log_save_summary),
                 leadingIcon = Icons.Rounded.Save,
                 onClick = {
                     onSave()
@@ -168,7 +177,7 @@ fun LogsTopBarActions(
             )
             MagiskDropdownMenuItem(
                 text = stringResource(CoreR.string.clear_log),
-                subtitle = "Svuota la cronologia attuale",
+                subtitle = stringResource(CoreR.string.log_clear_summary),
                 destructive = true,
                 leadingIcon = Icons.Rounded.DeleteSweep,
                 onClick = {

@@ -53,7 +53,11 @@ data class PolicyUiItem(
 }
 
 data class SuperuserUiState(
-    val loading: Boolean = true, val items: List<PolicyUiItem> = emptyList()
+    val loading: Boolean = true,
+    val items: List<PolicyUiItem> = emptyList(),
+    val filteredItems: List<PolicyUiItem> = emptyList(),
+    val searchQuery: String = "",
+    val searchVisible: Boolean = false
 )
 
 class SuperuserViewModel(
@@ -90,7 +94,7 @@ class SuperuserViewModel(
         val previousByKey = previousItems.associateBy { policyKey(it.uid, it.packageName) }
         reloadJob = viewModelScope.launch {
             val policies = loadPolicies(previousByKey)
-            _state.update { it.copy(loading = false, items = policies) }
+            _state.update { it.withItems(policies, loading = false) }
         }
     }
 
@@ -154,9 +158,27 @@ class SuperuserViewModel(
 
     fun toggleExpanded(uid: Int, packageName: String) {
         _state.update { state ->
-            state.copy(items = state.items.map {
+            state.withItems(state.items.map {
                 if (it.uid == uid && it.packageName == packageName) it.copy(expanded = !it.expanded) else it
             })
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _state.update { it.withSearchQuery(query) }
+    }
+
+    fun clearSearch() {
+        setSearchQuery("")
+    }
+
+    fun toggleSearch() {
+        _state.update {
+            if (it.searchVisible) {
+                it.withSearchQuery("").copy(searchVisible = false)
+            } else {
+                it.copy(searchVisible = true)
+            }
         }
     }
 
@@ -167,7 +189,7 @@ class SuperuserViewModel(
                 policyDao.update(item.toPolicy(policy = policy))
             }
             _state.update { state ->
-                state.copy(items = state.items.map { if (it.uid == uid) it.copy(policy = policy) else it })
+                state.withItems(state.items.map { if (it.uid == uid) it.copy(policy = policy) else it })
             }
             _messages.emit(
                 uiText(
@@ -185,7 +207,7 @@ class SuperuserViewModel(
                 policyDao.update(item.toPolicy(notification = value))
             }
             _state.update { state ->
-                state.copy(items = state.items.map {
+                state.withItems(state.items.map {
                     if (it.uid == item.uid) it.copy(notification = value) else it
                 })
             }
@@ -205,7 +227,7 @@ class SuperuserViewModel(
                 policyDao.update(item.toPolicy(logging = value))
             }
             _state.update { state ->
-                state.copy(items = state.items.map {
+                state.withItems(state.items.map {
                     if (it.uid == item.uid) it.copy(logging = value) else it
                 })
             }
@@ -221,7 +243,7 @@ class SuperuserViewModel(
     fun revoke(item: PolicyUiItem) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { policyDao.delete(item.uid) }
-            _state.update { state -> state.copy(items = state.items.filterNot { it.uid == item.uid }) }
+            _state.update { state -> state.withItems(state.items.filterNot { it.uid == item.uid }) }
             _messages.emit(uiText(CoreR.string.su_snack_deny, item.appName))
         }
     }
@@ -286,4 +308,27 @@ fun sliderValueToPolicy(value: Float): Int = when (value.toInt()) {
     2 -> SuPolicy.RESTRICT
     3 -> SuPolicy.ALLOW
     else -> SuPolicy.DENY
+}
+
+private fun SuperuserUiState.withItems(items: List<PolicyUiItem>, loading: Boolean = this.loading): SuperuserUiState {
+    return copy(
+        items = items,
+        filteredItems = items.filteredBy(searchQuery),
+        loading = loading
+    )
+}
+
+private fun SuperuserUiState.withSearchQuery(query: String): SuperuserUiState {
+    return copy(
+        searchQuery = query,
+        filteredItems = items.filteredBy(query)
+    )
+}
+
+private fun List<PolicyUiItem>.filteredBy(query: String): List<PolicyUiItem> {
+    val normalized = query.trim().lowercase(Locale.ROOT)
+    return if (normalized.isEmpty()) this else filter {
+        it.appName.lowercase(Locale.ROOT).contains(normalized) ||
+                it.packageName.lowercase(Locale.ROOT).contains(normalized)
+    }
 }

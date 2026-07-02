@@ -13,7 +13,7 @@ sealed interface UiEffect {
     data object RequestAuthentication : UiEffect
     data object RequestFilePicker : UiEffect
     data object Finish : UiEffect
-    data object Reboot : UiEffect
+    data class Reboot(val reason: String = "") : UiEffect
     data class OpenUri(val uri: Uri) : UiEffect
     data class RequestHideApp(val label: String) : UiEffect
     data object RequestRestoreApp : UiEffect

@@ -26,7 +26,10 @@ object MagiskComponentDefaults {
     val PillShape: Shape = RoundedCornerShape(50)
 
     val CardBorder: BorderStroke
-        @Composable get() = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        @Composable get() = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
 
     val CardContainer: Color
         @Composable get() = MaterialTheme.colorScheme.surfaceContainer
