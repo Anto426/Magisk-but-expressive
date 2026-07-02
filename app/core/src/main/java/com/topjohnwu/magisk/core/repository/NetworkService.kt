@@ -27,7 +27,16 @@ class NetworkService(
     }
 
     suspend fun fetchUpdate(version: Int) = safe {
-        findRelease { it.versionCode == version }.asInfo()
+        val info = try {
+            fetchCustomUpdate("https://raw.githubusercontent.com/Anto426/Magisk-but-expressive/master/update.json")
+        } catch (e: Exception) {
+            null
+        }
+        if (info != null && info.versionCode == version) {
+            info
+        } else {
+            findRelease { it.versionCode == version }.asInfo()
+        }
     }
 
     // Keep going through all release pages until we find a match

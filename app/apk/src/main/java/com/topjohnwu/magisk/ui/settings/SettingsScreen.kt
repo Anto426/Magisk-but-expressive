@@ -535,11 +535,11 @@ fun SettingsScreen(
                     add(
                         SettingScreenItem(
                             title = stringResource(CoreR.string.settings_update_channel_title),
-                            subtitle = "anto426",
+                            subtitle = "MBE",
                             content = {
                                 MagiskSettingsListItem(
                                     title = stringResource(CoreR.string.settings_update_channel_title),
-                                    subtitle = "anto426",
+                                    subtitle = "MBE",
                                     leadingIcon = Icons.AutoMirrored.Rounded.CallSplit,
                                     onClick = null)
                             }
