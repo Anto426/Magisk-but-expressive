@@ -1,8 +1,9 @@
 ## <img src="./asset/icon.gif" width="44px" /> About
 
-This repository is a fork of the official Magisk project.
+This repository is a fork of the official Magisk project, integrated with Magisk Alpha binaries.
 
 Upstream: https://github.com/topjohnwu/Magisk
+Binaries Source: https://github.com/vvb2060/Magisk (Magisk Alpha)
 
 ```sh
 magisk@android:~$ whoami

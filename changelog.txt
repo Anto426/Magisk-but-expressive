@@ -1,4 +1,4 @@
-Changelog per build custom Magisk (e8a58776-alpha)
+Changelog per build custom Magisk (anto426-alpha)
 - Package Name modificato a: io.github.vvb2060.magisk
 - Integra i binari di Magisk Alpha v30700
 - Codice versione incrementato a 30701 per supportare gli aggiornamenti automatici
