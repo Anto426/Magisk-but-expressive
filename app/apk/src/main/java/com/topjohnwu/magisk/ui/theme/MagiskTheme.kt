@@ -36,6 +36,7 @@ fun MagiskTheme(
     darkThemeMode: Int = Config.darkTheme,
     useDynamicColor: Boolean = true,
     themeVersion: Int = 0,
+    setSolidBackground: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -63,10 +64,14 @@ fun MagiskTheme(
             typography = MagiskTypography,
             shapes = MagiskShapes
         ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = colorScheme.background
-            ) {
+            if (setSolidBackground) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = colorScheme.background
+                ) {
+                    ProvideMagiskMotionEngine(content)
+                }
+            } else {
                 ProvideMagiskMotionEngine(content)
             }
         }

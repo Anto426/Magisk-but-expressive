@@ -10,7 +10,6 @@ import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.arch.uiText
 import com.topjohnwu.magisk.core.AppContext
-import com.topjohnwu.magisk.core.BuildConfig
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.Info
@@ -69,7 +68,9 @@ data class SettingsUiState(
         AppContext
     ),
     val canMigrateApp: Boolean = runtime.canMigrateApp,
-    val isHiddenApp: Boolean = AppContext.packageName != BuildConfig.APP_PACKAGE_NAME,
+    val isHiddenApp: Boolean = isHiddenMagiskApp(),
+    val canRestoreApp: Boolean = canMigrateApp && isHiddenApp,
+    val canHideApp: Boolean = canMigrateApp && !isHiddenApp,
     val checkUpdate: Boolean = Config.checkUpdate,
     val updateChannel: Int = Config.updateChannel.coerceIn(
         Config.Value.MBE_CHANNEL,
@@ -184,6 +185,10 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun requestHideApp(label: String) {
+        if (!_state.value.canHideApp) {
+            _messages.tryEmit(uiText(CoreR.string.failure))
+            return
+        }
         val safeLabel = label.trim()
         if (safeLabel.isBlank() || safeLabel.length > AppMigration.MAX_LABEL_LENGTH) {
             _messages.tryEmit(uiText(CoreR.string.failure))
@@ -193,6 +198,10 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun requestRestoreApp() {
+        if (!_state.value.canRestoreApp) {
+            _messages.tryEmit(uiText(CoreR.string.failure))
+            return
+        }
         _effects.tryEmit(UiEffect.RequestRestoreApp)
     }
 
@@ -344,6 +353,8 @@ class SettingsViewModel : ViewModel() {
         val suTimeoutIndex = SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout).let { if (it < 0) 0 else it }
         val currentLang = currentLanguageTag()
         val languageIndex = LocaleSetting.available.tags.indexOf(currentLang).let { if (it < 0) 0 else it }
+        val isHiddenApp = isHiddenMagiskApp()
+        val canMigrateApp = runtime.canMigrateApp
 
         _state.update {
             it.copy(
@@ -357,7 +368,10 @@ class SettingsViewModel : ViewModel() {
                 languageSystemName = LocaleSetting.instance.appLocale?.let { locale -> locale.getDisplayName(locale) } ?: AppContext.getString(CoreR.string.system_default),
                 languageIndex = languageIndex,
                 languageName = LocaleSetting.available.names.getOrElse(languageIndex) { AppContext.getString(CoreR.string.system_default) },
-                canMigrateApp = runtime.canMigrateApp,
+                canMigrateApp = canMigrateApp,
+                isHiddenApp = isHiddenApp,
+                canRestoreApp = canMigrateApp && isHiddenApp,
+                canHideApp = canMigrateApp && !isHiddenApp,
                 updateChannel = updateChannel,
                 updateChannelName = updateChannelArray.getOrElse(updateChannel) { "-" },
                 isCustomChannel = updateChannel == Config.Value.CUSTOM_CHANNEL,
@@ -408,4 +422,8 @@ val SU_TIMEOUT_VALUES = listOf(10, 15, 20, 30, 45, 60)
 
 private fun currentLanguageTag(): String {
     return LocaleSetting.instance.appLocale?.toLanguageTag() ?: Config.locale
+}
+
+private fun isHiddenMagiskApp(): Boolean {
+    return isRunningAsStub && Config.suManager == AppContext.packageName
 }

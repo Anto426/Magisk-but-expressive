@@ -107,6 +107,11 @@ class MainActivity : UIActivity<Unit>(), SplashScreenHost {
     }
 
     internal fun handleInvalidStateInstall() {
+        if (!MagiskRuntimeEngine.snapshot().canMigrateApp) {
+            toast(CoreR.string.root_required_operation, Toast.LENGTH_LONG)
+            showInvalidState.value = true
+            return
+        }
         extension.withPermission(REQUEST_INSTALL_PACKAGES) {
             if (!it) {
                 toast(CoreR.string.install_unknown_denied, Toast.LENGTH_SHORT)

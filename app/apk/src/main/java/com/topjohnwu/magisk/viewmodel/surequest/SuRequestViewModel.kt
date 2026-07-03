@@ -2,7 +2,8 @@ package com.topjohnwu.magisk.viewmodel.surequest
 
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.CountDownTimer
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.magisk.arch.BaseViewModel
 import com.topjohnwu.magisk.arch.UiEffect
@@ -42,10 +43,10 @@ class SuRequestViewModel(
     val uiState: StateFlow<SuRequestUiState> = _uiState.asStateFlow()
 
     private val handler = SuRequestHandler(AppContext.packageManager, policyDB)
-    private val millis = SECONDS.toMillis(Config.suDefaultTimeout.toLong())
-    private var timer = SuTimer(millis, 1000)
     private var initialized = false
+    private var responded = false
     private var respondAfterAuth = false
+    private var timerJob: Job? = null
 
     fun grantPressed() {
         cancelTimer()
@@ -119,13 +120,14 @@ class SuRequestViewModel(
         }
 
         _uiState.value = state
-        timer.start()
+        startTimer()
         initialized = true
     }
 
     private fun respond(action: Int) {
-        if (!initialized) return
-        timer.cancel()
+        if (!initialized || responded) return
+        responded = true
+        cancelTimer()
 
         val state = _uiState.value
         timeoutPrefs.edit().putInt(state.packageName, state.selectedItemPosition).apply()
@@ -136,27 +138,35 @@ class SuRequestViewModel(
         }
     }
 
+    private fun startTimer() {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch(Dispatchers.Default) {
+            val totalSeconds = Config.suDefaultTimeout
+            for (sec in totalSeconds downTo 1) {
+                withContext(Dispatchers.Main) {
+                    _uiState.update {
+                        it.copy(
+                            grantEnabled = it.grantEnabled || (totalSeconds - sec) >= 1,
+                            denyCountdown = sec
+                        )
+                    }
+                }
+                delay(1000)
+            }
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(denyCountdown = 0) }
+                respond(DENY)
+            }
+        }
+    }
+
     private fun cancelTimer() {
-        timer.cancel()
+        timerJob?.cancel()
         _uiState.update { it.copy(denyCountdown = 0) }
     }
 
-    private inner class SuTimer(
-        private val millis: Long, interval: Long
-    ) : CountDownTimer(millis, interval) {
-
-        override fun onTick(remains: Long) {
-            _uiState.update {
-                it.copy(
-                    grantEnabled = it.grantEnabled || remains <= millis - 1000,
-                    denyCountdown = (remains / 1000).toInt() + 1
-                )
-            }
-        }
-
-        override fun onFinish() {
-            _uiState.update { it.copy(denyCountdown = 0) }
-            respond(DENY)
-        }
+    override fun onCleared() {
+        respond(DENY)
+        super.onCleared()
     }
 }

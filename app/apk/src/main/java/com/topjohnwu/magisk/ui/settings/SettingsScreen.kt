@@ -627,7 +627,7 @@ fun SettingsScreen(
                         )
                     )
                 }
-                if (state.isHiddenApp) {
+                if (state.canRestoreApp) {
                     add(
                         SettingScreenItem(
                             title = stringResource(CoreR.string.settings_restore_app_title),
@@ -642,7 +642,7 @@ fun SettingsScreen(
                             }
                         )
                     )
-                } else if (state.canMigrateApp) {
+                } else if (state.canHideApp) {
                     add(
                         SettingScreenItem(
                             title = stringResource(CoreR.string.settings_hide_app_title),

@@ -12,6 +12,8 @@ import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ShellUtils.fastCmd
 import com.topjohnwu.superuser.ShellUtils.fastCmdResult
 import kotlinx.coroutines.Runnable
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 val isRunningAsStub get() = Info.stub != null
 
@@ -20,17 +22,34 @@ object Info {
     var stub: StubApk.Data? = null
 
     private val EMPTY_UPDATE = UpdateInfo()
+    private val updateLock = Mutex()
+    private var updateCacheKey = ""
     var update = EMPTY_UPDATE
         private set
 
     suspend fun fetchUpdate(svc: NetworkService): UpdateInfo? {
-        return if (update === EMPTY_UPDATE) {
-            svc.fetchUpdate()?.apply { update = this }
-        } else update
+        val key = currentUpdateCacheKey()
+        val cached = update
+        if (cached !== EMPTY_UPDATE && updateCacheKey == key) {
+            return cached
+        }
+
+        return updateLock.withLock {
+            val lockedCached = update
+            if (lockedCached !== EMPTY_UPDATE && updateCacheKey == key) {
+                lockedCached
+            } else {
+                svc.fetchUpdate()?.also {
+                    update = it
+                    updateCacheKey = key
+                }
+            }
+        }
     }
 
     fun resetUpdate() {
         update = EMPTY_UPDATE
+        updateCacheKey = ""
     }
 
     var isRooted = false
@@ -122,4 +141,15 @@ object Info {
         Config.keepVerity = getBool("KEEPVERITY")
         Config.keepEnc = getBool("KEEPFORCEENCRYPT")
     }
+}
+
+private fun currentUpdateCacheKey(): String {
+    val channel = Config.updateChannel.coerceIn(
+        Config.Value.MBE_CHANNEL,
+        Config.Value.CUSTOM_CHANNEL
+    )
+    val customUrl = Config.customChannelUrl.takeIf {
+        channel == Config.Value.CUSTOM_CHANNEL && it.isNotBlank()
+    }.orEmpty()
+    return "$channel:$customUrl"
 }

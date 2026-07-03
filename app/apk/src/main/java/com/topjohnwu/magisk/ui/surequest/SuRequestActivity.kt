@@ -20,6 +20,9 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +50,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -134,7 +139,7 @@ class SuRequestActivity : ComponentActivity(), UntrackedActivity {
         handleIntent(intent)
 
         setContent {
-            MagiskTheme {
+            MagiskTheme(setSolidBackground = false) {
                 SuRequestEffects(
                     activity = this@SuRequestActivity, extension = extension, viewModel = viewModel
                 )
@@ -294,7 +299,9 @@ private fun SuRequestPanel(
     MagiskElevatedPanel(
         modifier = Modifier
             .fillMaxWidth()
-            .widthIn(max = 440.dp)
+            .widthIn(max = 380.dp),
+        shape = MagiskComponentDefaults.CardShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Icon(
@@ -309,14 +316,18 @@ private fun SuRequestPanel(
             )
 
             Column(
-                modifier = Modifier.padding(28.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header Row with shield icon
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Header Row with shield icon squircle badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Surface(
-                        modifier = Modifier.size(36.dp),
-                        shape = CircleShape,
+                        modifier = Modifier.size(38.dp),
+                        shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ) {
@@ -325,24 +336,25 @@ private fun SuRequestPanel(
                                 imageVector = Icons.Rounded.Security,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     Text(
                         text = stringResource(id = CoreR.string.su_request_title).uppercase(),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Black,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
-                // Main App Info Card
+                // App Info Card (Sleek Container)
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    shape = MagiskComponentDefaults.ControlShape,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -351,8 +363,8 @@ private fun SuRequestPanel(
                     ) {
                         Surface(
                             modifier = Modifier.size(54.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLowest
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -364,20 +376,20 @@ private fun SuRequestPanel(
                                 )
                             }
                         }
-                        Spacer(Modifier.width(20.dp))
+                        Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = state.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Black,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = state.packageName,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -385,13 +397,21 @@ private fun SuRequestPanel(
                     }
                 }
 
-                // Interactive Section
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                // Improved Dropdown Selector
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Timeout Selector (Custom Dropdown)
-                    Box {
+                    Text(
+                        text = stringResource(id = CoreR.string.request_timeout),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
                         Surface(
                             onClick = {
                                 if (state.grantEnabled) {
@@ -401,36 +421,37 @@ private fun SuRequestPanel(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(MagiskComponentDefaults.ActionHeight),
+                                .height(44.dp),
                             shape = MagiskComponentDefaults.ControlShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                             enabled = state.grantEnabled
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(horizontal = 16.dp),
+                                    .padding(horizontal = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.Timer,
                                     contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(18.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
-                                Spacer(Modifier.width(12.dp))
+                                Spacer(Modifier.width(10.dp))
                                 Text(
-                                    text = timeoutItems.getOrNull(state.selectedItemPosition)
-                                        .orEmpty(),
+                                    text = timeoutItems.getOrNull(state.selectedItemPosition).orEmpty(),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Icon(
                                     imageVector = Icons.Rounded.UnfoldMore,
                                     contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.outline
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -451,87 +472,95 @@ private fun SuRequestPanel(
                             }
                         }
                     }
+                }
 
-                    // Warning Text Section
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
+                // Translucent Warning Panel
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    shape = MagiskComponentDefaults.ControlShape,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.15f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Warning,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Text(
-                                text = stringResource(id = CoreR.string.su_warning),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 16.sp,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Rounded.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = stringResource(id = CoreR.string.su_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Medium,
+                            lineHeight = 14.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
 
                 Spacer(Modifier.height(4.dp))
 
-                // Buttons Action Row
-                Row(
+                // Action Buttons stacked
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Surface(
-                        onClick = onDeny,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(MagiskComponentDefaults.ActionHeight),
-                        shape = MagiskComponentDefaults.ControlShape,
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = denyText.uppercase(),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
-                    }
-
+                    // Grant Button (Primary Action)
                     Button(
                         onClick = onGrant,
                         enabled = state.grantEnabled,
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
                             .height(MagiskComponentDefaults.ActionHeight)
                             .pointerInteropFilter(onTouchEvent = grantTouchFilter),
                         shape = MagiskComponentDefaults.ControlShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Security,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Security,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(id = CoreR.string.grant).uppercase(),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Deny Button (Secondary Action)
+                    OutlinedButton(
+                        onClick = onDeny,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(MagiskComponentDefaults.ActionHeight),
+                        shape = MagiskComponentDefaults.ControlShape,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
                         Text(
-                            text = stringResource(id = CoreR.string.grant).uppercase(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black
+                            text = denyText.uppercase(),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
