@@ -238,6 +238,7 @@ def notes_command(args: argparse.Namespace) -> None:
     ])
     (out_dir / "release.md").write_text("\n".join(release_md).rstrip() + "\n", encoding="utf-8")
 
+    native_code = metadata.get("native_version_code", "")
     update = {
         "magisk": {
             "version": version,

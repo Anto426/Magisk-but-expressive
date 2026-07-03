@@ -85,9 +85,6 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./build.py -vr app
 
-      - name: Build debug APK
-        run: ./build.py -v app
-
       - name: Package release files
         id: package
         shell: bash
@@ -99,12 +96,9 @@ jobs:
             tag="v${version}"
           fi
           apk_asset="Magisk-v${version}.apk"
-          debug_asset="Magisk-v${version}-debug.apk"
           cp out/app-release.apk "release-bot/${apk_asset}"
-          cp out/app-debug.apk "release-bot/${debug_asset}"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "apk_asset=${apk_asset}" >> "$GITHUB_OUTPUT"
-          echo "debug_asset=${debug_asset}" >> "$GITHUB_OUTPUT"
 
       - name: Generate release metadata
         id: notes
@@ -141,7 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="${{ steps.package.outputs.tag }}"
-          args=(release-bot/release.md release-bot/update.json "release-bot/${{ steps.package.outputs.apk_asset }}" "release-bot/${{ steps.package.outputs.debug_asset }}")
+          args=(release-bot/release.md release-bot/update.json "release-bot/${{ steps.package.outputs.apk_asset }}")
           release_flags=()
           if [[ "${{ inputs.prerelease || 'true' }}" == "true" ]]; then
             release_flags+=(--prerelease)
