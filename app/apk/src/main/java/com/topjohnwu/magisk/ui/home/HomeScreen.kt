@@ -384,13 +384,13 @@ fun HomeScreen(
                 metrics = listOf(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),
-                        value = if (isInstalled) state.magiskInstalledVersion else stringResource(
+                        value = if (isInstalled) state.runtime.envVersionName else stringResource(
                             CoreR.string.not_available
                         )
                     ),
                     MagiskStatusMetric(
-                        label = stringResource(CoreR.string.home_latest_version),
-                        value = state.managerRemoteVersion.ifEmpty {
+                        label = stringResource(CoreR.string.home_version_code),
+                        value = if (isInstalled) state.runtime.envVersionCode.toString() else {
                             stringResource(CoreR.string.not_available)
                         }
                     )
@@ -440,8 +440,18 @@ fun HomeScreen(
                         value = state.managerInstalledVersion
                     ),
                     MagiskStatusMetric(
+                        label = stringResource(CoreR.string.home_version_code),
+                        value = state.managerInstalledVersionCode
+                    ),
+                    MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_latest_version),
                         value = state.managerRemoteVersion.ifEmpty {
+                            stringResource(CoreR.string.not_available)
+                        }
+                    ),
+                    MagiskStatusMetric(
+                        label = stringResource(CoreR.string.home_latest_version_code),
+                        value = state.managerRemoteVersionCode.ifEmpty {
                             stringResource(CoreR.string.not_available)
                         }
                     )

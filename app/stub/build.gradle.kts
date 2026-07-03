@@ -14,10 +14,10 @@ android {
     enableKotlin = false
 
     val base = "https://github.com/Anto426/Magisk-but-expressive/releases/download/"
-    val url = base + "v${Config.version}/Magisk-v${Config.version}.apk"
+    val url = base + "v${Config.mbeVersionName}/Magisk-v${Config.mbeVersionName}.apk"
 
     defaultConfig {
-        applicationId = "io.github.vvb2060.magisk"
+        applicationId = Config.applicationId
         versionCode = 1
         versionName = "1.0"
         buildConfigField("String", "APK_URL", "\"$url\"")

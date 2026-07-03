@@ -113,6 +113,7 @@ fun Project.setupCoreLib() {
     setupCommon()
 
     val abiList = Config.abiList
+    val nativeBinariesDir = Config.nativeBinariesDir
 
     androidComponents {
         onVariants { variant ->
@@ -125,7 +126,7 @@ fun Project.setupCoreLib() {
 
                 for (abi in abiList) {
                     into(abi) {
-                        from(rootFile("asset/binaries/releases/e8a58776-alpha-30700/$abi")) {
+                        from(rootFile("$nativeBinariesDir/$abi")) {
                             include("magiskboot", "magiskinit", "magiskpolicy", "magisk", "init-ld", "busybox")
                             rename {
                                 when (it) {
@@ -139,9 +140,9 @@ fun Project.setupCoreLib() {
                 }
                 onlyIf {
                     for (abi in abiList) {
-                        val dir = rootFile("asset/binaries/releases/e8a58776-alpha-30700/$abi")
+                        val dir = rootFile("$nativeBinariesDir/$abi")
                         if (!dir.exists() || dir.listFiles()?.size ?: 0 < 6) {
-                            throw StopExecutionException("Missing binaries in asset/binaries/releases/e8a58776-alpha-30700/$abi")
+                            throw StopExecutionException("Missing binaries in $nativeBinariesDir/$abi")
                         }
                     }
                     true
@@ -285,10 +286,10 @@ fun Project.setupMainApk() {
         namespace = "com.topjohnwu.magisk"
 
         defaultConfig {
-            applicationId = "io.github.vvb2060.magisk"
+            applicationId = Config.applicationId
             vectorDrawables.useSupportLibrary = true
-            versionName = Config.version
-            versionCode = Config.versionCode
+            versionName = Config.mbeVersionName
+            versionCode = Config.mbeVersionCode
             ndk {
                 abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64", "riscv64")
                 debugSymbolLevel = "FULL"

@@ -72,8 +72,8 @@ object MagiskRuntimeEngine {
             envVersionName = env.versionString,
             envVersionCode = env.versionCode,
             envDebug = env.isDebug,
-            managerVersionName = BuildConfig.APP_VERSION_NAME,
-            managerVersionCode = BuildConfig.APP_VERSION_CODE,
+            managerVersionName = BuildConfig.MBE_VERSION_NAME,
+            managerVersionCode = BuildConfig.MBE_VERSION_CODE,
             managerDebug = BuildConfig.DEBUG,
             isEmulator = Info.isEmulator,
             isSystemAsRoot = Info.isSAR,
@@ -110,4 +110,5 @@ object MagiskRuntimeEngine {
                 action == Const.Value.FLASH_MAGISK ||
                 action == Const.Value.FLASH_INACTIVE_SLOT
     }
+
 }

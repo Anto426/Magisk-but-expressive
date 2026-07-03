@@ -127,8 +127,18 @@ fun AppUpdateScreen(
                         value = state.installedVersion
                     ),
                     MagiskStatusMetric(
+                        label = stringResource(CoreR.string.home_version_code),
+                        value = state.installedVersionCode
+                    ),
+                    MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_latest_version),
                         value = state.latestVersion.ifEmpty {
+                            stringResource(CoreR.string.not_available)
+                        }
+                    ),
+                    MagiskStatusMetric(
+                        label = stringResource(CoreR.string.home_latest_version_code),
+                        value = state.latestVersionCode.ifEmpty {
                             stringResource(CoreR.string.not_available)
                         }
                     )

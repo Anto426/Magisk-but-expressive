@@ -24,6 +24,11 @@ object Config {
     val version: String get() = get("version")!!
     val versionCode: Int get() = get("magisk.versionCode")!!.toInt()
     val stubVersion: String get() = get("magisk.stubVersion")!!
+    val applicationId: String get() = get("magisk.applicationId") ?: "io.github.vvb2060.magisk"
+    val nativeBinariesDir: String get() = get("magisk.nativeBinariesDir")
+        ?: "asset/binaries/releases/e8a58776-alpha-30700"
+    val mbeVersionName: String get() = get("magisk.mbeVersionName") ?: version
+    val mbeVersionCode: Int get() = get("magisk.mbeVersionCode")?.toInt() ?: versionCode
     val abiList: List<String> get() = get("abiList")!!.split(",")
 }
 

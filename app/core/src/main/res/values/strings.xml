@@ -37,6 +37,8 @@
     <string name="home_status_title">Status</string>
     <string name="home_installed_version">Installed</string>
     <string name="home_latest_version">Latest</string>
+    <string name="home_version_code">Version code</string>
+    <string name="home_latest_version_code">Latest code</string>
     <string name="invalid_update_channel">Invalid update channel</string>
     <string name="uninstall">Uninstall</string>
     <string name="uninstall_magisk_title">Uninstall Magisk</string>

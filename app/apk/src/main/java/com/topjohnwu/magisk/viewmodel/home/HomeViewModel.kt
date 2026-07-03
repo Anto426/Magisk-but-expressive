@@ -22,6 +22,7 @@ import com.topjohnwu.magisk.runtime.MagiskInstallState
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import com.topjohnwu.magisk.runtime.MagiskRuntimeState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -54,11 +55,12 @@ data class Contributor(
 data class HomeUiState(
     val runtime: MagiskRuntimeState = MagiskRuntimeEngine.snapshot(),
     val magiskState: HomeViewModel.State = HomeViewModel.State.INVALID,
-    val magiskInstalledVersion: String = "",
     val appState: HomeViewModel.State = HomeViewModel.State.LOADING,
     val managerRemoteVersion: String = "",
+    val managerRemoteVersionCode: String = "",
     val managerReleaseNotes: String = "",
     val managerInstalledVersion: String = "",
+    val managerInstalledVersionCode: String = "",
     val packageName: String = "",
     val envActive: Boolean = runtime.isInstalled,
     val showHideRestore: Boolean = false,
@@ -105,11 +107,13 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             _state.update { if (it.contributors.isEmpty()) it.copy(contributorsLoading = true) else it }
-            loadContributors()
-            val remote = Info.fetchUpdate(svc)
+            val contributors = async { loadContributors() }
+            val update = async { Info.fetchUpdate(svc) }
+            contributors.await()
+            val remote = update.await()
             val appState = when {
                 remote == null -> HomeViewModel.State.INVALID
-                BuildConfig.APP_VERSION_CODE < remote.versionCode -> HomeViewModel.State.OUTDATED
+                BuildConfig.MBE_VERSION_CODE < remote.versionCode -> HomeViewModel.State.OUTDATED
                 else -> HomeViewModel.State.UP_TO_DATE
             }
             val runtime = MagiskRuntimeEngine.snapshot()
@@ -118,10 +122,11 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
                 it.copy(
                     runtime = runtime,
                     magiskState = magiskState,
-                    magiskInstalledVersion = runtime.installedMagiskVersion,
                     appState = appState,
-                    managerInstalledVersion = runtime.installedManagerVersion,
-                    managerRemoteVersion = remote?.run { "$version ($versionCode)" }.orEmpty(),
+                    managerInstalledVersion = runtime.managerVersionName,
+                    managerInstalledVersionCode = runtime.managerVersionCode.toString(),
+                    managerRemoteVersion = remote?.version.orEmpty(),
+                    managerRemoteVersionCode = remote?.versionCode?.takeIf { code -> code > 0 }?.toString().orEmpty(),
                     managerReleaseNotes = remote?.note.orEmpty(),
                     packageName = AppContext.packageName,
                     envActive = runtime.isInstalled,
@@ -295,7 +300,7 @@ private fun createContributor(login: String, avatarUrl: String, htmlUrl: String)
 private fun cachedContributors(): List<Contributor>? {
     val cached = HomeViewModel.contributorsCache
     val cachedAt = HomeViewModel.contributorsCacheTimestamp
-    if (cached.isNotEmpty() && System.currentTimeMillis() - cachedAt < HomeViewModel.CONTRIBUTORS_CACHE_TTL_MS) {
+    if (cached.isNotEmpty() && SystemClock.elapsedRealtime() - cachedAt < HomeViewModel.CONTRIBUTORS_CACHE_TTL_MS) {
         return cached
     }
 
@@ -320,15 +325,16 @@ private fun cachedContributors(): List<Contributor>? {
         }
 
         HomeViewModel.contributorsCache = list
-        HomeViewModel.contributorsCacheTimestamp = timestamp
+        HomeViewModel.contributorsCacheTimestamp = SystemClock.elapsedRealtime()
         list
     }.getOrNull()
 }
 
 private fun cacheContributors(list: List<Contributor>) {
     val pinned = withPinnedContributors(list)
+    val now = System.currentTimeMillis()
     HomeViewModel.contributorsCache = pinned
-    HomeViewModel.contributorsCacheTimestamp = System.currentTimeMillis()
+    HomeViewModel.contributorsCacheTimestamp = SystemClock.elapsedRealtime()
 
     runCatching {
         val array = JSONArray()
@@ -343,7 +349,7 @@ private fun cacheContributors(list: List<Contributor>) {
         val prefs = AppContext.getSharedPreferences("git_contributors", android.content.Context.MODE_PRIVATE)
         prefs.edit().apply {
             putString("cache_data", array.toString())
-            putLong("cache_timestamp", System.currentTimeMillis())
+            putLong("cache_timestamp", now)
             apply()
         }
     }

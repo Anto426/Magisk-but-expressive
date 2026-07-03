@@ -28,13 +28,11 @@ data class AppUpdateUiState(
     val downloadFailed: Boolean = false
 ) {
     val hasUpdateInfo: Boolean get() = update.versionCode > 0 && update.link.isNotBlank()
-    val updateAvailable: Boolean get() = hasUpdateInfo && BuildConfig.APP_VERSION_CODE < update.versionCode
-    val installedVersion: String get() = "${BuildConfig.APP_VERSION_NAME} (${BuildConfig.APP_VERSION_CODE})"
-    val latestVersion: String get() = if (hasUpdateInfo) {
-        "${update.version} (${update.versionCode})"
-    } else {
-        ""
-    }
+    val updateAvailable: Boolean get() = hasUpdateInfo && BuildConfig.MBE_VERSION_CODE < update.versionCode
+    val installedVersion: String get() = BuildConfig.MBE_VERSION_NAME
+    val installedVersionCode: String get() = BuildConfig.MBE_VERSION_CODE.toString()
+    val latestVersion: String get() = if (hasUpdateInfo) update.version else ""
+    val latestVersionCode: String get() = if (hasUpdateInfo) update.versionCode.toString() else ""
 }
 
 class AppUpdateViewModel(
