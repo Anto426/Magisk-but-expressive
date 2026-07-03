@@ -1,5 +1,12 @@
 # Magisk Manager Changelog
 
+### e8a58776-alpha-mbe.1
+
+- Separate MBE app versioning from the Magisk core version used for root/runtime checks.
+- Show the MBE version code explicitly in the home and update cards.
+- Add a release bot that builds from local native binary folders, publishes APK/update metadata, and can notify Telegram.
+- Improve authentication, settings state, update cache handling, and M3 Expressive default theming.
+
 ### v8.0.7
 
 - Fix sepolicy rule migration when upgrading
