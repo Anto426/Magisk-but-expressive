@@ -215,7 +215,7 @@ fun Project.setupAppCommon() {
             val keyAlias = System.getenv("KEY_ALIAS") ?: Config["keyAlias"]
             val keyPass = System.getenv("KEY_PASSWORD") ?: Config["keyPass"]
 
-            if (keyStore != null) {
+            if (keyStore != null && keyStorePass != null && keyAlias != null && keyPass != null) {
                 create("config") {
                     storeFile = rootFile(keyStore)
                     storePassword = keyStorePass
