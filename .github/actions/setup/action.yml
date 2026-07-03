@@ -18,6 +18,24 @@ runs:
       with:
         python-version: "3.x"
 
+    - name: Detect Android SDK
+      shell: bash
+      run: |
+        if [ -z "${ANDROID_HOME:-}" ]; then
+          if [ -d "$HOME/Android/Sdk" ]; then
+            echo "ANDROID_HOME=$HOME/Android/Sdk" >> "$GITHUB_ENV"
+            echo "Detected Android SDK at $HOME/Android/Sdk"
+          elif [ -d "/usr/lib/android-sdk" ]; then
+            echo "ANDROID_HOME=/usr/lib/android-sdk" >> "$GITHUB_ENV"
+            echo "Detected Android SDK at /usr/lib/android-sdk"
+          elif [ -d "/usr/local/lib/android/sdk" ]; then
+            echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+            echo "Detected Android SDK at /usr/local/lib/android/sdk"
+          else
+            echo "Warning: Android SDK not found in standard locations. Please ensure it is installed."
+          fi
+        fi
+
     - name: Install GNU make
       if: runner.os == 'macOS'
       shell: bash
