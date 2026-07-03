@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
@@ -232,24 +233,6 @@ fun HomeScreen(
     }
 
     selectedContributorForLinks?.let { contributor ->
-        val contributorIndex = state.contributors.indexOfFirst { it.login == contributor.login }
-        val isEven = contributorIndex >= 0 && contributorIndex % 2 == 0
-        val shape = if (isEven) {
-            RoundedCornerShape(
-                topStart = 20.dp,
-                topEnd = 6.dp,
-                bottomStart = 6.dp,
-                bottomEnd = 20.dp
-            )
-        } else {
-            RoundedCornerShape(
-                topStart = 6.dp,
-                topEnd = 20.dp,
-                bottomStart = 20.dp,
-                bottomEnd = 6.dp
-            )
-        }
-
         MagiskBottomSheet(
             onDismissRequest = { selectedContributorForLinks = null }
         ) {
@@ -273,10 +256,10 @@ fun HomeScreen(
                             .border(
                                 width = 2.dp,
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
-                                shape = shape
+                                shape = CircleShape
                             )
                             .padding(4.dp)
-                            .clip(shape),
+                            .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
                     Text(
@@ -451,7 +434,6 @@ fun HomeScreen(
                     bottomStart = 32.dp,
                     bottomEnd = 4.dp
                 ),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
                 metrics = listOf(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),
@@ -506,43 +488,11 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             rowContributors.forEachIndexed { index, contributor ->
-                                val isEven = index % 2 == 0
-                                val cardShape = if (isEven) {
-                                    RoundedCornerShape(
-                                        topStart = 28.dp,
-                                        topEnd = 8.dp,
-                                        bottomStart = 8.dp,
-                                        bottomEnd = 28.dp
-                                    )
-                                } else {
-                                    RoundedCornerShape(
-                                        topStart = 8.dp,
-                                        topEnd = 28.dp,
-                                        bottomStart = 28.dp,
-                                        bottomEnd = 8.dp
-                                    )
-                                }
-                                val avatarShape = if (isEven) {
-                                    RoundedCornerShape(
-                                        topStart = 12.dp,
-                                        topEnd = 4.dp,
-                                        bottomStart = 4.dp,
-                                        bottomEnd = 12.dp
-                                    )
-                                } else {
-                                    RoundedCornerShape(
-                                        topStart = 4.dp,
-                                        topEnd = 12.dp,
-                                        bottomStart = 12.dp,
-                                        bottomEnd = 4.dp
-                                    )
-                                }
-
                                 MagiskCard(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(132.dp),
-                                    shape = cardShape,
+                                    shape = MagiskComponentDefaults.CardShape,
                                     contentPadding = PaddingValues(12.dp),
                                     onClick = { selectedContributorForLinks = contributor }
                                 ) {
@@ -561,10 +511,10 @@ fun HomeScreen(
                                                     color = MaterialTheme.colorScheme.primary.copy(
                                                         alpha = 0.25f
                                                     ),
-                                                    shape = avatarShape
+                                                    shape = CircleShape
                                                 )
                                                 .padding(3.dp)
-                                                .clip(avatarShape),
+                                                .clip(CircleShape),
                                             contentScale = ContentScale.Crop
                                         )
 

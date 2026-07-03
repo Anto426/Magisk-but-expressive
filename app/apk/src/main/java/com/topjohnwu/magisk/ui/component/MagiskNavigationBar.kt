@@ -114,7 +114,7 @@ fun MagiskNavigationBar(
                         .wrapContentWidth()
                         .height(if (showLabels) 76.dp else 64.dp),
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 3.dp,
                     shadowElevation = 8.dp,
                     border = MagiskComponentDefaults.CardBorder

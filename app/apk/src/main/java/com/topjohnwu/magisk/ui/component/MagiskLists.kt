@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -116,8 +115,16 @@ fun MagiskListItem(
             } else {
                 MagiskListItemDefaults.ContainerColor
             },
-            headlineColor = if (enabled) MagiskComponentDefaults.PrimaryText else MaterialTheme.colorScheme.outline,
-            supportingColor = MagiskComponentDefaults.SecondaryText
+            headlineColor = when {
+                !enabled -> MaterialTheme.colorScheme.outline
+                selected -> MagiskComponentDefaults.SelectedContent
+                else -> MagiskComponentDefaults.PrimaryText
+            },
+            supportingColor = if (selected) {
+                MagiskComponentDefaults.SelectedContent.copy(alpha = 0.78f)
+            } else {
+                MagiskComponentDefaults.SecondaryText
+            }
         ),
         elevation = ListItemDefaults.elevation(),
         content = {
@@ -251,7 +258,7 @@ fun MagiskLanguageItem(
         modifier = modifier.fillMaxWidth(),
         onClick = onClick,
         containerColor = if (selected) {
-            MagiskComponentDefaults.PrimaryIconTint.copy(alpha = 0.12f)
+            MagiskComponentDefaults.SelectedContainer
         } else {
             MagiskComponentDefaults.CardContainer
         },
@@ -272,19 +279,11 @@ fun MagiskLanguageItem(
                 modifier = Modifier
                     .size(36.dp)
                     .background(
-                        brush = Brush.linearGradient(
-                            colors = if (selected) {
-                                listOf(
-                                    MagiskComponentDefaults.PrimaryIconTint,
-                                    MagiskComponentDefaults.PrimaryIconTint.copy(alpha = 0.8f)
-                                )
-                            } else {
-                                listOf(
-                                    MaterialTheme.colorScheme.surfaceVariant,
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
-                                )
-                            }
-                        ),
+                        color = if (selected) {
+                            MagiskComponentDefaults.PrimaryIconTint
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHighest
+                        },
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -296,7 +295,7 @@ fun MagiskLanguageItem(
                     color = if (selected) {
                         MaterialTheme.colorScheme.onPrimary
                     } else {
-                        MagiskComponentDefaults.SecondaryText
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
             }
@@ -312,7 +311,7 @@ fun MagiskLanguageItem(
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     color = if (selected) {
-                        MagiskComponentDefaults.PrimaryIconTint
+                        MagiskComponentDefaults.SelectedContent
                     } else {
                         MagiskComponentDefaults.PrimaryText
                     }
@@ -321,7 +320,11 @@ fun MagiskLanguageItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MagiskComponentDefaults.SecondaryText
+                    color = if (selected) {
+                        MagiskComponentDefaults.SelectedContent.copy(alpha = 0.78f)
+                    } else {
+                        MagiskComponentDefaults.SecondaryText
+                    }
                 )
             }
 

@@ -9,18 +9,18 @@ internal val DefaultThemeDefinition = ThemeDefinition(
     labelRes = CoreR.string.theme_option_default_dynamic,
     seed = {
         ThemeSeed(
-            lightPrimary = Color(0xFFF06292),
-            darkPrimary = Color(0xFFF48FB1),
-            lightSecondary = Color(0xFFD81B60),
-            darkSecondary = Color(0xFFF06292),
-            lightTertiary = blend(Color(0xFFF06292), Color(0xFFD81B60), 0.42f),
-            darkTertiary = blend(Color(0xFFF48FB1), Color(0xFFF06292), 0.42f),
-            lightSurface = Color(0xFFFFF5F8),
-            darkSurface = Color(0xFF211017),
-            lightOnSurface = Color(0xFF3C1020),
-            darkOnSurface = Color(0xFFFCE4EC),
-            lightError = Color(0xFFB00020),
-            darkError = Color(0xFFCF6679)
+            lightPrimary = Color(0xFF8F174F),
+            darkPrimary = Color(0xFFE889B3),
+            lightSecondary = Color(0xFF00545A),
+            darkSecondary = Color(0xFF52B8C2),
+            lightTertiary = Color(0xFF6F4100),
+            darkTertiary = Color(0xFFE8AC59),
+            lightSurface = Color(0xFFF0E4EA),
+            darkSurface = Color(0xFF100B10),
+            lightOnSurface = Color(0xFF1F171C),
+            darkOnSurface = Color(0xFFEBD7E0),
+            lightError = Color(0xFFBA1A1A),
+            darkError = Color(0xFFFFB4AB)
         )
     }
 )

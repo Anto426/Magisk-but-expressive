@@ -15,6 +15,7 @@ import com.topjohnwu.magisk.core.repository.LogRepository
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils.outputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
 
 data class MagiskLogScreenUiState(
@@ -44,7 +46,7 @@ data class LogStats(
             return LogStats(
                 total = items.size,
                 issues = items.count { it.isIssue },
-                sources = items.map { it.sourceLabel }.distinct().size
+                sources = items.asSequence().map { it.sourceLabel }.toSet().size
             )
         }
     }
@@ -78,36 +80,15 @@ data class MagiskLogUiItem(
     val message: String,
     val raw: String,
     val pid: Int = 0,
-    val tid: Int = 0
+    val tid: Int = 0,
+    val isIssue: Boolean,
+    val isMagisk: Boolean,
+    val isSu: Boolean,
+    val sourceLabel: String,
+    val searchKey: String
 ) {
-    val isIssue: Boolean
-        get() = level == MagiskLogLevel.WARN || level == MagiskLogLevel.ERROR || level == MagiskLogLevel.FATAL
-
-    val isMagisk: Boolean
-        get() = tag.contains("magisk", ignoreCase = true) || message.contains(
-            "magisk",
-            ignoreCase = true
-        )
-
-    val isSu: Boolean
-        get() = message.contains("su:", ignoreCase = true) || raw.contains(
-            "su:",
-            ignoreCase = true
-        ) || tag.equals("su", ignoreCase = true)
-
-    val sourceLabel: String
-        get() = when {
-            isMagisk -> AppContext.getString(CoreR.string.log_source_magisk)
-            isSu -> AppContext.getString(CoreR.string.log_source_su)
-            tag.isNotBlank() -> tag
-            else -> AppContext.getString(CoreR.string.log_source_system)
-        }
-
     fun contains(query: String): Boolean {
-        return tag.contains(query, ignoreCase = true) || message.contains(
-            query,
-            ignoreCase = true
-        ) || raw.contains(query, ignoreCase = true) || timestamp.contains(query, ignoreCase = true)
+        return searchKey.contains(query)
     }
 }
 
@@ -118,12 +99,27 @@ class MagiskLogViewModel(private val repo: LogRepository) : ViewModel() {
     private val _messages = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
     val messages = _messages.asSharedFlow()
 
+    private var refreshJob: Job? = null
+
     fun refresh() {
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             _state.update { it.copy(loading = true) }
             val raw = withContext(Dispatchers.IO) { repo.fetchMagiskLogs() }
             val items = withContext(Dispatchers.Default) {
+                val magiskLabel = AppContext.getString(CoreR.string.log_source_magisk)
+                val suLabel = AppContext.getString(CoreR.string.log_source_su)
+                val systemLabel = AppContext.getString(CoreR.string.log_source_system)
                 MagiskLogParser.parse(raw).mapIndexed { index, entry ->
+                    val isMagisk = entry.tag.contains("magisk", ignoreCase = true) || entry.message.contains("magisk", ignoreCase = true)
+                    val isSu = entry.message.contains("su:", ignoreCase = true) || entry.tag.equals("su", ignoreCase = true)
+                    val isIssue = entry.level == 'W' || entry.level == 'E' || entry.level == 'F'
+                    val sourceLabel = when {
+                        isMagisk -> magiskLabel
+                        isSu -> suLabel
+                        entry.tag.isNotBlank() -> entry.tag
+                        else -> systemLabel
+                    }
                     MagiskLogUiItem(
                         id = index,
                         timestamp = entry.timestamp,
@@ -132,7 +128,12 @@ class MagiskLogViewModel(private val repo: LogRepository) : ViewModel() {
                         message = entry.message,
                         raw = entry.message,
                         pid = entry.pid,
-                        tid = entry.tid
+                        tid = entry.tid,
+                        isIssue = isIssue,
+                        isMagisk = isMagisk,
+                        isSu = isSu,
+                        sourceLabel = sourceLabel,
+                        searchKey = buildLogSearchKey(entry, sourceLabel)
                     )
                 }
             }
@@ -224,11 +225,24 @@ private fun MagiskLogScreenUiState.withSearchQuery(query: String): MagiskLogScre
 private fun List<MagiskLogUiItem>.filteredBy(
     filter: LogDisplayFilter, query: String
 ): List<MagiskLogUiItem> {
+    val normalized = query.trim().lowercase(Locale.ROOT)
     val base = when (filter) {
         LogDisplayFilter.ALL -> this
         LogDisplayFilter.ISSUES -> filter { it.isIssue }
         LogDisplayFilter.MAGISK -> filter { it.isMagisk }
         LogDisplayFilter.SU -> filter { it.isSu }
     }
-    return if (query.isBlank()) base else base.filter { it.contains(query) }
+    return if (normalized.isEmpty()) base else base.filter { it.contains(normalized) }
+}
+
+private fun buildLogSearchKey(entry: MagiskLogEntry, sourceLabel: String): String {
+    return buildString {
+        append(entry.timestamp)
+        append('\n')
+        append(entry.tag)
+        append('\n')
+        append(sourceLabel)
+        append('\n')
+        append(entry.message)
+    }.lowercase(Locale.ROOT)
 }

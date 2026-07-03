@@ -15,6 +15,7 @@ import com.topjohnwu.magisk.core.BuildConfig
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.di.ServiceLocator
+import com.topjohnwu.magisk.core.di.createApiService
 import com.topjohnwu.magisk.core.repository.NetworkService
 import com.topjohnwu.magisk.core.tasks.MagiskInstaller
 import com.topjohnwu.magisk.runtime.MagiskInstallState
@@ -34,6 +35,8 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.Query
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
 
@@ -56,7 +59,6 @@ data class HomeUiState(
     val managerRemoteVersion: String = "",
     val managerReleaseNotes: String = "",
     val managerInstalledVersion: String = "",
-    val updateChannel: Int = Config.updateChannel,
     val packageName: String = "",
     val envActive: Boolean = runtime.isInstalled,
     val showHideRestore: Boolean = false,
@@ -91,9 +93,7 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
     private var lastRefreshAt = 0L
 
     private val gitHubService: GitHubService by lazy {
-        Retrofit.Builder().baseUrl("https://api.github.com/")
-            .addConverterFactory(MoshiConverterFactory.create()).build()
-            .create(GitHubService::class.java)
+        createApiService(ServiceLocator.retrofit, "https://api.github.com/")
     }
 
     fun refresh(force: Boolean = false) {
@@ -121,12 +121,8 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
                     magiskInstalledVersion = runtime.installedMagiskVersion,
                     appState = appState,
                     managerInstalledVersion = runtime.installedManagerVersion,
-                    managerRemoteVersion = remote?.run {
-                        val debug = Config.updateChannel == Config.Value.DEBUG_CHANNEL
-                        "$version ($versionCode)" + if (debug) " (D)" else ""
-                    }.orEmpty(),
+                    managerRemoteVersion = remote?.run { "$version ($versionCode)" }.orEmpty(),
                     managerReleaseNotes = remote?.note.orEmpty(),
-                    updateChannel = Config.updateChannel,
                     packageName = AppContext.packageName,
                     envActive = runtime.isInstalled,
                     noticeVisible = Config.safetyNotice
@@ -299,14 +295,58 @@ private fun createContributor(login: String, avatarUrl: String, htmlUrl: String)
 private fun cachedContributors(): List<Contributor>? {
     val cached = HomeViewModel.contributorsCache
     val cachedAt = HomeViewModel.contributorsCacheTimestamp
-    return cached.takeIf {
-        it.isNotEmpty() && System.currentTimeMillis() - cachedAt < HomeViewModel.CONTRIBUTORS_CACHE_TTL_MS
+    if (cached.isNotEmpty() && System.currentTimeMillis() - cachedAt < HomeViewModel.CONTRIBUTORS_CACHE_TTL_MS) {
+        return cached
     }
+
+    return runCatching {
+        val prefs = AppContext.getSharedPreferences("git_contributors", android.content.Context.MODE_PRIVATE)
+        val data = prefs.getString("cache_data", null) ?: return null
+        val timestamp = prefs.getLong("cache_timestamp", 0)
+
+        // 7-day TTL for persistent disk cache
+        if (System.currentTimeMillis() - timestamp > 7L * 24 * 60 * 60 * 1000L) {
+            return null
+        }
+
+        val array = JSONArray(data)
+        val list = mutableListOf<Contributor>()
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            val login = obj.getString("login")
+            val avatarUrl = obj.getString("avatarUrl")
+            val htmlUrl = obj.getString("htmlUrl")
+            list.add(createContributor(login, avatarUrl, htmlUrl))
+        }
+
+        HomeViewModel.contributorsCache = list
+        HomeViewModel.contributorsCacheTimestamp = timestamp
+        list
+    }.getOrNull()
 }
 
 private fun cacheContributors(list: List<Contributor>) {
-    HomeViewModel.contributorsCache = withPinnedContributors(list)
+    val pinned = withPinnedContributors(list)
+    HomeViewModel.contributorsCache = pinned
     HomeViewModel.contributorsCacheTimestamp = System.currentTimeMillis()
+
+    runCatching {
+        val array = JSONArray()
+        pinned.forEach { c ->
+            val obj = JSONObject().apply {
+                put("login", c.login)
+                put("avatarUrl", c.avatarUrl)
+                put("htmlUrl", c.htmlUrl)
+            }
+            array.put(obj)
+        }
+        val prefs = AppContext.getSharedPreferences("git_contributors", android.content.Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putString("cache_data", array.toString())
+            putLong("cache_timestamp", System.currentTimeMillis())
+            apply()
+        }
+    }
 }
 
 private fun withPinnedContributors(list: List<Contributor>): List<Contributor> =

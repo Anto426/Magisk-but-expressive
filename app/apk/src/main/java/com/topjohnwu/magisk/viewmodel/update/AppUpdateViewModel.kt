@@ -10,6 +10,7 @@ import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.model.UpdateInfo
 import com.topjohnwu.magisk.core.repository.NetworkService
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -45,12 +46,15 @@ class AppUpdateViewModel(
     private val _messages = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
     val messages: SharedFlow<UiText> = _messages.asSharedFlow()
 
+    private var refreshJob: Job? = null
+
     init {
         refresh()
     }
 
     fun refresh(force: Boolean = false) {
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             if (force) {
                 Info.resetUpdate()
             }

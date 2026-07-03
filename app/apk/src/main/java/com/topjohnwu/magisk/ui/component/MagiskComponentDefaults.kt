@@ -20,9 +20,9 @@ object MagiskComponentDefaults {
     val IconButtonSize: Dp = 40.dp
     val IconBadgeSize: Dp = 36.dp
 
-    val CardShape: Shape = RoundedCornerShape(24.dp)
-    val PanelShape: Shape = RoundedCornerShape(24.dp)
-    val ControlShape: Shape = RoundedCornerShape(16.dp)
+    val CardShape: Shape = RoundedCornerShape(28.dp)
+    val PanelShape: Shape = RoundedCornerShape(28.dp)
+    val ControlShape: Shape = RoundedCornerShape(20.dp)
     val PillShape: Shape = RoundedCornerShape(50)
 
     val CardBorder: BorderStroke
@@ -32,13 +32,16 @@ object MagiskComponentDefaults {
         )
 
     val CardContainer: Color
-        @Composable get() = MaterialTheme.colorScheme.surfaceContainer
-
-    val PanelContainer: Color
         @Composable get() = MaterialTheme.colorScheme.surfaceContainerHigh
 
+    val PanelContainer: Color
+        @Composable get() = MaterialTheme.colorScheme.surfaceContainerHighest
+
     val SelectedContainer: Color
-        @Composable get() = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.46f)
+        @Composable get() = MaterialTheme.colorScheme.primaryContainer
+
+    val SelectedContent: Color
+        @Composable get() = MaterialTheme.colorScheme.onPrimaryContainer
 
     val DividerColor: Color
         @Composable get() = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)

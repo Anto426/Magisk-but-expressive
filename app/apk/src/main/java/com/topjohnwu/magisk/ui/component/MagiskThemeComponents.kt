@@ -56,6 +56,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import com.topjohnwu.magisk.ui.theme.dynamicThemeSeed
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.ui.theme.ThemeCustomColorSlot
@@ -335,18 +337,13 @@ fun themePreviewColors(
     option: ThemeOption,
     darkMode: Int
 ): List<Color> {
-    if (option == ThemeOption.Default && ThemeOption.supportsDynamicColor) {
-        return listOf(
-            Color(0xFFE85CF0),
-            Color(0xFF8A7BFF),
-            Color(0xFF58B8FF),
-            Color(0xFF57E2E7),
-            Color(0xFF62EB9A),
-            Color(0xFFB6EF64)
-        )
+    val seed = if (option == ThemeOption.Default && ThemeOption.supportsDynamicColor) {
+        val context = LocalContext.current
+        val fallback = ThemeCatalog.seedFor(option)
+        dynamicThemeSeed(context, fallback)
+    } else {
+        ThemeCatalog.seedFor(option)
     }
-
-    val seed = ThemeCatalog.seedFor(option)
     val dark = shouldUseDarkTheme(darkMode)
     return if (dark) {
         listOf(seed.darkPrimary, seed.darkSecondary, seed.darkTertiary, seed.darkSurface)

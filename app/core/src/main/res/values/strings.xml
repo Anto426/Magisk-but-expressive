@@ -225,6 +225,7 @@
     <string name="settings_update_stable">Stable</string>
     <string name="settings_update_beta">Beta</string>
     <string name="settings_update_debug">Debug</string>
+    <string name="settings_update_mbe">MBE</string>
     <string name="settings_update_custom">Custom</string>
     <string name="settings_update_custom_msg">Insert a custom channel URL</string>
     <string name="settings_zygisk_summary">Run parts of Magisk in the Zygote daemon</string>
@@ -261,6 +262,13 @@
     <string name="settings_su_auth_insecure">No authentication method is configured on the device</string>
     <string name="settings_su_restrict_title">Restrict root capabilities</string>
     <string name="settings_su_restrict_summary">Will restrict new Superuser apps by default. Warning: this will break most apps. Don\'t enable it unless you know what you\'re doing.</string>
+    <string name="settings_group_appearance_language">Appearance and language</string>
+    <string name="settings_group_app_identity">App identity</string>
+    <string name="settings_group_updates">Updates</string>
+    <string name="settings_group_network_downloads">Network and downloads</string>
+    <string name="settings_group_magisk_features">Magisk features</string>
+    <string name="settings_group_superuser_policy">Superuser policy</string>
+    <string name="settings_group_superuser_security">Superuser security</string>
     <string name="settings_customization">Customization</string>
     <string name="settings_color_mode">Color mode</string>
     <string name="color_mode_system">System</string>

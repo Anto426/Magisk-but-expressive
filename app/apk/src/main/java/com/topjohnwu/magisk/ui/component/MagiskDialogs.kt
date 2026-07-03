@@ -174,16 +174,22 @@ fun MagiskDropdownMenuItem(
     leadingIcon: ImageVector? = null,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
-    val contentColor = when {
+    val labelColor = when {
         !enabled -> MagiskComponentDefaults.PrimaryText.copy(alpha = 0.38f)
         destructive -> MaterialTheme.colorScheme.error
         selected -> MagiskComponentDefaults.PrimaryIconTint
         else -> MagiskComponentDefaults.PrimaryText
     }
     val iconContainerColor = when {
-        destructive -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+        destructive -> MaterialTheme.colorScheme.errorContainer
         selected -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val iconContentColor = when {
+        !enabled -> MagiskComponentDefaults.PrimaryText.copy(alpha = 0.38f)
+        destructive -> MaterialTheme.colorScheme.onErrorContainer
+        selected -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MagiskComponentDefaults.SecondaryIconTint
     }
 
     DropdownMenuItem(
@@ -193,13 +199,13 @@ fun MagiskDropdownMenuItem(
                     text = text,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                    color = contentColor
+                    color = labelColor
                 )
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = contentColor.copy(alpha = 0.62f)
+                        color = labelColor.copy(alpha = 0.62f)
                     )
                 }
             }
@@ -214,13 +220,13 @@ fun MagiskDropdownMenuItem(
                     modifier = Modifier.size(32.dp),
                     shape = MaterialTheme.shapes.small,
                     color = iconContainerColor,
-                    contentColor = contentColor
+                    contentColor = iconContentColor
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = it,
                             contentDescription = null,
-                            tint = contentColor,
+                            tint = iconContentColor,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -232,7 +238,7 @@ fun MagiskDropdownMenuItem(
                 Icon(
                     imageVector = Icons.Rounded.Check,
                     contentDescription = null,
-                    tint = contentColor,
+                    tint = labelColor,
                     modifier = Modifier.size(20.dp)
                 )
             }

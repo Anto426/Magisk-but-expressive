@@ -317,14 +317,15 @@ private fun SuRequestPanel(
                     Surface(
                         modifier = Modifier.size(36.dp),
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.Security,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
@@ -453,7 +454,8 @@ private fun SuRequestPanel(
 
                     // Warning Text Section
                     Surface(
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -466,12 +468,12 @@ private fun SuRequestPanel(
                                 imageVector = Icons.Rounded.Warning,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.error
+                                tint = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Text(
                                 text = stringResource(id = CoreR.string.su_warning),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 16.sp,
                                 modifier = Modifier.weight(1f)
@@ -493,14 +495,15 @@ private fun SuRequestPanel(
                             .weight(1f)
                             .height(MagiskComponentDefaults.ActionHeight),
                         shape = MagiskComponentDefaults.ControlShape,
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = denyText.uppercase(),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }

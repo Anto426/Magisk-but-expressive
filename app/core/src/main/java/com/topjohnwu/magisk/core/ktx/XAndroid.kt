@@ -243,15 +243,15 @@ private fun Context.isMagiskDarkTheme(): Boolean {
 }
 
 private fun Context.defaultToastSeed(dark: Boolean): MagiskToastSeed {
-    val fallback = RUBY_TOAST_SEED
+    val fallback = DEFAULT_TOAST_SEED
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
         return fallback
     }
     return MagiskToastSeed(
-        lightPrimary = androidSystemColor("system_accent1_600", fallback.lightPrimary),
-        darkPrimary = androidSystemColor("system_accent1_200", fallback.darkPrimary),
-        lightSecondary = androidSystemColor("system_accent2_600", fallback.lightSecondary),
-        darkSecondary = androidSystemColor("system_accent2_200", fallback.darkSecondary),
+        lightPrimary = androidSystemColor("system_accent1_800", fallback.lightPrimary),
+        darkPrimary = androidSystemColor("system_accent1_300", fallback.darkPrimary),
+        lightSecondary = androidSystemColor("system_accent2_800", fallback.lightSecondary),
+        darkSecondary = androidSystemColor("system_accent2_300", fallback.darkSecondary),
         lightSurface = androidSystemColor("system_neutral1_10", fallback.lightSurface),
         darkSurface = androidSystemColor("system_neutral1_900", fallback.darkSurface),
         lightOnSurface = androidSystemColor("system_neutral1_900", fallback.lightOnSurface),
@@ -373,6 +373,17 @@ private const val THEME_MEM_CHO = 1
 private const val THEME_AQUA = 2
 private const val THEME_SUNG_JIN_WOO = 3
 private const val THEME_CUSTOM = 5
+
+private val DEFAULT_TOAST_SEED = MagiskToastSeed(
+    lightPrimary = 0xFF00796B.toInt(),
+    darkPrimary = 0xFF00AF9C.toInt(),
+    lightSecondary = 0xFF004D40.toInt(),
+    darkSecondary = 0xFF80CBC4.toInt(),
+    lightSurface = 0xFFF4FAF9.toInt(),
+    darkSurface = 0xFF0A1211.toInt(),
+    lightOnSurface = 0xFF00201D.toInt(),
+    darkOnSurface = 0xFFE0F2F1.toInt()
+)
 
 private val RUBY_TOAST_SEED = MagiskToastSeed(
     lightPrimary = 0xFFF06292.toInt(),

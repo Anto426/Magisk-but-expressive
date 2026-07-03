@@ -60,12 +60,12 @@ fun LogItem(item: MagiskLogUiItem) {
         expanded = expanded,
         onClick = { expanded = !expanded },
         containerColor = if (isIssue) {
-            colors.errorContainer.copy(alpha = 0.24f)
+            colors.errorContainer
         } else {
             MagiskComponentDefaults.CardContainer
         },
         border = if (isIssue) {
-            BorderStroke(1.dp, colors.error.copy(alpha = 0.32f))
+            BorderStroke(1.dp, colors.error.copy(alpha = 0.45f))
         } else {
             MagiskComponentDefaults.CardBorder
         },
@@ -154,7 +154,7 @@ private fun LogExpandedContent(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.62f)
+                color = MaterialTheme.colorScheme.surfaceContainerHighest
             ) {
                 Text(
                     text = item.message,

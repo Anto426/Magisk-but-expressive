@@ -12,8 +12,11 @@ import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.model.module.LocalModule
 import com.topjohnwu.magisk.core.model.module.OnlineModule
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
+import com.topjohnwu.magisk.runtime.MagiskRuntimeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -96,7 +99,7 @@ class ModuleViewModel(
             val expanded = _state.value.modules.filter { it.expanded }.map { it.id }.toSet()
             _state.update {
                 it.withModules(
-                    modules = list.map { module -> module.toUiItem(expanded.contains(module.id)) },
+                    modules = list.map { module -> module.toUiItem(runtime, expanded.contains(module.id)) },
                     loading = false,
                     checkingUpdates = false
                 )
@@ -105,10 +108,16 @@ class ModuleViewModel(
                 lastMetadataRefreshAt = now
                 _state.update { it.copy(checkingUpdates = true) }
                 metadataJob = launch(Dispatchers.IO) {
-                    list.forEach { runCatching { it.fetch() } }
+                    list.map { module ->
+                        async { runCatching { module.fetch() } }
+                    }.awaitAll()
                     val expandedAfterMetadata =
                         _state.value.modules.filter { it.expanded }.map { it.id }.toSet()
-                    val updatedUi = list.map { it.toUiItem(expandedAfterMetadata.contains(it.id)) }
+                    val updatedUi = list.map { it.toUiItem(runtime, expandedAfterMetadata.contains(it.id)) }
+                    val outdatedCount = list.count { it.outdated }
+                    if (outdatedCount > 0) {
+                        com.topjohnwu.magisk.view.Notifications.moduleUpdateAvailable(outdatedCount)
+                    }
                     withContext(Dispatchers.Main) {
                         _state.update { st ->
                             st.withModules(updatedUi, checkingUpdates = false)
@@ -162,7 +171,8 @@ class ModuleViewModel(
                 return@launch
             }
             val expanded = _state.value.modules.find { it.id == id }?.expanded ?: false
-            val updatedUi = module.toUiItem(expanded)
+            val runtime = MagiskRuntimeEngine.snapshot()
+            val updatedUi = module.toUiItem(runtime, expanded)
             withContext(Dispatchers.Main) {
                 _state.update { state ->
                     val index = state.modules.indexOfFirst { it.id == id }
@@ -230,11 +240,10 @@ private fun List<ModuleUiItem>.filteredBy(query: String): List<ModuleUiItem> {
     return if (normalized.isEmpty()) this else filter { it.searchKey.contains(normalized) }
 }
 
-private fun LocalModule.toUiItem(expanded: Boolean = false): ModuleUiItem {
+private fun LocalModule.toUiItem(runtime: MagiskRuntimeState, expanded: Boolean = false): ModuleUiItem {
     val zygiskLabel = AppContext.getString(CoreR.string.zygisk)
     val safeName = name.ifBlank { id }
     val safeDescription = description
-    val runtime = MagiskRuntimeEngine.snapshot()
     val noticeText: UiText? = when {
         zygiskUnloaded -> uiText(CoreR.string.zygisk_module_unloaded)
         runtime.isZygiskEnabled && isRiru -> uiText(CoreR.string.suspend_text_riru, zygiskLabel)

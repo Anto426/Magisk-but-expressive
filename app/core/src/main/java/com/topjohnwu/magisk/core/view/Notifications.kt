@@ -24,6 +24,7 @@ object Notifications {
 
     private const val APP_UPDATED_ID = 4
     private const val APP_UPDATE_AVAILABLE_ID = 5
+    private const val MODULE_UPDATE_AVAILABLE_ID = 6
 
     private const val UPDATE_CHANNEL = "update"
     private const val PROGRESS_CHANNEL = "progress"
@@ -119,6 +120,29 @@ object Notifications {
                 .setVisibility(Notification.VISIBILITY_PRIVATE)
 
             mgr.notify(APP_UPDATE_AVAILABLE_ID, builder.build())
+        }
+    }
+
+    fun moduleUpdateAvailable(count: Int) {
+        AppContext.apply {
+            val flag = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            val pending = PendingIntent.getActivity(this, 0, selfLaunchIntent(), flag)
+            val bitmap = getBitmap(R.drawable.ic_magisk_outline)
+            val builder = if (SDK_INT >= Build.VERSION_CODES.O) {
+                Notification.Builder(this, UPDATE_CHANNEL)
+                    .setSmallIcon(bitmap.toIcon())
+            } else {
+                Notification.Builder(this)
+                    .setSmallIcon(R.drawable.ic_magisk_outline)
+            }
+                .setLargeIcon(bitmap)
+                .setContentIntent(pending)
+                .setContentTitle(getString(R.string.module_updates_title))
+                .setContentText(getString(R.string.module_updates_available_count, count))
+                .setAutoCancel(true)
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
+
+            mgr.notify(MODULE_UPDATE_AVAILABLE_ID, builder.build())
         }
     }
 

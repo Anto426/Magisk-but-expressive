@@ -39,6 +39,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.topjohnwu.magisk.core.R as CoreR
 
+private val updateChannelArray by lazy { AppContext.resources.getStringArray(CoreR.array.update_channel) }
+private val suAccessArray by lazy { AppContext.resources.getStringArray(CoreR.array.su_access) }
+private val multiuserModeArray by lazy { AppContext.resources.getStringArray(CoreR.array.multiuser_mode) }
+private val multiuserSummaryArray by lazy { AppContext.resources.getStringArray(CoreR.array.multiuser_summary) }
+private val namespaceArray by lazy { AppContext.resources.getStringArray(CoreR.array.namespace) }
+private val namespaceSummaryArray by lazy { AppContext.resources.getStringArray(CoreR.array.namespace_summary) }
+private val autoResponseArray by lazy { AppContext.resources.getStringArray(CoreR.array.auto_response) }
+private val requestTimeoutArray by lazy { AppContext.resources.getStringArray(CoreR.array.request_timeout) }
+private val suNotificationArray by lazy { AppContext.resources.getStringArray(CoreR.array.su_notification) }
+
 data class SettingsUiState(
     val runtime: MagiskRuntimeState = MagiskRuntimeEngine.snapshot(),
     val darkThemeMode: Int = Config.darkTheme,
@@ -61,10 +71,13 @@ data class SettingsUiState(
     val canMigrateApp: Boolean = runtime.canMigrateApp,
     val isHiddenApp: Boolean = AppContext.packageName != BuildConfig.APP_PACKAGE_NAME,
     val checkUpdate: Boolean = Config.checkUpdate,
-    val updateChannel: Int = Config.updateChannel,
-    val isCustomChannel: Boolean = Config.updateChannel == Config.Value.CUSTOM_CHANNEL,
-    val updateChannelName: String = AppContext.resources.getStringArray(CoreR.array.update_channel)
-        .getOrElse(Config.updateChannel) { "-" },
+    val updateChannel: Int = Config.updateChannel.coerceIn(
+        Config.Value.MBE_CHANNEL,
+        Config.Value.CUSTOM_CHANNEL
+    ),
+    val updateChannelName: String = updateChannelArray
+        .getOrElse(updateChannel) { "-" },
+    val isCustomChannel: Boolean = updateChannel == Config.Value.CUSTOM_CHANNEL,
     val customChannelUrl: String = Config.customChannelUrl,
     val doh: Boolean = Config.doh,
     val downloadDir: String = Config.downloadDir,
@@ -82,30 +95,30 @@ data class SettingsUiState(
     val suAuth: Boolean = Config.suAuth,
     val hideTapjackOnSPlus: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
     val rootMode: Int = Config.rootMode,
-    val accessModeName: String = AppContext.resources.getStringArray(CoreR.array.su_access)
+    val accessModeName: String = suAccessArray
         .getOrElse(Config.rootMode) { "-" },
     val suMultiuserMode: Int = Config.suMultiuserMode,
-    val multiuserModeName: String = AppContext.resources.getStringArray(CoreR.array.multiuser_mode)
+    val multiuserModeName: String = multiuserModeArray
         .getOrElse(Config.suMultiuserMode) { "-" },
     val multiuserModeEnabled: Boolean = Const.USER_ID == 0,
-    val multiuserSummary: String = AppContext.resources.getStringArray(CoreR.array.multiuser_summary)
+    val multiuserSummary: String = multiuserSummaryArray
         .getOrElse(Config.suMultiuserMode) { "-" },
     val suMntNamespaceMode: Int = Config.suMntNamespaceMode,
-    val mountNamespaceName: String = AppContext.resources.getStringArray(CoreR.array.namespace)
+    val mountNamespaceName: String = namespaceArray
         .getOrElse(Config.suMntNamespaceMode) { "-" },
-    val mountNamespaceSummary: String = AppContext.resources.getStringArray(CoreR.array.namespace_summary)
+    val mountNamespaceSummary: String = namespaceSummaryArray
         .getOrElse(Config.suMntNamespaceMode) { "-" },
     val suAutoResponse: Int = Config.suAutoResponse,
-    val autoResponseName: String = AppContext.resources.getStringArray(CoreR.array.auto_response)
+    val autoResponseName: String = autoResponseArray
         .getOrElse(Config.suAutoResponse) { "-" },
     val suTimeoutIndex: Int = SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout)
         .let { if (it < 0) 0 else it },
-    val requestTimeoutName: String = AppContext.resources.getStringArray(CoreR.array.request_timeout)
+    val requestTimeoutName: String = requestTimeoutArray
         .getOrElse(
             SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout)
                 .let { if (it < 0) 0 else it }) { "-" },
     val suNotification: Int = Config.suNotification,
-    val suNotificationName: String = AppContext.resources.getStringArray(CoreR.array.su_notification)
+    val suNotificationName: String = suNotificationArray
         .getOrElse(Config.suNotification) { "-" },
     val suReAuth: Boolean = Config.suReAuth,
     val showReauthenticate: Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.O,
@@ -195,14 +208,14 @@ class SettingsViewModel : ViewModel() {
         updateSnapshot()
     }
 
-    fun setUpdateChannel(channel: Int) {
-        Config.updateChannel = channel
+    fun setUpdateChannel(value: Int) {
+        Config.updateChannel = value.coerceIn(Config.Value.MBE_CHANNEL, Config.Value.CUSTOM_CHANNEL)
         Info.resetUpdate()
         updateSnapshot()
     }
 
     fun setCustomChannelUrl(url: String) {
-        Config.customChannelUrl = url
+        Config.customChannelUrl = url.trim()
         Info.resetUpdate()
         updateSnapshot()
     }
@@ -323,12 +336,61 @@ class SettingsViewModel : ViewModel() {
     }
 
     private fun updateSnapshot() {
+        val runtime = MagiskRuntimeEngine.snapshot()
+        val updateChannel = Config.updateChannel.coerceIn(
+            Config.Value.MBE_CHANNEL,
+            Config.Value.CUSTOM_CHANNEL
+        )
+        val suTimeoutIndex = SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout).let { if (it < 0) 0 else it }
+        val currentLang = currentLanguageTag()
+        val languageIndex = LocaleSetting.available.tags.indexOf(currentLang).let { if (it < 0) 0 else it }
+
         _state.update {
-            SettingsUiState(
-                languageSearchQuery = it.languageSearchQuery,
-                languageSearchVisible = it.languageSearchVisible,
-                settingsSearchQuery = it.settingsSearchQuery,
-                settingsSearchVisible = it.settingsSearchVisible
+            it.copy(
+                runtime = runtime,
+                darkThemeMode = Config.darkTheme,
+                bottomBarStyle = Config.bottomBarStyle,
+                themeOrdinal = Config.themeOrdinal,
+                selectedThemeIndex = ThemeOption.displayOrder.indexOf(ThemeOption.selected).coerceAtLeast(0),
+                themeNameRes = ThemeOption.selected.labelRes,
+                useLocaleManager = LocaleSetting.useLocaleManager,
+                languageSystemName = LocaleSetting.instance.appLocale?.let { locale -> locale.getDisplayName(locale) } ?: AppContext.getString(CoreR.string.system_default),
+                languageIndex = languageIndex,
+                languageName = LocaleSetting.available.names.getOrElse(languageIndex) { AppContext.getString(CoreR.string.system_default) },
+                canMigrateApp = runtime.canMigrateApp,
+                updateChannel = updateChannel,
+                updateChannelName = updateChannelArray.getOrElse(updateChannel) { "-" },
+                isCustomChannel = updateChannel == Config.Value.CUSTOM_CHANNEL,
+                customChannelUrl = Config.customChannelUrl,
+                doh = Config.doh,
+                downloadDir = Config.downloadDir,
+                downloadDirPath = MediaStoreUtils.fullPath(Config.downloadDir),
+                randName = Config.randName,
+                zygisk = Config.zygisk,
+                zygiskMismatch = Config.zygisk != runtime.isZygiskEnabled,
+                denyList = Config.denyList,
+                showMagisk = runtime.canShowMagiskSettings,
+                showMagiskAdvanced = runtime.canShowMagiskAdvancedSettings,
+                showDenyListConfig = runtime.canShowDenyListConfig,
+                showSuperuser = runtime.canShowSuperuser,
+                suTapjack = Config.suTapjack,
+                suAuth = Config.suAuth,
+                rootMode = Config.rootMode,
+                accessModeName = suAccessArray.getOrElse(Config.rootMode) { "-" },
+                suMultiuserMode = Config.suMultiuserMode,
+                multiuserModeName = multiuserModeArray.getOrElse(Config.suMultiuserMode) { "-" },
+                multiuserSummary = multiuserSummaryArray.getOrElse(Config.suMultiuserMode) { "-" },
+                suMntNamespaceMode = Config.suMntNamespaceMode,
+                mountNamespaceName = namespaceArray.getOrElse(Config.suMntNamespaceMode) { "-" },
+                mountNamespaceSummary = namespaceSummaryArray.getOrElse(Config.suMntNamespaceMode) { "-" },
+                suAutoResponse = Config.suAutoResponse,
+                autoResponseName = autoResponseArray.getOrElse(Config.suAutoResponse) { "-" },
+                suTimeoutIndex = suTimeoutIndex,
+                requestTimeoutName = requestTimeoutArray.getOrElse(suTimeoutIndex) { "-" },
+                suNotification = Config.suNotification,
+                suNotificationName = suNotificationArray.getOrElse(Config.suNotification) { "-" },
+                suReAuth = Config.suReAuth,
+                suRestrict = Config.suRestrict
             )
         }
     }

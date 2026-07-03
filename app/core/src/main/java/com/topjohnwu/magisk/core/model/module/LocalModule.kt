@@ -107,8 +107,14 @@ data class LocalModule(
 
         try {
             val json = svc.fetchModuleJson(updateUrl)
-            updateInfo = OnlineModule(this, json)
+            val info = OnlineModule(this, json)
+            updateInfo = info
             outdated = json.versionCode > versionCode
+            if (outdated) {
+                ServiceLocator.moduleUpdates[id] = info
+            } else {
+                ServiceLocator.moduleUpdates.remove(id)
+            }
             return true
         } catch (e: IOException) {
             Timber.w(e)
@@ -124,12 +130,28 @@ data class LocalModule(
         fun loaded() = RootUtils.fs.getFile(Const.MODULE_PATH).exists()
 
         suspend fun installed() = withContext(Dispatchers.IO) {
-            RootUtils.fs.getFile(Const.MODULE_PATH)
+            val localFiles = RootUtils.fs.getFile(Const.MODULE_PATH)
                 .listFiles()
                 .orEmpty()
                 .filter { !it.isFile && !it.isHidden }
-                .map { LocalModule(it) }
-                .sortedBy { it.name.lowercase(Locale.ROOT) }
+            val localModules = localFiles.map { LocalModule(it) }
+            val installedIds = localModules.map { it.id }.toSet()
+
+            // Remove updates for modules that were deleted/uninstalled
+            ServiceLocator.moduleUpdates.keys.retainAll { installedIds.contains(it) }
+
+            localModules.map { m ->
+                val cachedUpdate = ServiceLocator.moduleUpdates[m.id]
+                if (cachedUpdate != null) {
+                    if (cachedUpdate.versionCode > m.versionCode) {
+                        m.updateInfo = cachedUpdate
+                        m.outdated = true
+                    } else {
+                        ServiceLocator.moduleUpdates.remove(m.id)
+                    }
+                }
+                m
+            }.sortedBy { it.name.lowercase(Locale.ROOT) }
         }
     }
 }

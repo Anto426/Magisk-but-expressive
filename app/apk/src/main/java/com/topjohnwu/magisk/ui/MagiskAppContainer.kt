@@ -117,6 +117,7 @@ fun MagiskAppContainer(
     MagiskTheme(
         themeOption = themeState.themeOption,
         darkTheme = shouldUseDarkTheme(themeState.darkThemeMode),
+        darkThemeMode = themeState.darkThemeMode,
         themeVersion = themeState.customColorVersion
     ) {
         LaunchedEffect(openSection) {

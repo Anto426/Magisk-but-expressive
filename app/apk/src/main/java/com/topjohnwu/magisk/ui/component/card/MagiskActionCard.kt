@@ -1,10 +1,10 @@
 package com.topjohnwu.magisk.ui.component.card
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -21,12 +21,12 @@ fun MagiskActionCard(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = minHeight),
-        onClick = onClick
+        onClick = onClick,
+        contentPadding = PaddingValues(14.dp)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+                .fillMaxWidth(),
             content = content
         )
     }

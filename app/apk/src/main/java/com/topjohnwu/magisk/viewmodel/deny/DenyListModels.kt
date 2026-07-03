@@ -23,24 +23,23 @@ import com.topjohnwu.magisk.core.R as CoreR
 class CmdlineListItem(line: String) {
     val packageName: String
     val process: String
+    val key: String
 
     init {
-        val split = line.split(Regex("\\|"), 2)
-        packageName = split[0]
-        process = split.getOrElse(1) { packageName }
+        packageName = line.substringBefore('|')
+        process = line.substringAfter('|', packageName)
+        key = denyListKey(packageName, process)
     }
 }
 
 const val ISOLATED_MAGIC = "isolated"
 
+internal fun denyListKey(packageName: String, process: String): String = "$packageName\n$process"
+
 @SuppressLint("InlinedApi")
 class AppProcessInfo(
-    private val info: ApplicationInfo, pm: PackageManager, denyList: List<CmdlineListItem>
+    private val info: ApplicationInfo, pm: PackageManager, private val denyListKeys: Set<String>
 ) : Comparable<AppProcessInfo> {
-
-    private val denyList = denyList.filter {
-        it.packageName == info.packageName || it.packageName == ISOLATED_MAGIC
-    }
 
     val label = info.getLabel(pm)
     val packageName: String get() = info.packageName
@@ -57,7 +56,7 @@ class AppProcessInfo(
     fun isApp() = ProcessCompat.isApplicationUid(info.uid)
 
     private fun createProcess(name: String, pkg: String = info.packageName) =
-        ProcessInfo(name, pkg, denyList.any { it.process == name && it.packageName == pkg })
+        ProcessInfo(name, pkg, denyListKeys.contains(denyListKey(pkg, name)))
 
     private fun ComponentInfo.getProcName(): String =
         processName ?: applicationInfo.processName ?: applicationInfo.packageName

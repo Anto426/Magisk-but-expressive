@@ -62,16 +62,6 @@ object Config : PreferenceConfig, DBConfig {
             SU_AUTO_RESPONSE, SU_REAUTH, SU_TAPJACK)
     }
 
-    object OldValue {
-        // Update channels
-        const val DEFAULT_CHANNEL = -1
-        const val STABLE_CHANNEL = 0
-        const val BETA_CHANNEL = 1
-        const val CUSTOM_CHANNEL = 2
-        const val CANARY_CHANNEL = 3
-        const val DEBUG_CHANNEL = 4
-    }
-
     object Value {
         // Theme mode
         const val DARK_THEME_AMOLED = -2
@@ -79,12 +69,9 @@ object Config : PreferenceConfig, DBConfig {
         const val BOTTOM_BAR_FLOATING = 1
         const val BOTTOM_BAR_FIXED = 2
 
-        // Update channels
-        const val DEFAULT_CHANNEL = -1
-        const val STABLE_CHANNEL = 0
-        const val BETA_CHANNEL = 1
-        const val DEBUG_CHANNEL = 2
-        const val CUSTOM_CHANNEL = 3
+        // Update channel
+        const val MBE_CHANNEL = 0
+        const val CUSTOM_CHANNEL = 1
 
         // root access mode
         const val ROOT_ACCESS_DISABLED = 0
@@ -142,8 +129,8 @@ object Config : PreferenceConfig, DBConfig {
     private var checkUpdatePrefs by preference(Key.CHECK_UPDATES, true)
     private var localePrefs by preference(Key.LOCALE, "")
     var doh by preference(Key.DOH, false)
-    var updateChannel by preference(Key.RELEASE_CHANNEL, Value.CUSTOM_CHANNEL)
-    var customChannelUrl by preference(Key.CUSTOM_CHANNEL, "https://raw.githubusercontent.com/Anto426/Magisk-but-expressive/master/update.json")
+    var updateChannel by preference(Key.RELEASE_CHANNEL, Value.MBE_CHANNEL)
+    var customChannelUrl by preference(Key.CUSTOM_CHANNEL, "")
     var downloadDir by preference(Key.DOWNLOAD_DIR, "")
     var randName by preference(Key.RAND_NAME, true)
     var bottomBarStyle by preference(Key.BOTTOM_BAR_STYLE, 0)
@@ -184,6 +171,7 @@ object Config : PreferenceConfig, DBConfig {
 
     private const val SU_FINGERPRINT = "su_fingerprint"
     private const val UPDATE_CHANNEL = "update_channel"
+    const val MBE_CHANNEL_URL = "https://raw.githubusercontent.com/Anto426/Magisk-but-expressive/master/update.json"
 
     fun toBundle(): Bundle {
         val map = prefs.all - Key.NO_MIGRATION
@@ -224,16 +212,13 @@ object Config : PreferenceConfig, DBConfig {
                 suBiometric = true
             remove(SU_FINGERPRINT)
 
-            // Migrate update_channel
-            prefs.getString(UPDATE_CHANNEL, null)?.let {
-                val channel = when (it.toInt()) {
-                    OldValue.STABLE_CHANNEL -> Value.STABLE_CHANNEL
-                    OldValue.CANARY_CHANNEL, OldValue.BETA_CHANNEL -> Value.BETA_CHANNEL
-                    OldValue.DEBUG_CHANNEL -> Value.DEBUG_CHANNEL
-                    OldValue.CUSTOM_CHANNEL -> Value.CUSTOM_CHANNEL
-                    else -> Value.DEFAULT_CHANNEL
-                }
+            prefs.getString(UPDATE_CHANNEL, null)?.toIntOrNull()?.let { oldChannel ->
+                val channel = if (oldChannel == 2) Value.CUSTOM_CHANNEL else Value.MBE_CHANNEL
                 putInt(Key.RELEASE_CHANNEL, channel)
+            }
+            val channel = prefs.getInt(Key.RELEASE_CHANNEL, Value.MBE_CHANNEL)
+            if (channel != Value.MBE_CHANNEL && channel != Value.CUSTOM_CHANNEL) {
+                putInt(Key.RELEASE_CHANNEL, Value.MBE_CHANNEL)
             }
             remove(UPDATE_CHANNEL)
         }

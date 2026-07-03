@@ -94,7 +94,7 @@ fun MagiskInfoPill(
     text: String,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSecondaryContainer,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
+    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer
 ) {
     Surface(
         modifier = modifier, shape = MagiskComponentDefaults.PillShape, color = containerColor
@@ -116,7 +116,7 @@ fun MagiskInfoPill(
     @StringRes text: Int,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSecondaryContainer,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
+    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer
 ) {
     MagiskInfoPill(
         text = stringResource(text),

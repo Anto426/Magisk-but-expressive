@@ -244,7 +244,7 @@ fun ModulesScreen(
                                     Surface(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = MaterialTheme.shapes.medium,
-                                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                                        color = MaterialTheme.colorScheme.errorContainer,
                                         border = BorderStroke(
                                             1.dp,
                                             MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
@@ -258,7 +258,7 @@ fun ModulesScreen(
                                             Icon(
                                                 imageVector = Icons.Rounded.DeleteForever,
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.error
+                                                tint = MaterialTheme.colorScheme.onErrorContainer
                                             )
                                             Column {
                                                 Text(
@@ -281,9 +281,7 @@ fun ModulesScreen(
                                     Surface(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = MaterialTheme.shapes.medium,
-                                        color = MaterialTheme.colorScheme.primaryContainer.copy(
-                                            alpha = 0.35f
-                                        ),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
                                         border = BorderStroke(
                                             1.dp,
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -297,7 +295,7 @@ fun ModulesScreen(
                                             Icon(
                                                 imageVector = Icons.Rounded.RestartAlt,
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
                                             Column {
                                                 Text(
@@ -320,9 +318,7 @@ fun ModulesScreen(
                                     Surface(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = MaterialTheme.shapes.medium,
-                                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(
-                                            alpha = 0.35f
-                                        ),
+                                        color = MaterialTheme.colorScheme.tertiaryContainer,
                                         border = BorderStroke(
                                             1.dp,
                                             MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
@@ -339,7 +335,7 @@ fun ModulesScreen(
                                                 Icon(
                                                     imageVector = Icons.Rounded.Update,
                                                     contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.tertiary
+                                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
                                                 )
                                                 Text(
                                                     text = "Nuova versione disponibile: " + item.update.version,

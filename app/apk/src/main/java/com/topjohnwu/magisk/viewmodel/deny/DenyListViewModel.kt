@@ -180,12 +180,15 @@ class DenyListViewModel : ViewModel() {
 
             withContext(Dispatchers.Main) {
                 if (success) {
+                    val affectedKeys = affected.mapTo(hashSetOf()) {
+                        denyListKey(it.packageName, it.name)
+                    }
                     allApps = allApps.map { candidate ->
                         if (candidate.packageName != packageName) {
                             candidate
                         } else {
                             val processes = candidate.processes.map { process ->
-                                if (affected.any { it.name == process.name && it.packageName == process.packageName }) {
+                                if (denyListKey(process.packageName, process.name) in affectedKeys) {
                                     process.copy(enabled = enabled)
                                 } else {
                                     process
@@ -253,13 +256,14 @@ class DenyListViewModel : ViewModel() {
     }
 
     @SuppressLint("InlinedApi")
-    private suspend fun loadApps(): List<DenyListAppUi> = withContext(Dispatchers.Default) {
+    private suspend fun loadApps(): List<DenyListAppUi> = withContext(Dispatchers.IO) {
         val pm = AppContext.packageManager
-        val denyList = Shell.cmd("magisk --denylist ls").exec().out.map { CmdlineListItem(it) }
+        val denyListKeys = Shell.cmd("magisk --denylist ls").exec().out
+            .mapTo(hashSetOf()) { CmdlineListItem(it).key }
         pm.getInstalledApplications(MATCH_UNINSTALLED_PACKAGES_COMPAT).asSequence()
             .filter { it.packageName != AppContext.packageName }.mapNotNull { app ->
                 runCatching {
-                    val info = AppProcessInfo(app, pm, denyList)
+                    val info = AppProcessInfo(app, pm, denyListKeys)
                     if (info.processes.isEmpty()) {
                         null
                     } else {

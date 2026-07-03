@@ -118,7 +118,9 @@ fun AppUpdateScreen(
                     bottomStart = 32.dp,
                     bottomEnd = 4.dp
                 ),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                supportingContentColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.78f),
                 metrics = listOf(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),

@@ -1,12 +1,6 @@
 package com.topjohnwu.magisk.core.repository
 
-import com.topjohnwu.magisk.core.BuildConfig
 import com.topjohnwu.magisk.core.Config
-import com.topjohnwu.magisk.core.Config.Value.BETA_CHANNEL
-import com.topjohnwu.magisk.core.Config.Value.CUSTOM_CHANNEL
-import com.topjohnwu.magisk.core.Config.Value.DEBUG_CHANNEL
-import com.topjohnwu.magisk.core.Config.Value.DEFAULT_CHANNEL
-import com.topjohnwu.magisk.core.Config.Value.STABLE_CHANNEL
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.data.GithubApiServices
 import com.topjohnwu.magisk.core.data.RawUrl
@@ -23,12 +17,12 @@ class NetworkService(
     private val api: GithubApiServices,
 ) {
     suspend fun fetchUpdate() = safe {
-        fetchCustomUpdate("https://raw.githubusercontent.com/Anto426/Magisk-but-expressive/master/update.json")
+        fetchCustomUpdate(Config.updateChannelUrl)
     }
 
     suspend fun fetchUpdate(version: Int) = safe {
         val info = try {
-            fetchCustomUpdate("https://raw.githubusercontent.com/Anto426/Magisk-but-expressive/master/update.json")
+            fetchCustomUpdate(Config.updateChannelUrl)
         } catch (e: Exception) {
             null
         }
@@ -88,17 +82,6 @@ class NetworkService(
         )
     }
 
-    // Version number: debug == beta >= stable
-
-    // Find the latest non-prerelease
-    private suspend fun fetchStableUpdate() = api.fetchLatestRelease().asInfo()
-
-    // Find the latest release, regardless whether it's prerelease
-    private suspend fun fetchBetaUpdate() = findRelease { true }.asInfo()
-
-    private suspend fun fetchDebugUpdate() =
-        findRelease { true }.asInfo { it.name == "app-debug.apk" }
-
     private suspend fun fetchCustomUpdate(url: String): UpdateInfo {
         val info = raw.fetchUpdateJson(url).magisk
         return info.let { it.copy(note = raw.fetchString(it.note)) }
@@ -128,4 +111,11 @@ class NetworkService(
     suspend fun fetchFile(url: String) = wrap { raw.fetchFile(url) }
     suspend fun fetchString(url: String) = wrap { raw.fetchString(url) }
     suspend fun fetchModuleJson(url: String) = wrap { raw.fetchModuleJson(url) }
+
+    private val Config.updateChannelUrl: String
+        get() = if (updateChannel == Config.Value.CUSTOM_CHANNEL && customChannelUrl.isNotBlank()) {
+            customChannelUrl
+        } else {
+            Config.MBE_CHANNEL_URL
+        }
 }

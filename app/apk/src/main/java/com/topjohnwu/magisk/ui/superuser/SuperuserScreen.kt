@@ -51,7 +51,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.topjohnwu.magisk.arch.UIActivity
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.model.su.SuPolicy
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.component.AppIcon
@@ -81,6 +83,19 @@ fun SuperuserScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+
+    fun withSuAuthentication(action: () -> Unit) {
+        if (!Config.suAuth) {
+            action()
+            return
+        }
+        val uiActivity = context as? UIActivity<*> ?: return
+        uiActivity.withAuthentication { granted ->
+            if (granted) {
+                action()
+            }
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
@@ -148,17 +163,21 @@ fun SuperuserScreen(
                                     MagiskTriStateSwitch(
                                         policy = item.policy,
                                         onPolicyChange = { newPolicy ->
-                                            viewModel.setPolicy(item.uid, newPolicy)
+                                            withSuAuthentication {
+                                                viewModel.setPolicy(item.uid, newPolicy)
+                                            }
                                         }
                                     )
                                 } else {
                                     Switch(
                                         checked = item.policy == SuPolicy.ALLOW,
                                         onCheckedChange = { checked ->
-                                            viewModel.setPolicy(
-                                                item.uid,
-                                                if (checked) SuPolicy.ALLOW else SuPolicy.DENY
-                                            )
+                                            withSuAuthentication {
+                                                viewModel.setPolicy(
+                                                    item.uid,
+                                                    if (checked) SuPolicy.ALLOW else SuPolicy.DENY
+                                                )
+                                            }
                                         }
                                     )
                                 }
@@ -200,9 +219,9 @@ fun SuperuserScreen(
                                         options = options,
                                         selected = item.policy,
                                         onSelected = { newPolicy ->
-                                            viewModel.setPolicy(
-                                                item.uid, newPolicy
-                                            )
+                                            withSuAuthentication {
+                                                viewModel.setPolicy(item.uid, newPolicy)
+                                            }
                                         },
                                         modifier = Modifier.fillMaxWidth()
                                     )
@@ -226,7 +245,11 @@ fun SuperuserScreen(
 
                                 // 4. Revoke Button
                                 Button(
-                                    onClick = { viewModel.revoke(item) },
+                                    onClick = {
+                                        withSuAuthentication {
+                                            viewModel.revoke(item)
+                                        }
+                                    },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -334,10 +357,10 @@ fun MagiskTriStateSwitch(
     )
 
     val trackColor = when (policy) {
-        SuPolicy.DENY -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-        SuPolicy.RESTRICT -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-        SuPolicy.ALLOW -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-        else -> MaterialTheme.colorScheme.surfaceVariant
+        SuPolicy.DENY -> MaterialTheme.colorScheme.errorContainer
+        SuPolicy.RESTRICT -> MaterialTheme.colorScheme.tertiaryContainer
+        SuPolicy.ALLOW -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerHighest
     }
 
     val thumbColor = when (policy) {
@@ -345,6 +368,13 @@ fun MagiskTriStateSwitch(
         SuPolicy.RESTRICT -> MaterialTheme.colorScheme.tertiary
         SuPolicy.ALLOW -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.outline
+    }
+
+    val thumbContentColor = when (policy) {
+        SuPolicy.DENY -> MaterialTheme.colorScheme.onError
+        SuPolicy.RESTRICT -> MaterialTheme.colorScheme.onTertiary
+        SuPolicy.ALLOW -> MaterialTheme.colorScheme.onPrimary
+        else -> MaterialTheme.colorScheme.surface
     }
 
     val thumbIcon = when (policy) {
@@ -375,7 +405,7 @@ fun MagiskTriStateSwitch(
                 imageVector = thumbIcon,
                 contentDescription = null,
                 modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.onPrimary
+                tint = thumbContentColor
             )
         }
 

@@ -1,6 +1,7 @@
 package com.topjohnwu.magisk.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.ui.motion.MagiskAutoScrollToLatest
 
@@ -35,7 +37,10 @@ fun MagiskTerminal(
 ) {
     MagiskAutoScrollToLatest(itemCount = lines.size, state = state)
 
-    MagiskCard(modifier = modifier.fillMaxSize()) {
+    MagiskCard(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(0.dp)
+    ) {
         if (lines.isEmpty() && emptyText != null) {
             MagiskInlineMessage(
                 text = emptyText, icon = Icons.Rounded.Terminal, modifier = Modifier.padding(12.dp)
@@ -44,7 +49,7 @@ fun MagiskTerminal(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(12.dp),
+                    .padding(10.dp),
                 state = state,
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
@@ -65,7 +70,9 @@ private fun MagiskTerminalLine(line: String) {
     val displayLine = remember(line) { line.withoutTerminalStatusPrefix() }
     val textStyle = MaterialTheme.typography.bodySmall.copy(
         color = lineColor,
-        fontFamily = FontFamily.Monospace
+        fontFamily = FontFamily.Monospace,
+        fontSize = 11.sp,
+        lineHeight = 13.sp
     )
     val inverseForeground = MaterialTheme.colorScheme.surface
     val text = remember(displayLine, textStyle, inverseForeground) {

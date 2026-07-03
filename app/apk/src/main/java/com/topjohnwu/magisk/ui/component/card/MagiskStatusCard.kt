@@ -56,6 +56,8 @@ fun MagiskStatusCard(
     modifier: Modifier = Modifier,
     shape: androidx.compose.ui.graphics.Shape = MagiskComponentDefaults.CardShape,
     containerColor: Color = MagiskComponentDefaults.CardContainer,
+    contentColor: Color = MagiskComponentDefaults.PrimaryText,
+    supportingContentColor: Color = MagiskComponentDefaults.SecondaryText,
     border: BorderStroke? = MagiskComponentDefaults.CardBorder,
     iconContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -68,6 +70,7 @@ fun MagiskStatusCard(
         modifier = modifier.fillMaxWidth(),
         shape = shape,
         containerColor = containerColor,
+        contentColor = contentColor,
         border = border,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
     ) {
@@ -85,7 +88,7 @@ fun MagiskStatusCard(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MagiskComponentDefaults.PrimaryText
+                    color = contentColor
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -95,7 +98,7 @@ fun MagiskStatusCard(
                     Text(
                         text = statusText,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MagiskComponentDefaults.SecondaryText,
+                        color = supportingContentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -112,7 +115,9 @@ fun MagiskStatusCard(
                 metrics.forEach { metric ->
                     MagiskMetricBlock(
                         metric = metric,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        contentColor = contentColor,
+                        supportingContentColor = supportingContentColor
                     )
                 }
             }
@@ -205,7 +210,9 @@ fun MagiskActionButton(
 @Composable
 private fun MagiskMetricBlock(
     metric: MagiskStatusMetric,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentColor: Color = MagiskComponentDefaults.PrimaryText,
+    supportingContentColor: Color = MagiskComponentDefaults.SecondaryText
 ) {
     Column(
         modifier = modifier,
@@ -215,7 +222,7 @@ private fun MagiskMetricBlock(
             text = metric.label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
-            color = MagiskComponentDefaults.SecondaryText,
+            color = supportingContentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -223,7 +230,7 @@ private fun MagiskMetricBlock(
             text = metric.value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MagiskComponentDefaults.PrimaryText,
+            color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

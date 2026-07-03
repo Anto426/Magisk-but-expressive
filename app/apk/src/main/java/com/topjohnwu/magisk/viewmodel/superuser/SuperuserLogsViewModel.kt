@@ -84,6 +84,7 @@ class SuperuserLogsViewModel(private val repo: LogRepository) : ViewModel() {
     }
 
     fun saveLogs() {
+        val items = state.value.items
         viewModelScope.launch(Dispatchers.IO) {
             val result = runCatching {
                 val name = "superuser_log_%s.log".format(
@@ -91,7 +92,7 @@ class SuperuserLogsViewModel(private val repo: LogRepository) : ViewModel() {
                 )
                 val logFile = MediaStoreUtils.getFile(name)
                 logFile.uri.outputStream().bufferedWriter().use { writer ->
-                    state.value.items.forEach { item ->
+                    items.forEach { item ->
                         writer.write("${item.appName}\n")
                         item.infoLines.forEach { line -> writer.write("$line\n") }
                         if (item.command.isNotBlank()) {

@@ -50,6 +50,7 @@ data class PolicyUiItem(
             CoreR.string.shared_uid_label, appName
         ) else appName
     val showSlider: Boolean get() = Config.suRestrict || policy == SuPolicy.RESTRICT
+    val searchKey: String = "$appName\n$packageName".lowercase(Locale.ROOT)
 }
 
 data class SuperuserUiState(
@@ -328,7 +329,6 @@ private fun SuperuserUiState.withSearchQuery(query: String): SuperuserUiState {
 private fun List<PolicyUiItem>.filteredBy(query: String): List<PolicyUiItem> {
     val normalized = query.trim().lowercase(Locale.ROOT)
     return if (normalized.isEmpty()) this else filter {
-        it.appName.lowercase(Locale.ROOT).contains(normalized) ||
-                it.packageName.lowercase(Locale.ROOT).contains(normalized)
+        it.searchKey.contains(normalized)
     }
 }

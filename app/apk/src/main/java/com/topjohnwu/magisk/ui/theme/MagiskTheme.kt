@@ -1,5 +1,6 @@
 package com.topjohnwu.magisk.ui.theme
 
+import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,8 +11,6 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
@@ -20,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.ui.motion.ProvideMagiskMotionEngine
 import com.topjohnwu.magisk.ui.theme.themes.Black
@@ -33,6 +33,7 @@ import com.topjohnwu.magisk.ui.theme.themes.contentColorFor
 fun MagiskTheme(
     themeOption: ThemeOption = ThemeOption.selected,
     darkTheme: Boolean = shouldUseDarkTheme(),
+    darkThemeMode: Int = Config.darkTheme,
     useDynamicColor: Boolean = true,
     themeVersion: Int = 0,
     content: @Composable () -> Unit
@@ -42,7 +43,9 @@ fun MagiskTheme(
         themeOption == ThemeOption.Default &&
                 useDynamicColor &&
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            val fallbackSeed = ThemeCatalog.seedFor(themeOption)
+            val dynamicSeed = dynamicThemeSeed(context, fallbackSeed)
+            dynamicSeed.toColorScheme(darkTheme)
         }
 
         else -> ThemeCatalog.seedFor(themeOption).toColorScheme(darkTheme)
@@ -54,7 +57,7 @@ fun MagiskTheme(
         }
     }
 
-    key(themeOption, darkTheme, themeVersion) {
+    key(themeOption, darkTheme, darkThemeMode, themeVersion) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = MagiskTypography,
@@ -86,21 +89,22 @@ fun shouldUseDarkTheme(mode: Int): Boolean {
 }
 
 private val MagiskShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(6.dp),
-    medium = RoundedCornerShape(8.dp),
-    large = RoundedCornerShape(12.dp),
-    extraLarge = RoundedCornerShape(16.dp)
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp)
 )
 
 private val BaseTypography = Typography()
 
 private val MagiskTypography = BaseTypography.copy(
-    headlineMedium = BaseTypography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
-    headlineSmall = BaseTypography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
-    titleLarge = BaseTypography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-    titleMedium = BaseTypography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-    labelLarge = BaseTypography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+    headlineLarge = BaseTypography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.sp),
+    headlineMedium = BaseTypography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.sp),
+    headlineSmall = BaseTypography.headlineSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.sp),
+    titleLarge = BaseTypography.titleLarge.copy(fontWeight = FontWeight.Bold),
+    titleMedium = BaseTypography.titleMedium.copy(fontWeight = FontWeight.Bold),
+    labelLarge = BaseTypography.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.sp)
 )
 
 private fun ThemeSeed.toColorScheme(darkTheme: Boolean): ColorScheme {
@@ -252,3 +256,45 @@ private fun ColorScheme.toAmoledScheme(): ColorScheme = copy(
     inverseOnSurface = Color(0xFF141414),
     scrim = Black
 )
+
+internal fun androidSystemColor(context: Context, name: String, fallback: Color): Color {
+    val id = context.resources.getIdentifier(name, "color", "android")
+    if (id == 0) return fallback
+    val colorInt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        context.getColor(id)
+    } else {
+        @Suppress("DEPRECATION")
+        context.resources.getColor(id)
+    }
+    return Color(colorInt)
+}
+
+internal fun dynamicThemeSeed(context: Context, fallback: ThemeSeed): ThemeSeed {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        return fallback
+    }
+    val dynamicLightSurface = androidSystemColor(
+        context,
+        "system_neutral1_50",
+        blend(fallback.lightSurface, Black, 0.06f)
+    )
+    val dynamicDarkSurface = blend(
+        androidSystemColor(context, "system_neutral1_900", fallback.darkSurface),
+        Black,
+        0.12f
+    )
+    return ThemeSeed(
+        lightPrimary = androidSystemColor(context, "system_accent1_900", fallback.lightPrimary),
+        darkPrimary = androidSystemColor(context, "system_accent1_400", fallback.darkPrimary),
+        lightSecondary = androidSystemColor(context, "system_accent2_900", fallback.lightSecondary),
+        darkSecondary = androidSystemColor(context, "system_accent2_400", fallback.darkSecondary),
+        lightTertiary = androidSystemColor(context, "system_accent3_900", fallback.lightTertiary),
+        darkTertiary = androidSystemColor(context, "system_accent3_400", fallback.darkTertiary),
+        lightSurface = dynamicLightSurface,
+        darkSurface = dynamicDarkSurface,
+        lightOnSurface = androidSystemColor(context, "system_neutral1_900", fallback.lightOnSurface),
+        darkOnSurface = androidSystemColor(context, "system_neutral1_100", fallback.darkOnSurface),
+        lightError = fallback.lightError,
+        darkError = fallback.darkError
+    )
+}
