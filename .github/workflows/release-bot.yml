@@ -67,14 +67,19 @@ jobs:
             --version-code-offset "${{ inputs.version_code_offset || '' }}"
 
       - name: Decode keystore
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         shell: bash
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release-key.jks
+          if [[ -n "$KEYSTORE_BASE64" ]]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > release-key.jks
+            echo "KEYSTORE_FILE=release-key.jks" >> "$GITHUB_ENV"
+          else
+            echo "No keystore provided, building unsigned APK."
+          fi
 
       - name: Build release APK
         env:
-          KEYSTORE_FILE: release-key.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -166,11 +171,17 @@ jobs:
           compression-level: 9
 
       - name: Notify Telegram
-        if: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish)) && secrets.TELEGRAM_BOT_TOKEN != '' }}
+        if: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish)) && inputs.telegram }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python scripts/release_bot.py telegram --message release-bot/telegram.md
+        shell: bash
+        run: |
+          if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
+            python scripts/release_bot.py telegram --message release-bot/telegram.md
+          else
+            echo "Telegram credentials not provided, skipping notification."
+          fi
 
       - name: Clean sensitive files
         if: always()
