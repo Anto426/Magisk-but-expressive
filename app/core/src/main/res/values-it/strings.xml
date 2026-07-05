@@ -307,4 +307,14 @@
     <string name="theme_option_custom">Personalizzato</string>
     <string name="settings_search">Cerca impostazioni</string>
     <string name="home_contributor">Contributore</string>
+
+    <string name="home_support_and_contributors">Supporto &amp; collaboratori</string>
+    <string name="mbe_section_title">Magisk-but-expressive (MBE)</string>
+    <string name="official_magisk_section_title">Progetto Magisk ufficiale</string>
+    <string name="mbe_support_content">MBE è un fork di Magisk con un\'interfaccia espressiva moderna. Se ti piace usarlo, puoi supportare il suo sviluppo con una donazione.</string>
+    <string name="mbe_maintainer_label">Creatore &amp; manutentore del fork</string>
+    <string name="donate_to_anto">Dona a Anto426</string>
+    <string name="donate_to_topjohnwu">Dona a topjohnwu</string>
+    <string name="original_magisk_maintainer_label">Creatore &amp; manutentore originale di Magisk</string>
+    <string name="donate">Dona</string>
 </resources>
