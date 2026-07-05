@@ -28,6 +28,14 @@
     <string name="home_notice_content">Download Magisk ONLY from the official GitHub page. Files from unknown sources can be malicious!</string>
     <string name="home_safety_warning">Safety warning</string>
     <string name="home_support_title">Support Us</string>
+    <string name="home_support_and_contributors">Support &amp; Contributors</string>
+    <string name="mbe_section_title">Magisk-but-expressive (MBE)</string>
+    <string name="official_magisk_section_title">Official Magisk Project</string>
+    <string name="mbe_support_content">MBE is a fork of Magisk with a modern expressive interface. If you enjoy using it, you can support its development with a donation.</string>
+    <string name="mbe_maintainer_label">Fork Creator &amp; Maintainer</string>
+    <string name="donate_to_anto">Donate to Anto426</string>
+    <string name="donate_to_topjohnwu">Donate to topjohnwu</string>
+    <string name="original_magisk_maintainer_label">Original Magisk Creator &amp; Maintainer</string>
     <string name="home_follow_title">Follow Us</string>
     <string name="home_item_source">Source</string>
     <string name="home_support_content">Magisk is, and always will be, free, and open source. However, you can show us that you care by making a donation.</string>
