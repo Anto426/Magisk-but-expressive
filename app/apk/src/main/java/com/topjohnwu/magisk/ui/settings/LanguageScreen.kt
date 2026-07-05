@@ -31,7 +31,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.core.utils.LocaleSetting
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
-import com.topjohnwu.magisk.ui.component.MagiskSearchField
+import com.topjohnwu.magisk.ui.component.MagiskAnimatedSearchField
+import com.topjohnwu.magisk.ui.component.MagiskSearchActionButton
 import com.topjohnwu.magisk.ui.component.MagiskSettingsGroup
 import com.topjohnwu.magisk.ui.component.MagiskSettingsItemContent
 import com.topjohnwu.magisk.ui.component.MagiskSettingsListItem
@@ -65,15 +66,12 @@ fun LanguageScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        MagiskAnimatedVisibility(visible = state.languageSearchVisible) {
-            MagiskSearchField(
-                value = state.languageSearchQuery,
-                onValueChange = viewModel::setLanguageSearchQuery,
-                placeholder = stringResource(CoreR.string.hide_search),
-                clearContentDescription = stringResource(CoreR.string.clear_search),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        }
+        MagiskAnimatedSearchField(
+            visible = state.languageSearchVisible,
+            value = state.languageSearchQuery,
+            onValueChange = viewModel::setLanguageSearchQuery,
+            placeholder = stringResource(CoreR.string.hide_search)
+        )
 
         MagiskLazyContent(
             modifier = Modifier.fillMaxSize(),
@@ -152,9 +150,8 @@ fun LanguageTopBarActions(
     searchVisible: Boolean,
     onToggleSearch: () -> Unit
 ) {
-    MagiskTopBarIconButton(
-        icon = if (searchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
-        contentDescription = stringResource(CoreR.string.hide_search),
-        onClick = onToggleSearch
+    MagiskSearchActionButton(
+        searchVisible = searchVisible,
+        onToggleSearch = onToggleSearch
     )
 }

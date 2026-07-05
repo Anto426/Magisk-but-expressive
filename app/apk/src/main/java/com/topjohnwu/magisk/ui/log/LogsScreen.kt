@@ -40,7 +40,8 @@ import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskLoadingState
-import com.topjohnwu.magisk.ui.component.MagiskSearchField
+import com.topjohnwu.magisk.ui.component.MagiskAnimatedSearchField
+import com.topjohnwu.magisk.ui.component.MagiskSearchActionButton
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.log.LogDisplayFilter
@@ -90,15 +91,12 @@ fun LogsScreen(
             MagiskLoadingState(modifier = Modifier.fillMaxSize())
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
-                MagiskAnimatedVisibility(visible = controlsVisible && state.searchVisible) {
-                    MagiskSearchField(
-                        value = state.searchQuery,
-                        onValueChange = viewModel::setSearchQuery,
-                        placeholder = stringResource(CoreR.string.log_search_hint),
-                        clearContentDescription = stringResource(CoreR.string.clear_search),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
+                MagiskAnimatedSearchField(
+                    visible = controlsVisible && state.searchVisible,
+                    value = state.searchQuery,
+                    onValueChange = viewModel::setSearchQuery,
+                    placeholder = stringResource(CoreR.string.log_search_hint)
+                )
                 // Log List
                 if (state.filteredLogs.isEmpty()) {
                     MagiskEmptyState(
@@ -138,10 +136,9 @@ fun LogsTopBarActions(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    MagiskTopBarIconButton(
-        icon = if (searchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
-        contentDescription = stringResource(CoreR.string.hide_search),
-        onClick = onToggleSearch
+    MagiskSearchActionButton(
+        searchVisible = searchVisible,
+        onToggleSearch = onToggleSearch
     )
 
     Box {
@@ -185,6 +182,7 @@ fun LogsTopBarActions(
                 MagiskDropdownMenuItem(
                     text = stringResource(filter.labelRes),
                     selected = filter == selectedFilter,
+                    alignWithIcons = true,
                     onClick = {
                         onFilterSelected(filter)
                         expanded = false

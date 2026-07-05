@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
@@ -40,6 +38,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -199,7 +201,9 @@ fun MagiskBackButton(
 ) {
     FilledTonalIconButton(
         onClick = onClick,
-        modifier = modifier.size(MagiskComponentDefaults.IconButtonSize),
+        modifier = modifier
+            .padding(start = 12.dp, end = 12.dp)
+            .size(MagiskComponentDefaults.IconButtonSize),
         colors = IconButtonDefaults.filledTonalIconButtonColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -297,24 +301,14 @@ private fun MagiskActionDropdown(
     expanded: MutableState<Boolean>,
     initialItems: List<MagiskTopBarAction>
 ) {
-    DropdownMenu(
+    MagiskDropdownMenu(
         expanded = expanded.value,
-        onDismissRequest = { expanded.value = false },
-        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
+        onDismissRequest = { expanded.value = false }
     ) {
         initialItems.forEach { item ->
-            DropdownMenuItem(
-                text = {
-                    Row {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = item.label)
-                    }
-                },
+            MagiskDropdownMenuItem(
+                text = item.label,
+                leadingIcon = item.icon,
                 onClick = {
                     item.onClick()
                     expanded.value = false
@@ -322,4 +316,18 @@ private fun MagiskActionDropdown(
             )
         }
     }
+}
+
+@Composable
+fun MagiskSearchActionButton(
+    searchVisible: Boolean,
+    onToggleSearch: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    MagiskTopBarIconButton(
+        icon = if (searchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
+        contentDescription = stringResource(com.topjohnwu.magisk.core.R.string.hide_search),
+        onClick = onToggleSearch,
+        modifier = modifier
+    )
 }

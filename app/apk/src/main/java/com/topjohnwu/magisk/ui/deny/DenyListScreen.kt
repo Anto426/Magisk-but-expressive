@@ -47,7 +47,8 @@ import com.topjohnwu.magisk.ui.component.MagiskInfoPill
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskListItem
 import com.topjohnwu.magisk.ui.component.MagiskLoadingState
-import com.topjohnwu.magisk.ui.component.MagiskSearchField
+import com.topjohnwu.magisk.ui.component.MagiskAnimatedSearchField
+import com.topjohnwu.magisk.ui.component.MagiskSearchActionButton
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
@@ -88,12 +89,12 @@ fun DenyListScreen(
             contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 24.dp)
         ) {
             item {
-                MagiskAnimatedVisibility(visible = state.searchVisible) {
-                    DenyListSearch(
-                        query = state.query,
-                        onQueryChange = viewModel::setQuery
-                    )
-                }
+                MagiskAnimatedSearchField(
+                    visible = state.searchVisible,
+                    value = state.query,
+                    onValueChange = viewModel::setQuery,
+                    placeholder = stringResource(CoreR.string.hide_filter_hint)
+                )
             }
 
             when {
@@ -153,10 +154,9 @@ fun DenyListTopBarActions(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    MagiskTopBarIconButton(
-        icon = if (searchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
-        contentDescription = stringResource(CoreR.string.hide_search),
-        onClick = onToggleSearch
+    MagiskSearchActionButton(
+        searchVisible = searchVisible,
+        onToggleSearch = onToggleSearch
     )
 
     Box {
@@ -197,12 +197,14 @@ fun DenyListTopBarActions(
             MagiskDropdownMenuItem(
                 text = stringResource(CoreR.string.menu_sort),
                 enabled = false,
+                alignWithIcons = true,
                 onClick = {}
             )
             DenyListSortMethod.entries.forEach { method ->
                 MagiskDropdownMenuItem(
                     text = stringResource(method.labelRes),
                     selected = method == sortMethod,
+                    alignWithIcons = true,
                     onClick = {
                         onSortMethodChange(method)
                         expanded = false
@@ -213,18 +215,7 @@ fun DenyListTopBarActions(
     }
 }
 
-@Composable
-private fun DenyListSearch(
-    query: String,
-    onQueryChange: (String) -> Unit
-) {
-    MagiskSearchField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = stringResource(CoreR.string.hide_filter_hint),
-        clearContentDescription = stringResource(CoreR.string.clear_search)
-    )
-}
+
 
 @Composable
 private fun DenyListAppItem(

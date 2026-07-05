@@ -68,6 +68,7 @@ import com.topjohnwu.magisk.ui.flash.FlashScreen
 import com.topjohnwu.magisk.ui.flash.FlashTopBarActions
 import com.topjohnwu.magisk.ui.home.HomeScreen
 import com.topjohnwu.magisk.ui.home.HomeTopBarActions
+import com.topjohnwu.magisk.ui.home.SupportScreen
 import com.topjohnwu.magisk.ui.install.InstallScreen
 import com.topjohnwu.magisk.ui.install.InstallTopBarActions
 import com.topjohnwu.magisk.ui.log.LogsScreen
@@ -279,6 +280,12 @@ private fun MagiskNavHost(
         popExitTransition = { magiskExitTransition(isPop = true) }) {
         composable("home") {
             HomeScreen(
+                onNavigate = onNavigate,
+                snackbarHostState = snackbarHostState
+            )
+        }
+        composable("support") {
+            SupportScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )

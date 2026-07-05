@@ -25,6 +25,7 @@ fun MagiskProfileCard(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     shape: Shape = MagiskComponentDefaults.CardShape,
+    onClick: (() -> Unit)? = null,
     trailingContent: (@Composable RowScope.() -> Unit)? = null
 ) {
     MagiskCard(
@@ -32,7 +33,8 @@ fun MagiskProfileCard(
         shape = shape,
         containerColor = MagiskComponentDefaults.CardContainer,
         border = MagiskComponentDefaults.CardBorder,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -172,7 +173,8 @@ fun MagiskDropdownMenuItem(
     enabled: Boolean = true,
     destructive: Boolean = false,
     leadingIcon: ImageVector? = null,
-    trailingContent: (@Composable () -> Unit)? = null
+    trailingContent: (@Composable () -> Unit)? = null,
+    alignWithIcons: Boolean = false
 ) {
     val labelColor = when {
         !enabled -> MagiskComponentDefaults.PrimaryText.copy(alpha = 0.38f)
@@ -214,24 +216,32 @@ fun MagiskDropdownMenuItem(
         enabled = enabled,
         modifier = modifier.heightIn(min = if (subtitle != null) 56.dp else 48.dp),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-        leadingIcon = leadingIcon?.let {
-            {
-                Surface(
-                    modifier = Modifier.size(32.dp),
-                    shape = MaterialTheme.shapes.small,
-                    color = iconContainerColor,
-                    contentColor = iconContentColor
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = it,
-                            contentDescription = null,
-                            tint = iconContentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
+        leadingIcon = when {
+            leadingIcon != null -> {
+                {
+                    Surface(
+                        modifier = Modifier.size(32.dp),
+                        shape = MaterialTheme.shapes.small,
+                        color = iconContainerColor,
+                        contentColor = iconContentColor
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = leadingIcon,
+                                contentDescription = null,
+                                tint = iconContentColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
+            alignWithIcons -> {
+                {
+                    Spacer(modifier = Modifier.size(32.dp))
+                }
+            }
+            else -> null
         },
         trailingIcon = trailingContent ?: if (selected) {
             {

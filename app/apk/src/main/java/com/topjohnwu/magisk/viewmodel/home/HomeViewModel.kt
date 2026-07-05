@@ -1,9 +1,6 @@
 package com.topjohnwu.magisk.viewmodel.home
 
 import android.os.SystemClock
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,11 +8,11 @@ import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.arch.uiText
 import com.topjohnwu.magisk.core.AppContext
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.core.BuildConfig
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.di.ServiceLocator
-import com.topjohnwu.magisk.core.di.createApiService
 import com.topjohnwu.magisk.core.repository.NetworkService
 import com.topjohnwu.magisk.core.tasks.MagiskInstaller
 import com.topjohnwu.magisk.runtime.MagiskInstallState
@@ -31,26 +28,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
-import retrofit2.http.GET
-import retrofit2.http.Headers
-import retrofit2.http.Query
-import org.json.JSONArray
-import org.json.JSONObject
-import java.util.Locale
+import androidx.core.net.toUri
 import com.topjohnwu.magisk.core.R as CoreR
-
-data class ContributorLink(
-    @param:StringRes val labelRes: Int, @param:DrawableRes val iconRes: Int, val url: String
-)
-
-data class Contributor(
-    val login: String,
-    val avatarUrl: String,
-    val htmlUrl: String,
-    val links: List<ContributorLink> = emptyList()
-)
 
 data class HomeUiState(
     val runtime: MagiskRuntimeState = MagiskRuntimeEngine.snapshot(),
@@ -66,16 +45,8 @@ data class HomeUiState(
     val showHideRestore: Boolean = false,
     val showManagerInstall: Boolean = false,
     val envFixCode: Int = 0,
-    val contributors: List<Contributor> = emptyList(),
-    val contributorsLoading: Boolean = true,
     val noticeVisible: Boolean = Config.safetyNotice
 )
-
-interface GitHubService {
-    @GET("repos/topjohnwu/Magisk/contributors")
-    @Headers("Accept: application/vnd.github+json", "X-GitHub-Api-Version: 2022-11-28")
-    suspend fun getContributors(@Query("per_page") perPage: Int = 30): List<Map<String, Any?>>
-}
 
 class HomeViewModel(private val svc: NetworkService) : ViewModel() {
     enum class State {
@@ -94,8 +65,28 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
     private var refreshJob: Job? = null
     private var lastRefreshAt = 0L
 
-    private val gitHubService: GitHubService by lazy {
-        createApiService(ServiceLocator.retrofit, "https://api.github.com/")
+    init {
+        viewModelScope.launch {
+            UpdateManager.appUpdateState.collect { appUpdate ->
+                val appState = when {
+                    appUpdate.isChecking -> HomeViewModel.State.LOADING
+                    appUpdate.hasFailed -> HomeViewModel.State.INVALID
+                    appUpdate.isUpdateAvailable -> HomeViewModel.State.OUTDATED
+                    else -> if (appUpdate.updateInfo != null) HomeViewModel.State.UP_TO_DATE else HomeViewModel.State.LOADING
+                }
+                val remote = appUpdate.updateInfo
+                _state.update {
+                    it.copy(
+                        appState = appState,
+                        managerInstalledVersion = "${BuildConfig.MBE_VERSION_NAME} (${BuildConfig.APP_VERSION_CODE})",
+                        managerInstalledVersionCode = String.format("%05d", BuildConfig.MBE_VERSION_CODE),
+                        managerRemoteVersion = remote?.let { r -> "${r.version} (${if (r.clientVersionCode > 0) r.clientVersionCode else BuildConfig.APP_VERSION_CODE})" }.orEmpty(),
+                        managerRemoteVersionCode = remote?.versionCode?.takeIf { code -> code > 0 }?.let { String.format("%05d", it) }.orEmpty(),
+                        managerReleaseNotes = remote?.note.orEmpty(),
+                    )
+                }
+            }
+        }
     }
 
     fun refresh(force: Boolean = false) {
@@ -106,28 +97,14 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
         lastRefreshAt = now
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            _state.update { if (it.contributors.isEmpty()) it.copy(contributorsLoading = true) else it }
-            val contributors = async { loadContributors() }
-            val update = async { Info.fetchUpdate(svc) }
-            contributors.await()
-            val remote = update.await()
-            val appState = when {
-                remote == null -> HomeViewModel.State.INVALID
-                BuildConfig.MBE_VERSION_CODE < remote.versionCode -> HomeViewModel.State.OUTDATED
-                else -> HomeViewModel.State.UP_TO_DATE
-            }
+            val update = async { UpdateManager.checkForAppUpdate(svc, force = force) }
+            update.await()
             val runtime = MagiskRuntimeEngine.snapshot()
             val magiskState = runtime.toHomeState()
             _state.update {
                 it.copy(
                     runtime = runtime,
                     magiskState = magiskState,
-                    appState = appState,
-                    managerInstalledVersion = "${BuildConfig.MBE_VERSION_NAME} (${BuildConfig.APP_VERSION_CODE})",
-                    managerInstalledVersionCode = String.format("%05d", BuildConfig.MBE_VERSION_CODE),
-                    managerRemoteVersion = remote?.let { r -> "${r.version} (${if (r.clientVersionCode > 0) r.clientVersionCode else BuildConfig.APP_VERSION_CODE})" }.orEmpty(),
-                    managerRemoteVersionCode = remote?.versionCode?.takeIf { code -> code > 0 }?.let { String.format("%05d", it) }.orEmpty(),
-                    managerReleaseNotes = remote?.note.orEmpty(),
                     packageName = AppContext.packageName,
                     envActive = runtime.isInstalled,
                     noticeVisible = Config.safetyNotice
@@ -193,38 +170,6 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
         _effects.tryEmit(UiEffect.OpenUri(link.toUri()))
     }
 
-    private suspend fun loadContributors() {
-        val cached = cachedContributors()
-        if (cached != null) {
-            _state.update { it.copy(contributors = cached, contributorsLoading = false) }
-            return
-        }
-        runCatching { gitHubService.getContributors(perPage = 30) }.onSuccess { raw ->
-                val fetched = raw.mapNotNull { item ->
-                    val login = item["login"] as? String ?: return@mapNotNull null
-                    createContributor(
-                        login = login,
-                        avatarUrl = item["avatar_url"] as? String ?: "",
-                        htmlUrl = item["html_url"] as? String ?: ""
-                    )
-                }
-                val priorityOrder =
-                    listOf("topjohnwu", "vvb2060", "yujincheng08", "rikkaw", "canyie")
-                val fetchedMap = fetched.associateBy { it.login.lowercase(Locale.US) }
-                val ordered = priorityOrder.mapNotNull { fetchedMap[it] }
-                val finalList = withPinnedContributors(ordered.ifEmpty { fetched })
-                cacheContributors(finalList)
-                _state.update { it.copy(contributors = finalList, contributorsLoading = false) }
-            }.onFailure {
-                _state.update {
-                    it.copy(
-                        contributors = withPinnedContributors(emptyList()),
-                        contributorsLoading = false
-                    )
-                }
-            }
-    }
-
     private suspend fun ensureEnv(runtime: MagiskRuntimeState) {
         if (!runtime.isInstalled || runtime.isUnsupported || checkedEnv) return
         val code = MagiskRuntimeEngine.checkEnvironment(runtime)
@@ -236,9 +181,6 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
 
     companion object {
         internal const val MIN_REFRESH_INTERVAL_MS = 1200L
-        internal const val CONTRIBUTORS_CACHE_TTL_MS = 30L * 60_000L
-        internal var contributorsCache: List<Contributor> = emptyList()
-        internal var contributorsCacheTimestamp: Long = 0
         private var checkedEnv = false
 
         val Factory = object : ViewModelProvider.Factory {
@@ -255,105 +197,3 @@ private fun MagiskRuntimeState.toHomeState(): HomeViewModel.State = when (instal
     MagiskInstallState.Outdated,
     MagiskInstallState.Unsupported -> HomeViewModel.State.OUTDATED
 }
-
-private val maintainerLinks: Map<String, List<ContributorLink>> = mapOf(
-    "topjohnwu" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/topjohnwu"),
-        ContributorLink(
-            CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/topjohnwu/Magisk"
-        )
-    ), "vvb2060" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/vvb2060"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/vvb2060")
-    ), "yujincheng08" to listOf(
-        ContributorLink(
-            CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/yujincheng08"
-        ), ContributorLink(
-            CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/yujincheng08"
-        ), ContributorLink(
-            CoreR.string.github,
-            CoreR.drawable.ic_favorite,
-            "https://github.com/sponsors/yujincheng08"
-        )
-    ), "rikkaw" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/rikkaw_"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/RikkaW")
-    ), "canyie" to listOf(
-        ContributorLink(CoreR.string.twitter, CoreR.drawable.ic_twitter, "https://x.com/canyieq"),
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/canyie")
-    ), "anto426" to listOf(
-        ContributorLink(CoreR.string.github, CoreR.drawable.ic_github, "https://github.com/Anto426")
-    )
-)
-
-private val forkMaintainer = createContributor(
-    login = "Anto426",
-    avatarUrl = "https://github.com/Anto426.png",
-    htmlUrl = "https://github.com/Anto426"
-)
-
-private fun createContributor(login: String, avatarUrl: String, htmlUrl: String): Contributor {
-    val normalized = login.lowercase(Locale.US)
-    return Contributor(login, avatarUrl, htmlUrl, maintainerLinks[normalized].orEmpty())
-}
-
-private fun cachedContributors(): List<Contributor>? {
-    val cached = HomeViewModel.contributorsCache
-    val cachedAt = HomeViewModel.contributorsCacheTimestamp
-    if (cached.isNotEmpty() && SystemClock.elapsedRealtime() - cachedAt < HomeViewModel.CONTRIBUTORS_CACHE_TTL_MS) {
-        return cached
-    }
-
-    return runCatching {
-        val prefs = AppContext.getSharedPreferences("git_contributors", android.content.Context.MODE_PRIVATE)
-        val data = prefs.getString("cache_data", null) ?: return null
-        val timestamp = prefs.getLong("cache_timestamp", 0)
-
-        // 7-day TTL for persistent disk cache
-        if (System.currentTimeMillis() - timestamp > 7L * 24 * 60 * 60 * 1000L) {
-            return null
-        }
-
-        val array = JSONArray(data)
-        val list = mutableListOf<Contributor>()
-        for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            val login = obj.getString("login")
-            val avatarUrl = obj.getString("avatarUrl")
-            val htmlUrl = obj.getString("htmlUrl")
-            list.add(createContributor(login, avatarUrl, htmlUrl))
-        }
-
-        HomeViewModel.contributorsCache = list
-        HomeViewModel.contributorsCacheTimestamp = SystemClock.elapsedRealtime()
-        list
-    }.getOrNull()
-}
-
-private fun cacheContributors(list: List<Contributor>) {
-    val pinned = withPinnedContributors(list)
-    val now = System.currentTimeMillis()
-    HomeViewModel.contributorsCache = pinned
-    HomeViewModel.contributorsCacheTimestamp = SystemClock.elapsedRealtime()
-
-    runCatching {
-        val array = JSONArray()
-        pinned.forEach { c ->
-            val obj = JSONObject().apply {
-                put("login", c.login)
-                put("avatarUrl", c.avatarUrl)
-                put("htmlUrl", c.htmlUrl)
-            }
-            array.put(obj)
-        }
-        val prefs = AppContext.getSharedPreferences("git_contributors", android.content.Context.MODE_PRIVATE)
-        prefs.edit().apply {
-            putString("cache_data", array.toString())
-            putLong("cache_timestamp", now)
-            apply()
-        }
-    }
-}
-
-private fun withPinnedContributors(list: List<Contributor>): List<Contributor> =
-    (listOf(forkMaintainer) + list).distinctBy { it.login.lowercase(Locale.US) }

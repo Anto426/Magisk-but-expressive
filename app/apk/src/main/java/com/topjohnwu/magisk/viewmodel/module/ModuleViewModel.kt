@@ -11,6 +11,7 @@ import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.model.module.LocalModule
 import com.topjohnwu.magisk.core.model.module.OnlineModule
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import com.topjohnwu.magisk.runtime.MagiskRuntimeState
 import kotlinx.coroutines.Dispatchers
@@ -73,6 +74,23 @@ class ModuleViewModel(
     private var lastRefreshAt = 0L
     private var lastMetadataRefreshAt = 0L
 
+    init {
+        viewModelScope.launch {
+            UpdateManager.moduleUpdatesState.collect { moduleUpdate ->
+                val runtime = MagiskRuntimeEngine.snapshot()
+                val list = synchronized(cacheLock) { moduleCache.values.toList() }
+                val expanded = _state.value.modules.filter { it.expanded }.map { it.id }.toSet()
+                val updatedUi = list.map { it.toUiItem(runtime, expanded.contains(it.id)) }
+                _state.update {
+                    it.withModules(
+                        modules = updatedUi,
+                        checkingUpdates = moduleUpdate.isChecking
+                    )
+                }
+            }
+        }
+    }
+
     fun refresh(force: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
         if (!force && _state.value.modules.isNotEmpty() && now - lastRefreshAt < MIN_REFRESH_INTERVAL_MS) {
@@ -106,23 +124,8 @@ class ModuleViewModel(
             }
             if (list.isNotEmpty() && (force || now - lastMetadataRefreshAt >= MIN_METADATA_REFRESH_INTERVAL_MS)) {
                 lastMetadataRefreshAt = now
-                _state.update { it.copy(checkingUpdates = true) }
-                metadataJob = launch(Dispatchers.IO) {
-                    list.map { module ->
-                        async { runCatching { module.fetch() } }
-                    }.awaitAll()
-                    val expandedAfterMetadata =
-                        _state.value.modules.filter { it.expanded }.map { it.id }.toSet()
-                    val updatedUi = list.map { it.toUiItem(runtime, expandedAfterMetadata.contains(it.id)) }
-                    val outdatedCount = list.count { it.outdated }
-                    if (outdatedCount > 0) {
-                        com.topjohnwu.magisk.view.Notifications.moduleUpdateAvailable(outdatedCount)
-                    }
-                    withContext(Dispatchers.Main) {
-                        _state.update { st ->
-                            st.withModules(updatedUi, checkingUpdates = false)
-                        }
-                    }
+                metadataJob = launch {
+                    UpdateManager.checkForModuleUpdates(list, showNotification = true)
                 }
             }
         }

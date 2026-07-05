@@ -53,6 +53,7 @@ object AppNavigationConfig {
             AppDestinationType.NavigationBar
         ),
         AppRouteSpec(AppRoute.Install, "install", CoreR.string.install),
+        AppRouteSpec(AppRoute.Support, "support", CoreR.string.home_support_title),
         AppRouteSpec(AppRoute.DenyList, "denylist", CoreR.string.denylist),
         AppRouteSpec(AppRoute.Theme, "theme", CoreR.string.section_theme),
         AppRouteSpec(AppRoute.Language, "language", CoreR.string.language),
@@ -107,6 +108,7 @@ object AppNavigationConfig {
         AppRoute.Logs -> "logs"
         AppRoute.Settings -> "settings"
         AppRoute.Install -> "install"
+        AppRoute.Support -> "support"
         AppRoute.DenyList -> "denylist"
         AppRoute.Theme -> "theme"
         AppRoute.Language -> "language"

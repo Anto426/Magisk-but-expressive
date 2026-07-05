@@ -69,7 +69,8 @@ import com.topjohnwu.magisk.ui.component.MagiskInfoPill
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskListItem
 import com.topjohnwu.magisk.ui.component.MagiskLoadingState
-import com.topjohnwu.magisk.ui.component.MagiskSearchField
+import com.topjohnwu.magisk.ui.component.MagiskAnimatedSearchField
+import com.topjohnwu.magisk.ui.component.MagiskSearchActionButton
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.ui.component.card.MagiskWarningCard
@@ -155,15 +156,12 @@ fun ModulesScreen(
         MagiskLoadingState(modifier = modifier.fillMaxSize())
     } else {
         Column(modifier = modifier.fillMaxSize()) {
-            MagiskAnimatedVisibility(visible = state.searchVisible) {
-                MagiskSearchField(
-                    value = state.searchQuery,
-                    onValueChange = viewModel::setSearchQuery,
-                    placeholder = stringResource(CoreR.string.hide_search),
-                    clearContentDescription = stringResource(CoreR.string.clear_search),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
+            MagiskAnimatedSearchField(
+                visible = state.searchVisible,
+                value = state.searchQuery,
+                onValueChange = viewModel::setSearchQuery,
+                placeholder = stringResource(CoreR.string.hide_search)
+            )
 
             MagiskLazyContent(
                 modifier = Modifier.weight(1f),
@@ -511,9 +509,8 @@ fun ModulesTopBarActions(
             onClick = onUpdatesClick
         )
     }
-    MagiskTopBarIconButton(
-        icon = if (searchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
-        contentDescription = stringResource(CoreR.string.hide_search),
-        onClick = onToggleSearch
+    MagiskSearchActionButton(
+        searchVisible = searchVisible,
+        onToggleSearch = onToggleSearch
     )
 }

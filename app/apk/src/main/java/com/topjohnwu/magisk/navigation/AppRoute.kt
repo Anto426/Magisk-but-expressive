@@ -35,6 +35,10 @@ sealed interface AppRoute {
         override val id = "settings"
     }
 
+    data object Support : AppRoute {
+        override val id = "support"
+    }
+
     data object Language : AppRoute {
         override val id = "language"
     }

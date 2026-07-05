@@ -13,6 +13,7 @@ import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.download.DownloadEngine
 import com.topjohnwu.magisk.core.download.DownloadSession
 import com.topjohnwu.magisk.core.download.Subject
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.view.Notifications
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -76,11 +77,8 @@ class JobService : BaseJobService() {
     @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
     private fun checkUpdate(params: JobParameters): Boolean {
         GlobalScope.launch(Dispatchers.IO) {
-            Info.fetchUpdate(ServiceLocator.networkService)?.let {
-                if (Info.env.isActive && BuildConfig.MBE_VERSION_CODE < it.versionCode)
-                    Notifications.updateAvailable()
-                jobFinished(params, false)
-            }
+            UpdateManager.checkForAppUpdate(ServiceLocator.networkService, showNotification = true)
+            jobFinished(params, false)
         }
         return true
     }

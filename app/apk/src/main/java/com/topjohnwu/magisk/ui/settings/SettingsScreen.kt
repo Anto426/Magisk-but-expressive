@@ -78,7 +78,8 @@ import com.topjohnwu.magisk.ui.component.MagiskDialogAction
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskOptionsSheet
-import com.topjohnwu.magisk.ui.component.MagiskSearchField
+import com.topjohnwu.magisk.ui.component.MagiskAnimatedSearchField
+import com.topjohnwu.magisk.ui.component.MagiskSearchActionButton
 import com.topjohnwu.magisk.ui.component.MagiskSettingsGroup
 import com.topjohnwu.magisk.ui.component.MagiskSettingsListItem
 import com.topjohnwu.magisk.ui.component.MagiskSettingsSwitchItem
@@ -1017,41 +1018,38 @@ fun SettingsScreen(
         }
     }
 
-    MagiskLazyContent(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 12.dp, bottom = 120.dp, start = 16.dp, end = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        if (state.settingsSearchVisible) {
-            item {
-                MagiskSearchField(
-                    value = state.settingsSearchQuery,
-                    onValueChange = viewModel::setSettingsSearchQuery,
-                    placeholder = stringResource(CoreR.string.hide_search),
-                    clearContentDescription = stringResource(CoreR.string.clear_search),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
+    Column(modifier = modifier.fillMaxSize()) {
+        MagiskAnimatedSearchField(
+            visible = state.settingsSearchVisible,
+            value = state.settingsSearchQuery,
+            onValueChange = viewModel::setSettingsSearchQuery,
+            placeholder = stringResource(CoreR.string.hide_search)
+        )
 
-        if (filteredGroups.isEmpty()) {
-            item {
-                MagiskEmptyState(
-                    title = stringResource(CoreR.string.superuser_policy_none),
-                    icon = Icons.Rounded.Search,
-                    modifier = Modifier.fillParentMaxSize()
-                )
-            }
-        } else {
-            items(filteredGroups.size, key = { index -> filteredGroups[index].title }) { index ->
-                val group = filteredGroups[index]
-                MagiskSettingsGroup(
-                    title = group.title,
-                    icon = group.icon,
-                    items = group.items.map { item ->
-                        { item.content() }
-                    }
-                )
+        MagiskLazyContent(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 120.dp, start = 16.dp, end = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            if (filteredGroups.isEmpty()) {
+                item {
+                    MagiskEmptyState(
+                        title = stringResource(CoreR.string.superuser_policy_none),
+                        icon = Icons.Rounded.Search,
+                        modifier = Modifier.fillParentMaxSize()
+                    )
+                }
+            } else {
+                items(filteredGroups.size, key = { index -> filteredGroups[index].title }) { index ->
+                    val group = filteredGroups[index]
+                    MagiskSettingsGroup(
+                        title = group.title,
+                        icon = group.icon,
+                        items = group.items.map { item ->
+                            { item.content() }
+                        }
+                    )
+                }
             }
         }
     }
@@ -1074,9 +1072,8 @@ fun SettingsTopBarActions(
     searchVisible: Boolean,
     onToggleSearch: () -> Unit
 ) {
-    MagiskTopBarIconButton(
-        icon = if (searchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
-        contentDescription = stringResource(CoreR.string.hide_search),
-        onClick = onToggleSearch
+    MagiskSearchActionButton(
+        searchVisible = searchVisible,
+        onToggleSearch = onToggleSearch
     )
 }

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.DeveloperMode
@@ -79,7 +80,6 @@ import com.topjohnwu.magisk.ui.component.card.MagiskStatusMetric
 import com.topjohnwu.magisk.ui.component.card.MagiskSupportCard
 import com.topjohnwu.magisk.ui.component.card.MagiskWarningCard
 import com.topjohnwu.magisk.view.SystemToastManager
-import com.topjohnwu.magisk.viewmodel.home.Contributor
 import com.topjohnwu.magisk.viewmodel.home.HomeViewModel
 import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
@@ -94,7 +94,6 @@ fun HomeScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var showUninstallDialog by remember { mutableStateOf(false) }
-    var selectedContributorForLinks by remember { mutableStateOf<Contributor?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -232,106 +231,6 @@ fun HomeScreen(
         )
     }
 
-    selectedContributorForLinks?.let { contributor ->
-        MagiskBottomSheet(
-            onDismissRequest = { selectedContributorForLinks = null }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AsyncImage(
-                        model = contributor.avatarUrl,
-                        contentDescription = contributor.login,
-                        modifier = Modifier
-                            .size(72.dp)
-                            .border(
-                                width = 2.dp,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
-                                shape = CircleShape
-                            )
-                            .padding(4.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Text(
-                        text = contributor.login,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MagiskComponentDefaults.PrimaryText
-                    )
-                }
-
-                HorizontalDivider(color = MagiskComponentDefaults.DividerColor)
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    MagiskListItem(
-                        title = stringResource(CoreR.string.github),
-                        leadingContent = {
-                            Surface(
-                                modifier = Modifier.size(MagiskComponentDefaults.IconBadgeSize),
-                                shape = MagiskComponentDefaults.ControlShape,
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        painter = painterResource(CoreR.drawable.ic_github),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(19.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-                        },
-                        onClick = {
-                            viewModel.openLink(contributor.htmlUrl)
-                            selectedContributorForLinks = null
-                        }
-                    )
-
-                    contributor.links.forEach { link ->
-                        if (link.url != contributor.htmlUrl) {
-                            MagiskListItem(
-                                title = stringResource(link.labelRes),
-                                leadingContent = {
-                                    Surface(
-                                        modifier = Modifier.size(MagiskComponentDefaults.IconBadgeSize),
-                                        shape = MagiskComponentDefaults.ControlShape,
-                                        color = MaterialTheme.colorScheme.primaryContainer
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                painter = painterResource(link.iconRes),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(19.dp),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.openLink(link.url)
-                                    selectedContributorForLinks = null
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     // --- MAIN SCREEN LAYOUT ---
 
     MagiskLazyContent(
@@ -396,13 +295,19 @@ fun HomeScreen(
                     )
                 ),
                 primaryAction = MagiskCardAction(
-                    text = if (isInstalled) {
+                    text = if (state.magiskState == HomeViewModel.State.OUTDATED) {
+                        stringResource(CoreR.string.update)
+                    } else if (isInstalled) {
                         stringResource(CoreR.string.reinstall)
                     } else {
                         stringResource(CoreR.string.install)
                     },
                     onClick = { onNavigate(AppRoute.Install) },
-                    icon = Icons.Rounded.Download
+                    icon = if (state.magiskState == HomeViewModel.State.OUTDATED) {
+                        Icons.Rounded.Update
+                    } else {
+                        Icons.Rounded.Download
+                    }
                 ),
                 secondaryAction = if (isInstalled) {
                     MagiskCardAction(
@@ -457,107 +362,71 @@ fun HomeScreen(
                     )
                 ),
                 primaryAction = MagiskCardAction(
-                    text = stringResource(CoreR.string.update),
+                    text = if (state.appState == HomeViewModel.State.OUTDATED) {
+                        stringResource(CoreR.string.update)
+                    } else {
+                        stringResource(CoreR.string.reinstall)
+                    },
                     onClick = { onNavigate(AppRoute.AppUpdate) },
-                    icon = Icons.Rounded.Update
+                    icon = if (state.appState == HomeViewModel.State.OUTDATED) {
+                        Icons.Rounded.Update
+                    } else {
+                        Icons.Rounded.Download
+                    }
                 )
             )
         }
 
-        // 4. Support Us Panel
+        // 4. Support & Contributors Link Card
         item {
-            MagiskSupportCard(
-                title = stringResource(CoreR.string.home_support_title),
-                message = stringResource(CoreR.string.home_support_content),
-                primaryAction = MagiskCardAction(
-                    text = stringResource(CoreR.string.donate),
-                    onClick = { viewModel.openLink("https://github.com/sponsors/topjohnwu") },
-                    icon = Icons.Rounded.Favorite
-                ),
-                secondaryAction = MagiskCardAction(
-                    text = stringResource(CoreR.string.documents),
-                    onClick = { viewModel.openLink("https://topjohnwu.github.io/Magisk/") },
-                    style = MagiskCardActionStyle.Secondary
-                ),
-                actionsStacked = true
-            )
-        }
-
-        // 5. Contributors Section
-        item {
-            MagiskSection(
-                title = stringResource(CoreR.string.home_section_contributors),
-                icon = Icons.Rounded.People
+            MagiskCard(
+                onClick = { onNavigate(AppRoute.Support) },
+                shape = MagiskComponentDefaults.CardShape,
+                containerColor = MagiskComponentDefaults.CardContainer,
+                border = MagiskComponentDefaults.CardBorder,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                if (state.contributorsLoading) {
-                    MagiskLoadingState()
-                } else {
-                    state.contributors.chunked(2).forEach { rowContributors ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            rowContributors.forEachIndexed { index, contributor ->
-                                MagiskCard(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(132.dp),
-                                    shape = MagiskComponentDefaults.CardShape,
-                                    contentPadding = PaddingValues(12.dp),
-                                    onClick = { selectedContributorForLinks = contributor }
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxSize(),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        AsyncImage(
-                                            model = contributor.avatarUrl,
-                                            contentDescription = contributor.login,
-                                            modifier = Modifier
-                                                .size(52.dp)
-                                                .border(
-                                                    width = 1.5.dp,
-                                                    color = MaterialTheme.colorScheme.primary.copy(
-                                                        alpha = 0.25f
-                                                    ),
-                                                    shape = CircleShape
-                                                )
-                                                .padding(3.dp)
-                                                .clip(CircleShape),
-                                            contentScale = ContentScale.Crop
-                                        )
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        Text(
-                                            text = contributor.login,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MagiskComponentDefaults.PrimaryText,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-
-                                        Text(
-                                            text = if (contributor.login.lowercase(Locale.US) == "anto426") {
-                                                stringResource(CoreR.string.home_maintainer)
-                                            } else {
-                                                stringResource(CoreR.string.home_contributor)
-                                            },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MagiskComponentDefaults.SecondaryText,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                            }
-                            if (rowContributors.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Surface(
+                        modifier = Modifier.size(MagiskComponentDefaults.IconBadgeSize),
+                        shape = MagiskComponentDefaults.ControlShape,
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Favorite,
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
                     }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(CoreR.string.home_support_and_contributors),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MagiskComponentDefaults.PrimaryText
+                        )
+                        Text(
+                            text = stringResource(CoreR.string.home_support_content),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MagiskComponentDefaults.SecondaryText,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = MagiskComponentDefaults.SecondaryIconTint,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }

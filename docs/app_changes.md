@@ -1,5 +1,11 @@
 # Magisk Manager Changelog
 
+### e8a58776-alpha-mbe.2
+
+- Merge pull request #4 from ZGUATION-PROJECTS/master
+- Some UI FIX
+- New Contributor Screen
+
 ### e8a58776-alpha-mbe.1
 
 - Separate MBE app versioning from the Magisk core version used for root/runtime checks.
@@ -229,6 +235,7 @@
 - Prevent sudb crashing Magisk Manager
 
 ### v5.5.1
+
 - Fix an issue in setting up superuser database, which causes some users to experience tons of root issues
 
 ### v5.5.0
@@ -336,6 +343,7 @@
 - Adapt to Android O broadcast limitations: re-authenticate app when update is disabled on Android O
 
 ### v5.0.2
+
 - Rewrite zip signing part, zips downloaded from repo will be properly signed and adjusted for custom recoveries
 
 ### v5.0.1
@@ -364,6 +372,7 @@
 - Update translations (thanks to all contributors!!)
 
 ### v4.3.1
+
 - Update proper Magisk busybox detection, will not be confused by busybox installed by default in custom roms
 
 ### v4.3.0

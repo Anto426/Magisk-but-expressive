@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Security
@@ -238,5 +239,6 @@ fun AppRoute.navigationIcon(): ImageVector = when (this) {
     AppRoute.DenyList -> Icons.Rounded.Security
     AppRoute.Theme -> Icons.Rounded.Palette
     AppRoute.Language -> Icons.Rounded.Language
+    AppRoute.Support -> Icons.Rounded.Favorite
     is AppRoute.Flash, is AppRoute.ModuleAction -> Icons.Rounded.Terminal
 }

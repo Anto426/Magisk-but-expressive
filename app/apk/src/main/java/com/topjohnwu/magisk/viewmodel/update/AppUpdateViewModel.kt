@@ -7,6 +7,7 @@ import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.arch.uiText
 import com.topjohnwu.magisk.core.BuildConfig
 import com.topjohnwu.magisk.core.Info
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.model.UpdateInfo
 import com.topjohnwu.magisk.core.repository.NetworkService
@@ -47,6 +48,17 @@ class AppUpdateViewModel(
     private var refreshJob: Job? = null
 
     init {
+        viewModelScope.launch {
+            UpdateManager.appUpdateState.collect { appUpdate ->
+                _state.update {
+                    it.copy(
+                        loading = appUpdate.isChecking,
+                        update = appUpdate.updateInfo ?: UpdateInfo(),
+                        downloadFailed = appUpdate.hasFailed
+                    )
+                }
+            }
+        }
         refresh()
     }
 
@@ -54,15 +66,11 @@ class AppUpdateViewModel(
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             if (force) {
-                Info.resetUpdate()
+                UpdateManager.resetAppUpdate()
             }
-            _state.update { it.copy(loading = true, downloadFailed = false) }
-            val update = Info.fetchUpdate(svc)
+            val update = UpdateManager.checkForAppUpdate(svc, force = force)
             if (update == null) {
-                _state.update { it.copy(loading = false, update = UpdateInfo()) }
                 _messages.emit(uiText(CoreR.string.no_connection))
-            } else {
-                _state.update { it.copy(loading = false, update = update) }
             }
         }
     }

@@ -16,8 +16,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +74,26 @@ fun MagiskSearchField(
             unfocusedBorderColor = Color.Transparent
         )
     )
+}
+
+@Composable
+fun MagiskAnimatedSearchField(
+    visible: Boolean,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    clearContentDescription: String? = null
+) {
+    MagiskAnimatedVisibility(visible = visible) {
+        MagiskSearchField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = placeholder,
+            clearContentDescription = clearContentDescription ?: stringResource(com.topjohnwu.magisk.core.R.string.clear_search),
+            modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
 }
 
 @Composable
