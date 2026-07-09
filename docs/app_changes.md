@@ -1,5 +1,10 @@
 # Magisk Manager Changelog
 
+### e8a58776-alpha-mbe.3
+
+- Merge pull request #5 from ZGUATION-PROJECTS/master
+- Some UI FIX
+
 ### e8a58776-alpha-mbe.2
 
 - Merge pull request #4 from ZGUATION-PROJECTS/master
