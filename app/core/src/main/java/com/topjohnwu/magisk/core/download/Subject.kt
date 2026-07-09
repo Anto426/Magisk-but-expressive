@@ -7,9 +7,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
 import androidx.core.net.toUri
-import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.model.UpdateInfo
 import com.topjohnwu.magisk.core.model.module.OnlineModule
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.view.Notifications
 import kotlinx.parcelize.IgnoredOnParcel
@@ -38,7 +38,7 @@ abstract class Subject : Parcelable {
 
     @Parcelize
     class App(
-        private val json: UpdateInfo = Info.update,
+        private val json: UpdateInfo = UpdateManager.cachedAppUpdate,
         override val notifyId: Int = Notifications.nextId()
     ) : Subject() {
         override val title: String get() = "Magisk-${json.version}(${json.versionCode})"

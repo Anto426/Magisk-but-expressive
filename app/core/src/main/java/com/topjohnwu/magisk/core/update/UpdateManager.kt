@@ -1,7 +1,6 @@
 package com.topjohnwu.magisk.core.update
 
-import com.topjohnwu.magisk.core.BuildConfig
-import com.topjohnwu.magisk.core.Info
+import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.model.UpdateInfo
 import com.topjohnwu.magisk.core.model.module.LocalModule
 import com.topjohnwu.magisk.core.model.module.OnlineModule
@@ -18,6 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 object UpdateManager {
 
@@ -45,12 +45,53 @@ object UpdateManager {
     private val _moduleUpdatesState = MutableStateFlow(ModuleUpdatesState())
     val moduleUpdatesState: StateFlow<ModuleUpdatesState> = _moduleUpdatesState.asStateFlow()
 
+    private val emptyAppUpdate = UpdateInfo()
+    private val appCacheMutex = Mutex()
+    private var appUpdateCacheKey = ""
+    var cachedAppUpdate: UpdateInfo = emptyAppUpdate
+        private set
+
+    private val moduleUpdateCache = ConcurrentHashMap<String, OnlineModule>()
+
     private val appCheckMutex = Mutex()
     private val moduleCheckMutex = Mutex()
 
     fun resetAppUpdate() {
-        Info.resetUpdate()
+        cachedAppUpdate = emptyAppUpdate
+        appUpdateCacheKey = ""
         _appUpdateState.update { AppUpdateState() }
+    }
+
+    fun resetModuleUpdates() {
+        moduleUpdateCache.clear()
+        _moduleUpdatesState.update { ModuleUpdatesState() }
+    }
+
+    fun resetAllUpdates() {
+        resetAppUpdate()
+        resetModuleUpdates()
+    }
+
+    fun retainModuleUpdates(moduleIds: Set<String>) {
+        moduleUpdateCache.keys.retainAll { it in moduleIds }
+    }
+
+    fun getCachedModuleUpdate(module: LocalModule): OnlineModule? {
+        val cached = moduleUpdateCache[module.id] ?: return null
+        return if (cached.versionCode > module.versionCode) {
+            cached
+        } else {
+            moduleUpdateCache.remove(module.id)
+            null
+        }
+    }
+
+    fun cacheModuleUpdate(module: LocalModule, update: OnlineModule?) {
+        if (update != null && update.versionCode > module.versionCode) {
+            moduleUpdateCache[module.id] = update
+        } else {
+            moduleUpdateCache.remove(module.id)
+        }
     }
 
     suspend fun checkForAppUpdate(
@@ -59,15 +100,16 @@ object UpdateManager {
         showNotification: Boolean = false
     ): UpdateInfo? = appCheckMutex.withLock {
         if (force) {
-            Info.resetUpdate()
+            cachedAppUpdate = emptyAppUpdate
+            appUpdateCacheKey = ""
         }
         _appUpdateState.update { it.copy(isChecking = true, hasFailed = false) }
-        val info = Info.fetchUpdate(svc)
+        val info = fetchAppUpdate(svc)
         if (info == null) {
             _appUpdateState.update { it.copy(isChecking = false, hasFailed = true) }
             return null
         }
-        val isAvailable = BuildConfig.MBE_VERSION_CODE < info.versionCode
+        val isAvailable = AppVersion.isUpdateAvailable(info)
         _appUpdateState.update {
             AppUpdateState(
                 isChecking = false,
@@ -78,10 +120,30 @@ object UpdateManager {
                 updateInfo = info
             )
         }
-        if (isAvailable && showNotification && Info.env.isActive) {
+        if (isAvailable && showNotification) {
             Notifications.updateAvailable()
         }
         return info
+    }
+
+    private suspend fun fetchAppUpdate(svc: NetworkService): UpdateInfo? {
+        val key = currentAppUpdateCacheKey()
+        val cached = cachedAppUpdate
+        if (cached !== emptyAppUpdate && appUpdateCacheKey == key) {
+            return cached
+        }
+
+        return appCacheMutex.withLock {
+            val lockedCached = cachedAppUpdate
+            if (lockedCached !== emptyAppUpdate && appUpdateCacheKey == key) {
+                lockedCached
+            } else {
+                svc.fetchUpdate()?.also {
+                    cachedAppUpdate = it
+                    appUpdateCacheKey = key
+                }
+            }
+        }
     }
 
     suspend fun checkForModuleUpdates(
@@ -90,7 +152,7 @@ object UpdateManager {
     ) {
         moduleCheckMutex.withLock {
             if (installedModules.isEmpty()) {
-                _moduleUpdatesState.update { ModuleUpdatesState() }
+                resetModuleUpdates()
                 return@withLock
             }
             _moduleUpdatesState.update { it.copy(isChecking = true) }
@@ -118,4 +180,15 @@ object UpdateManager {
             }
         }
     }
+}
+
+private fun currentAppUpdateCacheKey(): String {
+    val channel = Config.updateChannel.coerceIn(
+        Config.Value.MBE_CHANNEL,
+        Config.Value.CUSTOM_CHANNEL
+    )
+    val customUrl = Config.customChannelUrl.takeIf {
+        channel == Config.Value.CUSTOM_CHANNEL && it.isNotBlank()
+    }.orEmpty()
+    return "$channel:$customUrl"
 }

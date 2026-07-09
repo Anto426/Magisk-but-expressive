@@ -9,12 +9,11 @@ import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.arch.uiText
 import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.update.UpdateManager
-import com.topjohnwu.magisk.core.BuildConfig
 import com.topjohnwu.magisk.core.Config
-import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.repository.NetworkService
 import com.topjohnwu.magisk.core.tasks.MagiskInstaller
+import com.topjohnwu.magisk.core.update.AppVersion
 import com.topjohnwu.magisk.runtime.MagiskInstallState
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import com.topjohnwu.magisk.runtime.MagiskRuntimeState
@@ -28,7 +27,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 import com.topjohnwu.magisk.core.R as CoreR
 
 data class HomeUiState(
@@ -37,13 +35,10 @@ data class HomeUiState(
     val appState: HomeViewModel.State = HomeViewModel.State.LOADING,
     val managerRemoteVersion: String = "",
     val managerRemoteVersionCode: String = "",
-    val managerReleaseNotes: String = "",
     val managerInstalledVersion: String = "",
     val managerInstalledVersionCode: String = "",
     val packageName: String = "",
-    val envActive: Boolean = runtime.isInstalled,
     val showHideRestore: Boolean = false,
-    val showManagerInstall: Boolean = false,
     val envFixCode: Int = 0,
     val noticeVisible: Boolean = Config.safetyNotice
 )
@@ -78,11 +73,11 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
                 _state.update {
                     it.copy(
                         appState = appState,
-                        managerInstalledVersion = "${BuildConfig.MBE_VERSION_NAME} (${BuildConfig.APP_VERSION_CODE})",
-                        managerInstalledVersionCode = String.format("%05d", BuildConfig.MBE_VERSION_CODE),
-                        managerRemoteVersion = remote?.let { r -> "${r.version} (${if (r.clientVersionCode > 0) r.clientVersionCode else BuildConfig.APP_VERSION_CODE})" }.orEmpty(),
-                        managerRemoteVersionCode = remote?.versionCode?.takeIf { code -> code > 0 }?.let { String.format("%05d", it) }.orEmpty(),
-                        managerReleaseNotes = remote?.note.orEmpty(),
+                        managerInstalledVersion = AppVersion.installedDisplay,
+                        managerInstalledVersionCode = AppVersion.installedCodeText,
+                        managerRemoteVersion = remote?.let(AppVersion::remoteDisplay).orEmpty(),
+                        managerRemoteVersionCode = remote?.takeIf { r -> r.versionCode > 0 }
+                            ?.let(AppVersion::remoteCodeText).orEmpty(),
                     )
                 }
             }
@@ -106,7 +101,6 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
                     runtime = runtime,
                     magiskState = magiskState,
                     packageName = AppContext.packageName,
-                    envActive = runtime.isInstalled,
                     noticeVisible = Config.safetyNotice
                 )
             }
@@ -135,18 +129,6 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
         _state.update { it.copy(envFixCode = 0) }
     }
 
-    fun onManagerPressed() {
-        when (_state.value.appState) {
-            HomeViewModel.State.LOADING -> _messages.tryEmit(uiText(CoreR.string.loading))
-            HomeViewModel.State.INVALID -> _messages.tryEmit(uiText(CoreR.string.no_connection))
-            else -> _state.update { it.copy(showManagerInstall = true) }
-        }
-    }
-
-    fun onManagerInstallConsumed() {
-        _state.update { it.copy(showManagerInstall = false) }
-    }
-
     fun restoreImages() {
         viewModelScope.launch {
             _messages.tryEmit(uiText(CoreR.string.restore_img_msg))
@@ -164,10 +146,6 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
             }
             _effects.emit(UiEffect.Reboot(reason))
         }
-    }
-
-    fun openLink(link: String) {
-        _effects.tryEmit(UiEffect.OpenUri(link.toUri()))
     }
 
     private suspend fun ensureEnv(runtime: MagiskRuntimeState) {

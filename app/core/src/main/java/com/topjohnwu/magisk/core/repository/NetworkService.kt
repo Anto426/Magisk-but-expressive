@@ -40,7 +40,7 @@ class NetworkService(
             val response = api.fetchReleases(page = page)
             val releases = response.body() ?: throw HttpException(response)
             // Remove all non Magisk releases
-            releases.removeAll { it.tag[0] != 'v' && !it.tag.startsWith("canary") }
+            releases.removeAll { !it.isMagiskReleaseTag }
             // Make sure it's sorted correctly
             releases.sortByDescending { it.createdTime }
             releases.find(predicate)?.let { return it }
@@ -58,7 +58,7 @@ class NetworkService(
             it.name.run { endsWith(".apk") && !contains("debug") }
         }): UpdateInfo {
         return if (this == null) UpdateInfo()
-        else if (tag[0] == 'v') asPublicInfo(selector)
+        else if (tag.startsWith("v")) asPublicInfo(selector)
         else asCanaryInfo(selector)
     }
 
@@ -118,4 +118,7 @@ class NetworkService(
         } else {
             Config.MBE_CHANNEL_URL
         }
+
+    private val Release.isMagiskReleaseTag: Boolean
+        get() = tag.startsWith("v") || tag.startsWith("canary")
 }

@@ -3,6 +3,7 @@ package com.topjohnwu.magisk.core.model.module
 import com.squareup.moshi.JsonDataException
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.di.ServiceLocator
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.core.utils.RootUtils
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.nio.ExtendedFile
@@ -102,19 +103,17 @@ data class LocalModule(
     }
 
     suspend fun fetch(): Boolean {
-        if (updateUrl.isEmpty())
+        if (updateUrl.isEmpty()) {
+            UpdateManager.cacheModuleUpdate(this, null)
             return false
+        }
 
         try {
             val json = svc.fetchModuleJson(updateUrl)
             val info = OnlineModule(this, json)
             updateInfo = info
             outdated = json.versionCode > versionCode
-            if (outdated) {
-                ServiceLocator.moduleUpdates[id] = info
-            } else {
-                ServiceLocator.moduleUpdates.remove(id)
-            }
+            UpdateManager.cacheModuleUpdate(this, info.takeIf { outdated })
             return true
         } catch (e: IOException) {
             Timber.w(e)
@@ -138,17 +137,13 @@ data class LocalModule(
             val installedIds = localModules.map { it.id }.toSet()
 
             // Remove updates for modules that were deleted/uninstalled
-            ServiceLocator.moduleUpdates.keys.retainAll { installedIds.contains(it) }
+            UpdateManager.retainModuleUpdates(installedIds)
 
             localModules.map { m ->
-                val cachedUpdate = ServiceLocator.moduleUpdates[m.id]
+                val cachedUpdate = UpdateManager.getCachedModuleUpdate(m)
                 if (cachedUpdate != null) {
-                    if (cachedUpdate.versionCode > m.versionCode) {
-                        m.updateInfo = cachedUpdate
-                        m.outdated = true
-                    } else {
-                        ServiceLocator.moduleUpdates.remove(m.id)
-                    }
+                    m.updateInfo = cachedUpdate
+                    m.outdated = true
                 }
                 m
             }.sortedBy { it.name.lowercase(Locale.ROOT) }

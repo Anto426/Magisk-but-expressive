@@ -433,14 +433,21 @@ fun ModulesScreen(
                                             Text(text = stringResource(CoreR.string.module_state_restore))
                                         }
                                     } else {
+                                        val removeEnabled = !item.updated
                                         OutlinedButton(
                                             onClick = { viewModel.toggleRemove(item.id) },
                                             modifier = Modifier.fillMaxWidth(),
+                                            enabled = removeEnabled,
                                             colors = ButtonDefaults.outlinedButtonColors(
                                                 contentColor = MaterialTheme.colorScheme.error
                                             ),
                                             border = BorderStroke(
-                                                1.dp, MaterialTheme.colorScheme.error
+                                                1.dp,
+                                                if (removeEnabled) {
+                                                    MaterialTheme.colorScheme.error
+                                                } else {
+                                                    MaterialTheme.colorScheme.outlineVariant
+                                                }
                                             )
                                         ) {
                                             Icon(

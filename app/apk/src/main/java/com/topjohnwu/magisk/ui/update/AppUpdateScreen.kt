@@ -106,18 +106,12 @@ fun AppUpdateScreen(
                 statusColor = when {
                     state.downloadFailed -> MaterialTheme.colorScheme.error
                     state.updateAvailable -> MaterialTheme.colorScheme.primary
-                    state.hasUpdateInfo -> MaterialTheme.colorScheme.secondary
+                    state.hasUpdateInfo -> MaterialTheme.colorScheme.primary
                     else -> MaterialTheme.colorScheme.error
                 },
                 icon = Icons.Rounded.Android,
-                iconContainerColor = MaterialTheme.colorScheme.secondary,
-                iconTint = MaterialTheme.colorScheme.onSecondary,
-                shape = RoundedCornerShape(
-                    topStart = 4.dp,
-                    topEnd = 32.dp,
-                    bottomStart = 32.dp,
-                    bottomEnd = 4.dp
-                ),
+                iconContainerColor = MaterialTheme.colorScheme.primary,
+                iconTint = MaterialTheme.colorScheme.onPrimary,
                 metrics = listOf(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),

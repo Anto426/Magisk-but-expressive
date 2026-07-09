@@ -60,7 +60,6 @@ import coil.compose.AsyncImage
 import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.core.Const
-import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.component.MagiskBottomSheet
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
@@ -139,13 +138,13 @@ fun HomeScreen(
             text = stringResource(if (isFullFix) CoreR.string.env_full_fix_msg else CoreR.string.env_fix_msg),
             confirmAction = if (!isFullFix) {
                 MagiskDialogAction(
-                    text = stringResource(android.R.string.ok), onClick = {
+                    text = stringResource(CoreR.string.reboot), onClick = {
                         viewModel.onEnvFixConsumed()
                         viewModel.requestReboot()
                     })
             } else {
                 MagiskDialogAction(
-                    text = stringResource(CoreR.string.install), onClick = {
+                    text = stringResource(CoreR.string.reinstall), onClick = {
                         viewModel.onEnvFixConsumed()
                         onNavigate(AppRoute.Install)
                     })
@@ -170,23 +169,6 @@ fun HomeScreen(
             dismissAction = MagiskDialogAction(
                 text = stringResource(android.R.string.cancel),
                 onClick = viewModel::onHideRestoreConsumed
-            )
-        )
-    }
-
-    if (state.showManagerInstall) {
-        MagiskDialog(
-            title = stringResource(CoreR.string.update),
-            onDismissRequest = viewModel::onManagerInstallConsumed,
-            text = state.managerReleaseNotes.ifEmpty { stringResource(CoreR.string.update_available) },
-            confirmAction = MagiskDialogAction(
-                text = stringResource(android.R.string.ok), onClick = {
-                    viewModel.onManagerInstallConsumed()
-                    viewModel.openLink(Info.update.link)
-                }),
-            dismissAction = MagiskDialogAction(
-                text = stringResource(android.R.string.cancel),
-                onClick = viewModel::onManagerInstallConsumed
             )
         )
     }
@@ -274,12 +256,6 @@ fun HomeScreen(
                 icon = Icons.Rounded.Security,
                 iconContainerColor = MaterialTheme.colorScheme.primary,
                 iconTint = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(
-                    topStart = 32.dp,
-                    topEnd = 4.dp,
-                    bottomStart = 4.dp,
-                    bottomEnd = 32.dp
-                ),
                 metrics = listOf(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),
@@ -328,18 +304,22 @@ fun HomeScreen(
         item {
             MagiskStatusCard(
                 title = stringResource(CoreR.string.home_app_title),
-                statusText = stringResource(CoreR.string.home_package) + ": " + state.packageName,
-                statusColor = MaterialTheme.colorScheme.secondary,
+                statusText = when (state.appState) {
+                    HomeViewModel.State.LOADING -> stringResource(CoreR.string.loading)
+                    HomeViewModel.State.INVALID -> stringResource(CoreR.string.no_connection)
+                    HomeViewModel.State.OUTDATED -> stringResource(CoreR.string.update_available)
+                    HomeViewModel.State.UP_TO_DATE -> stringResource(CoreR.string.home_state_up_to_date)
+                },
+                statusColor = when (state.appState) {
+                    HomeViewModel.State.INVALID -> MaterialTheme.colorScheme.error
+                    HomeViewModel.State.OUTDATED -> MaterialTheme.colorScheme.primary
+                    HomeViewModel.State.LOADING,
+                    HomeViewModel.State.UP_TO_DATE -> MaterialTheme.colorScheme.primary
+                },
                 icon = Icons.Rounded.Android,
-                iconContainerColor = MaterialTheme.colorScheme.secondary,
-                iconTint = MaterialTheme.colorScheme.onSecondary,
-                shape = RoundedCornerShape(
-                    topStart = 4.dp,
-                    topEnd = 32.dp,
-                    bottomStart = 32.dp,
-                    bottomEnd = 4.dp
-                ),
-                metrics = listOf(
+                iconContainerColor = MaterialTheme.colorScheme.primary,
+                iconTint = MaterialTheme.colorScheme.onPrimary,
+                metrics = listOfNotNull(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),
                         value = state.managerInstalledVersion
@@ -348,18 +328,12 @@ fun HomeScreen(
                         label = stringResource(CoreR.string.home_version_code),
                         value = state.managerInstalledVersionCode
                     ),
-                    MagiskStatusMetric(
-                        label = stringResource(CoreR.string.home_latest_version),
-                        value = state.managerRemoteVersion.ifEmpty {
-                            stringResource(CoreR.string.not_available)
-                        }
-                    ),
-                    MagiskStatusMetric(
-                        label = stringResource(CoreR.string.home_latest_version_code),
-                        value = state.managerRemoteVersionCode.ifEmpty {
-                            stringResource(CoreR.string.not_available)
-                        }
-                    )
+                    if (state.appState == HomeViewModel.State.OUTDATED && state.managerRemoteVersion.isNotEmpty()) {
+                        MagiskStatusMetric(
+                            label = stringResource(CoreR.string.home_latest_version),
+                            value = state.managerRemoteVersion
+                        )
+                    } else null
                 ),
                 primaryAction = MagiskCardAction(
                     text = if (state.appState == HomeViewModel.State.OUTDATED) {

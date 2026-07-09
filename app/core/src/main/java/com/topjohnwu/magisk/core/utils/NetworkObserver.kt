@@ -13,6 +13,7 @@ import androidx.collection.ArraySet
 import androidx.core.content.getSystemService
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.ktx.registerRuntimeReceiver
+import com.topjohnwu.magisk.core.update.UpdateManager
 
 class NetworkObserver(context: Context) {
     private val manager = context.getSystemService<ConnectivityManager>()!!
@@ -62,7 +63,7 @@ class NetworkObserver(context: Context) {
     }
 
     private fun postValue(b: Boolean) {
-        Info.resetUpdate()
+        UpdateManager.resetAppUpdate()
         Info.isConnected.postValue(b)
     }
 

@@ -57,12 +57,14 @@ fun MagiskSupportCard(
             ) {
                 MagiskActionButton(
                     action = primaryAction,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    alignContentStart = true
                 )
                 secondaryAction?.let {
                     MagiskActionButton(
                         action = it,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        alignContentStart = true
                     )
                 }
             }

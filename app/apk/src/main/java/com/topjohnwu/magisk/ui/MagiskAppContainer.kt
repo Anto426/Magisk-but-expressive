@@ -42,7 +42,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -149,52 +151,9 @@ fun MagiskAppContainer(
             currentBackStackEntry?.destination?.route
         )
         val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-        val topBarActions = currentBackStackEntry?.let { entry ->
-            appTopBarActions(
-                spec = currentSpec, entry = entry, onNavigate = navigateToRoute
-            )
-        }
-        val flashTopBarState = currentBackStackEntry
-            ?.takeIf { currentSpec.route is AppRoute.Flash }
-            ?.let { entry ->
-                val viewModel: FlashViewModel = viewModel(
-                    viewModelStoreOwner = entry, factory = FlashViewModel.Factory
-                )
-                val state by viewModel.state.collectAsState()
-                state
-            }
 
         Scaffold(
-            modifier = Modifier.nestedScroll(topBarScrollBehavior.nestedScrollConnection),
-            topBar = {
-                val title = appBarTitle(
-                    currentSpec, currentBackStackEntry, flashTopBarState?.title
-                )
-                MagiskTopBar(
-                    title = title, navigationIcon = {
-                        if (!currentSpec.isNavigationBarDestination && flashTopBarState?.running != true) {
-                            MagiskBackButton(
-                                onClick = { navController.navigateUp() },
-                                contentDescription = stringResource(CoreR.string.back)
-                            )
-                        }
-                    }, actions = {
-                        topBarActions?.invoke(this)
-                    }, compactTitle = currentSpec.route is AppRoute.Flash ||
-                        currentSpec.route is AppRoute.ModuleAction,
-                    subtitleContent = if (flashTopBarState?.running == true) {
-                        {
-                            LinearWavyProgressIndicator(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(end = 16.dp)
-                            )
-                        }
-                    } else {
-                        null
-                    }, scrollBehavior = topBarScrollBehavior
-                )
-            },
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 if (currentSpec.isNavigationBarDestination) {
                     val navigationBottomInset =
@@ -257,7 +216,8 @@ fun MagiskAppContainer(
                 MagiskNavHost(
                     navController = navController,
                     snackbarHostState = snackbarHostState,
-                    onNavigate = navigateToRoute
+                    onNavigate = navigateToRoute,
+                    topBarScrollBehavior = topBarScrollBehavior
                 )
             }
         }
@@ -269,8 +229,26 @@ fun MagiskAppContainer(
 private fun MagiskNavHost(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState,
-    onNavigate: (AppRoute) -> Unit
+    onNavigate: (AppRoute) -> Unit,
+    topBarScrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior
 ) {
+    fun NavGraphBuilder.destination(
+        route: String,
+        arguments: List<NamedNavArgument> = emptyList(),
+        content: @Composable (NavBackStackEntry) -> Unit
+    ) {
+        composable(route = route, arguments = arguments) { entry ->
+            MagiskDestinationScaffold(
+                entry = entry,
+                onNavigate = onNavigate,
+                onBack = { navController.navigateUp() },
+                scrollBehavior = topBarScrollBehavior
+            ) {
+                content(entry)
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = AppNavigationConfig.startGraphKey,
@@ -278,65 +256,65 @@ private fun MagiskNavHost(
         exitTransition = { magiskExitTransition(isPop = false) },
         popEnterTransition = { magiskEnterTransition(isPop = true) },
         popExitTransition = { magiskExitTransition(isPop = true) }) {
-        composable("home") {
+        destination("home") {
             HomeScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("support") {
+        destination("support") {
             SupportScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("app_update") {
+        destination("app_update") {
             AppUpdateScreen(
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("superuser") {
+        destination("superuser") {
             SuperuserScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("superuser_logs") {
+        destination("superuser_logs") {
             SuperuserLogsScreen(
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("modules") {
+        destination("modules") {
             ModulesScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("module_updates") {
+        destination("module_updates") {
             ModuleUpdatesScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("logs") {
+        destination("logs") {
             LogsScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("settings") {
+        destination("settings") {
             SettingsScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("install") {
+        destination("install") {
             InstallScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable("denylist") { entry ->
+        destination("denylist") { entry ->
             val denyListViewModel: DenyListViewModel = viewModel(
                 viewModelStoreOwner = entry, factory = DenyListViewModel.Factory
             )
@@ -344,16 +322,16 @@ private fun MagiskNavHost(
                 snackbarHostState = snackbarHostState, viewModel = denyListViewModel
             )
         }
-        composable("theme") {
+        destination("theme") {
             ThemeScreen()
         }
-        composable("language") {
+        destination("language") {
             LanguageScreen(
                 onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
             )
         }
-        composable(route = "flash/{action}?data={data}", arguments = listOf(navArgument("action") {
+        destination(route = "flash/{action}?data={data}", arguments = listOf(navArgument("action") {
             type = NavType.StringType
         }, navArgument("data") {
             type = NavType.StringType
@@ -367,7 +345,7 @@ private fun MagiskNavHost(
                 snackbarHostState = snackbarHostState
             )
         }
-        composable(route = "module/{id}/action?name={name}", arguments = listOf(navArgument("id") {
+        destination(route = "module/{id}/action?name={name}", arguments = listOf(navArgument("id") {
             type = NavType.StringType
         }, navArgument("name") {
             type = NavType.StringType
@@ -381,6 +359,68 @@ private fun MagiskNavHost(
                 onBack = { navController.navigateUp() },
                 snackbarHostState = snackbarHostState
             )
+        }
+    }
+}
+
+@Composable
+private fun MagiskDestinationScaffold(
+    entry: NavBackStackEntry,
+    onNavigate: (AppRoute) -> Unit,
+    onBack: () -> Unit,
+    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior,
+    content: @Composable () -> Unit
+) {
+    val spec = AppNavigationConfig.specForGraphKey(entry.destination.route)
+    val flashTopBarState = entry
+        .takeIf { spec.route is AppRoute.Flash }
+        ?.let { flashEntry ->
+            val viewModel: FlashViewModel = viewModel(
+                viewModelStoreOwner = flashEntry,
+                factory = FlashViewModel.Factory
+            )
+            val state by viewModel.state.collectAsState()
+            state
+        }
+    val topBarActions = appTopBarActions(spec, entry, onNavigate)
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            MagiskTopBar(
+                title = appBarTitle(spec, entry, flashTopBarState?.title),
+                navigationIcon = {
+                    if (!spec.isNavigationBarDestination && flashTopBarState?.running != true) {
+                        MagiskBackButton(
+                            onClick = onBack,
+                            contentDescription = stringResource(CoreR.string.back)
+                        )
+                    }
+                },
+                actions = { topBarActions?.invoke(this) },
+                compactTitle = spec.route is AppRoute.Flash || spec.route is AppRoute.ModuleAction,
+                subtitleContent = if (flashTopBarState?.running == true) {
+                    {
+                        LinearWavyProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 16.dp)
+                        )
+                    }
+                } else {
+                    null
+                },
+                scrollBehavior = scrollBehavior
+            )
+        },
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .padding(innerPadding)
+                .clipToBounds()
+        ) {
+            content()
         }
     }
 }

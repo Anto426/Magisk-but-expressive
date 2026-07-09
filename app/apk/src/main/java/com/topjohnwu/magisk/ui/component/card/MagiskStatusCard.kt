@@ -1,15 +1,21 @@
 package com.topjohnwu.magisk.ui.component.card
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -83,7 +89,10 @@ fun MagiskStatusCard(
                 containerColor = iconContainerColor,
                 iconTint = iconTint
             )
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
@@ -117,7 +126,8 @@ fun MagiskStatusCard(
                         metric = metric,
                         modifier = Modifier.fillMaxWidth(),
                         contentColor = contentColor,
-                        supportingContentColor = supportingContentColor
+                        supportingContentColor = supportingContentColor,
+                        accentColor = statusColor
                     )
                 }
             }
@@ -168,7 +178,8 @@ fun MagiskStatusCard(
 @Composable
 fun MagiskActionButton(
     action: MagiskCardAction,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    alignContentStart: Boolean = false
 ) {
     when (action.style) {
         MagiskCardActionStyle.Primary -> {
@@ -177,7 +188,7 @@ fun MagiskActionButton(
                 modifier = modifier.heightIn(min = 40.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                MagiskActionButtonContent(action)
+                MagiskActionButtonContent(action, alignContentStart)
             }
         }
 
@@ -187,7 +198,7 @@ fun MagiskActionButton(
                 modifier = modifier.heightIn(min = 40.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                MagiskActionButtonContent(action)
+                MagiskActionButtonContent(action, alignContentStart)
             }
         }
 
@@ -201,7 +212,7 @@ fun MagiskActionButton(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                MagiskActionButtonContent(action)
+                MagiskActionButtonContent(action, alignContentStart)
             }
         }
     }
@@ -212,44 +223,65 @@ private fun MagiskMetricBlock(
     metric: MagiskStatusMetric,
     modifier: Modifier = Modifier,
     contentColor: Color = MagiskComponentDefaults.PrimaryText,
-    supportingContentColor: Color = MagiskComponentDefaults.SecondaryText
+    supportingContentColor: Color = MagiskComponentDefaults.SecondaryText,
+    accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
-    Column(
+    Row(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = metric.label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Medium,
-            color = supportingContentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+        Box(
+            modifier = Modifier
+                .size(width = 3.dp, height = 24.dp)
+                .background(accentColor.copy(alpha = 0.6f), RoundedCornerShape(2.dp))
         )
-        Text(
-            text = metric.value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
+            Text(
+                text = metric.label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = supportingContentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = metric.value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
 @Composable
-private fun MagiskActionButtonContent(action: MagiskCardAction) {
-    action.icon?.let { icon ->
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp)
+private fun MagiskActionButtonContent(
+    action: MagiskCardAction,
+    alignContentStart: Boolean
+) {
+    Row(
+        modifier = if (alignContentStart) Modifier.fillMaxWidth() else Modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (alignContentStart) Arrangement.Start else Arrangement.Center
+    ) {
+        action.icon?.let { icon ->
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        }
+        Text(
+            text = action.text,
+            modifier = if (alignContentStart) Modifier.weight(1f, fill = false) else Modifier,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.width(6.dp))
     }
-    Text(
-        text = action.text,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
 }

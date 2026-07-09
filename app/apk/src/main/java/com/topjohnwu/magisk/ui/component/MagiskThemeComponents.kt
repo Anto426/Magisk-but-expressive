@@ -67,6 +67,19 @@ import com.topjohnwu.magisk.ui.theme.shouldUseDarkTheme
 import com.topjohnwu.magisk.ui.theme.themes.ThemeCatalog
 import android.graphics.Color as AndroidColor
 import com.topjohnwu.magisk.core.R as CoreR
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.sp
+import com.topjohnwu.magisk.ui.theme.themes.ThemeSeed
 
 data class ThemeModeOption(
     val mode: Int,
@@ -173,6 +186,205 @@ fun ThemeCardGrid(
     }
 }
 
+fun ThemeOption.subtitle(): String = when (this) {
+    ThemeOption.Ruby -> "Stile Ruby Hoshino"
+    ThemeOption.MemCho -> "Stile Mem-Cho"
+    ThemeOption.Aqua -> "Stile Aqua"
+    ThemeOption.SungJinWoo -> "Stile Sung Jin-Woo"
+    ThemeOption.Default -> "Material 3 Dinamico"
+    ThemeOption.Custom -> "Personalizzato"
+}
+
+@Composable
+fun MockAppPreview(
+    option: ThemeOption,
+    darkMode: Int,
+    modifier: Modifier = Modifier
+) {
+    val seed = if (option == ThemeOption.Default && ThemeOption.supportsDynamicColor) {
+        val context = LocalContext.current
+        val fallback = ThemeCatalog.seedFor(option)
+        dynamicThemeSeed(context, fallback)
+    } else {
+        ThemeCatalog.seedFor(option)
+    }
+    
+    val dark = shouldUseDarkTheme(darkMode)
+    val primary = if (dark) seed.darkPrimary else seed.lightPrimary
+    val surface = if (dark) seed.darkSurface else seed.lightSurface
+    val onSurface = if (dark) seed.darkOnSurface else seed.lightOnSurface
+
+    Box(
+        modifier = modifier
+            .shadow(2.dp, RoundedCornerShape(8.dp))
+            .background(surface, RoundedCornerShape(8.dp))
+            .border(BorderStroke(1.dp, primary.copy(alpha = 0.15f)), RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Status bar mockup
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(14.dp)
+                    .padding(horizontal = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "12:00",
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = onSurface.copy(alpha = 0.5f)
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.size(3.dp).background(onSurface.copy(alpha = 0.5f), CircleShape))
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp, 4.dp)
+                            .border(BorderStroke(0.5.dp, onSurface.copy(alpha = 0.5f)), RoundedCornerShape(0.5.dp))
+                            .padding(0.5.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(0.7f)
+                                .background(onSurface.copy(alpha = 0.5f))
+                        )
+                    }
+                }
+            }
+            
+            // App bar mockup
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(20.dp)
+                    .padding(horizontal = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(modifier = Modifier.size(5.dp).background(onSurface.copy(alpha = 0.6f), CircleShape))
+                Text(
+                    text = "Magisk",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    color = onSurface
+                )
+            }
+            
+            // Content mockup
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(28.dp)
+                        .background(primary.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+                        .padding(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(primary, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(6.dp),
+                                tint = Color.White
+                            )
+                        }
+                        
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(35.dp, 2.5.dp)
+                                    .background(primary)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(50.dp, 1.5.dp)
+                                    .background(onSurface.copy(alpha = 0.3f))
+                            )
+                        }
+                    }
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(12.dp)
+                            .background(primary, RoundedCornerShape(3.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp, 2.dp)
+                                .background(Color.White.copy(alpha = 0.9f))
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(12.dp)
+                            .border(BorderStroke(0.5.dp, primary.copy(alpha = 0.4f)), RoundedCornerShape(3.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp, 2.dp)
+                                .background(primary.copy(alpha = 0.7f))
+                        )
+                    }
+                }
+            }
+            
+            // Bottom bar mockup
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(16.dp)
+                    .background(surface)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(0.5.dp)
+                        .background(onSurface.copy(alpha = 0.08f))
+                )
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.size(4.dp).background(primary, CircleShape))
+                    Box(modifier = Modifier.size(4.dp).background(onSurface.copy(alpha = 0.3f), CircleShape))
+                    Box(modifier = Modifier.size(4.dp).background(onSurface.copy(alpha = 0.3f), CircleShape))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun ThemeOptionCard(
     option: ThemeOption,
@@ -181,73 +393,135 @@ fun ThemeOptionCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val previewColors = themePreviewColors(option = option, darkMode = darkMode)
-    val border = if (selected) {
-        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+    val seed = if (option == ThemeOption.Default && ThemeOption.supportsDynamicColor) {
+        val context = LocalContext.current
+        val fallback = ThemeCatalog.seedFor(option)
+        dynamicThemeSeed(context, fallback)
     } else {
-        MagiskComponentDefaults.CardBorder
+        ThemeCatalog.seedFor(option)
     }
+    
+    val dark = shouldUseDarkTheme(darkMode)
+    val primary = if (dark) seed.darkPrimary else seed.lightPrimary
+    val secondary = if (dark) seed.darkSecondary else seed.lightSecondary
+
+    val borderThickness by animateDpAsState(targetValue = if (selected) 2.5.dp else 1.dp, label = "BorderThickness")
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        label = "BorderColor"
+    )
+    val scale by animateFloatAsState(targetValue = if (selected) 1.03f else 1f, label = "Scale")
+
+    val border = BorderStroke(borderThickness, borderColor)
 
     MagiskCard(
-        modifier = modifier.height(190.dp),
+        modifier = modifier
+            .height(205.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         containerColor = if (selected) {
             MaterialTheme.colorScheme.surfaceContainerHigh
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
         border = border,
+        contentPadding = PaddingValues(0.dp),
         onClick = onClick
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
-                    .background(Brush.linearGradient(previewColors)),
-                contentAlignment = Alignment.Center
+                    .height(125.dp)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                primary.copy(alpha = 0.15f),
+                                secondary.copy(alpha = 0.05f)
+                            )
+                        )
+                    )
             ) {
-                ThemeCharacter(
+                val hasCharacter = option.characterRes() != null
+                MockAppPreview(
                     option = option,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp)
+                    darkMode = darkMode,
+                    modifier = if (hasCharacter) {
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .offset(x = 12.dp, y = 4.dp)
+                            .size(105.dp, 100.dp)
+                    } else {
+                        Modifier
+                            .align(Alignment.Center)
+                            .offset(y = 8.dp)
+                            .size(150.dp, 100.dp)
+                    }
                 )
+
+                if (hasCharacter) {
+                    ThemeCharacter(
+                        option = option,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .height(125.dp)
+                            .offset(x = 10.dp, y = 2.dp)
+                    )
+                }
 
                 if (selected) {
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
-                            .size(28.dp),
+                            .size(24.dp),
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+                        color = primary,
+                        shadowElevation = 2.dp
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
-                                modifier = Modifier.size(17.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                modifier = Modifier.size(14.dp),
+                                tint = Color.White
                             )
                         }
                     }
                 }
             }
 
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = stringResource(option.labelRes),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = stringResource(option.labelRes),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = option.subtitle(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                
                 ThemePreviewSwatches(option = option, darkMode = darkMode)
             }
         }
@@ -315,7 +589,7 @@ fun ThemePreviewSwatches(
 ) {
     val colors = themePreviewColors(option = option, darkMode = darkMode).take(4)
 
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
         colors.forEach { color ->
             ThemeColorDot(color = color)
         }
@@ -325,10 +599,10 @@ fun ThemePreviewSwatches(
 @Composable
 fun ThemeColorDot(color: Color) {
     Surface(
-        modifier = Modifier.size(18.dp),
+        modifier = Modifier.size(16.dp),
         shape = CircleShape,
         color = color,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface)
     ) {}
 }
 

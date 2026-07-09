@@ -35,7 +35,7 @@ fun MagiskTerminal(
     state: LazyListState = rememberLazyListState(),
     emptyText: String? = null
 ) {
-    MagiskAutoScrollToLatest(itemCount = lines.size, state = state)
+    MagiskAutoScrollToLatest(itemCount = lines.size, state = state, always = true)
 
     MagiskCard(
         modifier = modifier.fillMaxSize(),

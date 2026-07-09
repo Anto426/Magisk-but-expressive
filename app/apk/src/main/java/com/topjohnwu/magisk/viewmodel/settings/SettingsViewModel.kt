@@ -15,6 +15,7 @@ import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.isRunningAsStub
 import com.topjohnwu.magisk.core.tasks.AppMigration
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.core.utils.LocaleSetting
 import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.RootUtils
@@ -219,13 +220,13 @@ class SettingsViewModel : ViewModel() {
 
     fun setUpdateChannel(value: Int) {
         Config.updateChannel = value.coerceIn(Config.Value.MBE_CHANNEL, Config.Value.CUSTOM_CHANNEL)
-        Info.resetUpdate()
+        UpdateManager.resetAppUpdate()
         updateSnapshot()
     }
 
     fun setCustomChannelUrl(url: String) {
         Config.customChannelUrl = url.trim()
-        Info.resetUpdate()
+        UpdateManager.resetAppUpdate()
         updateSnapshot()
     }
 

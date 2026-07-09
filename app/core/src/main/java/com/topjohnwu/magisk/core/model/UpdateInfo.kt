@@ -60,10 +60,14 @@ data class Release(
     @param:Json(name = "created_at") val createdTime: Instant,
 ) {
     val versionCode: Int get() {
-        return if (tag[0] == 'v') {
-            (tag.drop(1).toFloat() * 1000).toInt()
-        } else {
-            tag.drop(7).toInt()
+        return when {
+            tag.startsWith("canary") -> tag.drop(7).toIntOrNull() ?: -1
+            "-mbe." in tag -> tag.substringAfterLast("-mbe.").toIntOrNull() ?: -1
+            tag.startsWith("v") -> tag.drop(1).substringBefore('-')
+                .toFloatOrNull()
+                ?.let { (it * 1000).toInt() }
+                ?: -1
+            else -> -1
         }
     }
 }

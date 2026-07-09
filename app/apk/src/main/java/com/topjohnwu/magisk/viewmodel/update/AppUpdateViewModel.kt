@@ -5,12 +5,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.magisk.arch.UiText
 import com.topjohnwu.magisk.arch.uiText
-import com.topjohnwu.magisk.core.BuildConfig
-import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.model.UpdateInfo
 import com.topjohnwu.magisk.core.repository.NetworkService
+import com.topjohnwu.magisk.core.update.AppVersion
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,11 +28,11 @@ data class AppUpdateUiState(
     val downloadFailed: Boolean = false
 ) {
     val hasUpdateInfo: Boolean get() = update.versionCode > 0 && update.link.isNotBlank()
-    val updateAvailable: Boolean get() = hasUpdateInfo && BuildConfig.MBE_VERSION_CODE < update.versionCode
-    val installedVersion: String get() = "${BuildConfig.MBE_VERSION_NAME} (${BuildConfig.APP_VERSION_CODE})"
-    val installedVersionCode: String get() = String.format("%05d", BuildConfig.MBE_VERSION_CODE)
-    val latestVersion: String get() = if (hasUpdateInfo) "${update.version} (${if (update.clientVersionCode > 0) update.clientVersionCode else BuildConfig.APP_VERSION_CODE})" else ""
-    val latestVersionCode: String get() = if (hasUpdateInfo) String.format("%05d", update.versionCode) else ""
+    val updateAvailable: Boolean get() = hasUpdateInfo && AppVersion.isUpdateAvailable(update)
+    val installedVersion: String get() = AppVersion.installedDisplay
+    val installedVersionCode: String get() = AppVersion.installedCodeText
+    val latestVersion: String get() = if (hasUpdateInfo) AppVersion.remoteDisplay(update) else ""
+    val latestVersionCode: String get() = if (hasUpdateInfo) AppVersion.remoteCodeText(update) else ""
 }
 
 class AppUpdateViewModel(
@@ -65,9 +64,6 @@ class AppUpdateViewModel(
     fun refresh(force: Boolean = false) {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            if (force) {
-                UpdateManager.resetAppUpdate()
-            }
             val update = UpdateManager.checkForAppUpdate(svc, force = force)
             if (update == null) {
                 _messages.emit(uiText(CoreR.string.no_connection))

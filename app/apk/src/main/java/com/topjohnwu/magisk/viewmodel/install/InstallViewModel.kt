@@ -5,9 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.topjohnwu.magisk.arch.BaseViewModel
 import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.core.AppContext
-import com.topjohnwu.magisk.core.BuildConfig.MBE_VERSION_CODE
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.repository.NetworkService
+import com.topjohnwu.magisk.core.update.AppVersion
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import kotlinx.coroutines.Dispatchers
@@ -46,11 +46,11 @@ class InstallViewModel(svc: NetworkService) : BaseViewModel() {
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val noteFile = File(AppContext.cacheDir, "${MBE_VERSION_CODE}.md")
+                val noteFile = File(AppContext.cacheDir, "mbe-${AppVersion.installedCode}.md")
                 val noteText = when {
                     noteFile.exists() -> noteFile.readText()
                     else -> {
-                        val note = svc.fetchUpdate(MBE_VERSION_CODE)?.note.orEmpty()
+                        val note = svc.fetchUpdate(AppVersion.installedCode)?.note.orEmpty()
                         if (note.isEmpty()) return@launch
                         noteFile.writeText(note)
                         note

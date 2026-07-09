@@ -193,14 +193,15 @@ fun MagiskAutoScrollToLatest(
     itemCount: Int,
     state: LazyListState,
     enabled: Boolean = true,
+    always: Boolean = false,
     trailingThreshold: Int = 4
 ) {
     val profile = MagiskMotionEngine.profile()
-    LaunchedEffect(itemCount, enabled, profile.enabled) {
+    LaunchedEffect(itemCount, enabled, always, profile.enabled) {
         val last = itemCount - 1
         if (!enabled || last < 0) return@LaunchedEffect
         val closeToEnd =
-            !state.canScrollForward || state.firstVisibleItemIndex >= last - trailingThreshold
+            always || !state.canScrollForward || state.firstVisibleItemIndex >= last - trailingThreshold
         if (closeToEnd) {
             if (profile.enabled) {
                 state.animateScrollToItem(last)

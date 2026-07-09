@@ -20,8 +20,8 @@ object MagiskComponentDefaults {
     val IconButtonSize: Dp = 40.dp
     val IconBadgeSize: Dp = 36.dp
 
-    val CardShape: Shape = RoundedCornerShape(28.dp)
-    val PanelShape: Shape = RoundedCornerShape(28.dp)
+    val CardShape: Shape = RoundedCornerShape(16.dp)
+    val PanelShape: Shape = RoundedCornerShape(16.dp)
     val ControlShape: Shape = RoundedCornerShape(20.dp)
     val PillShape: Shape = RoundedCornerShape(50)
 

@@ -39,9 +39,6 @@ object ServiceLocator {
             createApiService(retrofit, Const.Url.GITHUB_API_URL),
         )
     }
-
-    // Global Cache for Module Updates: moduleId -> OnlineModule
-    val moduleUpdates = java.util.concurrent.ConcurrentHashMap<String, com.topjohnwu.magisk.core.model.module.OnlineModule>()
 }
 
 private fun createSuLogDatabase(context: Context) =
