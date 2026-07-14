@@ -7,11 +7,11 @@ import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.StopExecutionException
 import org.gradle.api.tasks.Sync
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.filter
@@ -21,6 +21,15 @@ import java.io.File
 import java.net.URI
 import java.security.MessageDigest
 import java.util.HexFormat
+
+private val CORE_NATIVE_BINARIES = setOf(
+    "magiskboot",
+    "magiskinit",
+    "magiskpolicy",
+    "magisk",
+    "init-ld",
+    "busybox",
+)
 
 private fun Project.android(configure: Action<CommonExtension>) =
     extensions.configure("android", configure)
@@ -42,9 +51,7 @@ internal fun Project.androidAppComponents(configure: Action<ApplicationAndroidCo
 
 fun Project.setupCommon() {
     android {
-        compileSdk {
-            version = release(37)
-        }
+        compileSdk = 37
         buildToolsVersion = "37.0.0"
         ndkPath = "${androidComponents.sdkComponents.sdkDirectory.get().asFile}/ndk/magisk"
         ndkVersion = "30.0.14904198"
@@ -127,7 +134,7 @@ fun Project.setupCoreLib() {
                 for (abi in abiList) {
                     into(abi) {
                         from(rootFile("$nativeBinariesDir/$abi")) {
-                            include("magiskboot", "magiskinit", "magiskpolicy", "magisk", "init-ld", "busybox")
+                            include(*CORE_NATIVE_BINARIES.toTypedArray())
                             rename {
                                 when (it) {
                                     "init-ld" -> "libinit-ld.so"
@@ -141,8 +148,15 @@ fun Project.setupCoreLib() {
                 onlyIf {
                     for (abi in abiList) {
                         val dir = rootFile("$nativeBinariesDir/$abi")
-                        if (!dir.exists() || dir.listFiles()?.size ?: 0 < 6) {
-                            throw StopExecutionException("Missing binaries in $nativeBinariesDir/$abi")
+                        val entries = dir.listFiles().orEmpty()
+                        val names = entries.filter { it.isFile }.map { it.name }.toSet()
+                        if (!dir.isDirectory || names != CORE_NATIVE_BINARIES ||
+                            entries.any { !it.isFile || it.name !in CORE_NATIVE_BINARIES }
+                        ) {
+                            throw GradleException(
+                                "Invalid binaries in $nativeBinariesDir/$abi; expected exactly " +
+                                    CORE_NATIVE_BINARIES.sorted().joinToString()
+                            )
                         }
                     }
                     true
@@ -244,7 +258,7 @@ fun Project.setupAppCommon() {
 
         lint {
             disable += "MissingTranslation"
-            checkReleaseBuilds = false
+            checkReleaseBuilds = true
         }
 
         dependenciesInfo {
@@ -258,6 +272,7 @@ fun Project.setupAppCommon() {
         }
     }
 
+    val releaseSigningConfigured = androidApp.signingConfigs.findByName("config") != null
     androidAppComponents {
         onVariants { variant ->
             val commentTask = tasks.register(
@@ -269,6 +284,14 @@ fun Project.setupAppCommon() {
                 .toTransformMany(SingleArtifact.APK)
             val signingConfig = androidApp.buildTypes.getByName(variant.buildType!!).signingConfig
             commentTask.configure {
+                if (variant.buildType == "release" && !releaseSigningConfigured) {
+                    doFirst {
+                        throw GradleException(
+                            "Release signing is required; configure KEYSTORE_FILE, " +
+                                "KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD"
+                        )
+                    }
+                }
                 this.transformationRequest = transformationRequest
                 this.signingConfig = signingConfig
                 this.outFolder.set(layout.buildDirectory.dir("outputs/apk/${variant.name}"))
@@ -293,10 +316,12 @@ fun Project.setupMainApk() {
         defaultConfig {
             applicationId = Config.applicationId
             vectorDrawables.useSupportLibrary = true
-            versionName = Config.version
-            versionCode = Config.versionCode
+            // Android package identity follows the MBE release counter. Magisk core
+            // compatibility continues to use Config.version/Config.versionCode.
+            versionName = Config.packageVersionName
+            versionCode = Config.packageVersionCode
             ndk {
-                abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64", "riscv64")
+                abiFilters += Config.abiList
                 debugSymbolLevel = "FULL"
             }
         }

@@ -6,6 +6,11 @@
         android:enableOnBackInvokedCallback="true"
         android:localeConfig="@xml/locale_config"
         tools:replace="android:enableOnBackInvokedCallback">
+        <!-- Signed artifact identity used by the stub to reject mismatched/rollback updates. -->
+        <meta-data
+            android:name="com.topjohnwu.magisk.MBE_VERSION_CODE"
+            android:value="${mbeVersionCode}" />
+
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
