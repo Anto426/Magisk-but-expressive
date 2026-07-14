@@ -13,14 +13,11 @@ android {
     namespace = "com.topjohnwu.magisk"
     enableKotlin = false
 
-    val base = "https://github.com/Anto426/Magisk-but-expressive/releases/download/"
-    val url = base + "v${Config.mbeVersionName}/Magisk-v${Config.mbeVersionName}.apk"
-
     defaultConfig {
         applicationId = Config.applicationId
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "APK_URL", "\"$url\"")
+        buildConfigField("String", "UPDATE_URL", "\"${Config.updateUrl}\"")
         buildConfigField("int", "STUB_VERSION", Config.stubVersion)
     }
 

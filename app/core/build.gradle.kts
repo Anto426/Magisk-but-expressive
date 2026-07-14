@@ -25,6 +25,7 @@ android {
         buildConfigField("String", "APP_VERSION_NAME", "\"${Config.version}\"")
         buildConfigField("int", "MBE_VERSION_CODE", "${Config.mbeVersionCode}")
         buildConfigField("String", "MBE_VERSION_NAME", "\"${Config.mbeVersionName}\"")
+        buildConfigField("String", "UPDATE_URL", "\"${Config.updateUrl}\"")
         buildConfigField("int", "STUB_VERSION", Config.stubVersion)
         consumerProguardFile("proguard-rules.pro")
     }
@@ -85,4 +86,5 @@ dependencies {
     // That's why we make it compileOnly.
     compileOnly(libs.test.junit)
     compileOnly(libs.test.uiautomator)
+    testImplementation(libs.junit4)
 }
