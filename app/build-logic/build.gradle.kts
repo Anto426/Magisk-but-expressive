@@ -19,4 +19,5 @@ gradlePlugin {
 dependencies {
     compileOnly(libs.android.gradle.plugin)
     compileOnly(libs.android.build.sdk.common)
+    implementation("com.google.code.gson:gson:2.13.2")
 }

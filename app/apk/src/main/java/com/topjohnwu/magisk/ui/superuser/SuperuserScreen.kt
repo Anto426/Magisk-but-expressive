@@ -48,11 +48,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UIActivity
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.core.model.su.SuPolicy
 import com.topjohnwu.magisk.navigation.AppRoute
@@ -62,14 +73,14 @@ import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskExpandableListItem
 import com.topjohnwu.magisk.ui.component.MagiskFilterChipRow
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.MagiskSearchField
 import com.topjohnwu.magisk.ui.component.MagiskSwitchItem
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskActionCard
 import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
-import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
+import com.topjohnwu.magisk.ui.motion.MotionCenter
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.superuser.SuperuserViewModel
 import com.topjohnwu.magisk.core.R as CoreR
@@ -99,16 +110,13 @@ fun SuperuserScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
 
     if (state.loading) {
-        MagiskLoadingState(modifier = modifier)
+        MagiskLoader(modifier = modifier)
     } else {
         Column(modifier = modifier.fillMaxSize()) {
             MagiskAnimatedVisibility(visible = state.searchVisible) {
@@ -137,7 +145,7 @@ fun SuperuserScreen(
                         val item = state.filteredItems[index]
                         val isActive =
                             item.policy == SuPolicy.ALLOW || item.policy == SuPolicy.RESTRICT
-                        val alphaAnimation = MagiskMotionEngine.tweenSpec<Float>(
+                        val alphaAnimation = MotionCenter.tweenSpec<Float>(
                             MagiskMotionDuration.Short
                         )
                         val alpha by animateFloatAsState(
@@ -162,6 +170,7 @@ fun SuperuserScreen(
                                 if (item.showSlider) {
                                     MagiskTriStateSwitch(
                                         policy = item.policy,
+                                        accessibilityLabel = item.title,
                                         onPolicyChange = { newPolicy ->
                                             withSuAuthentication {
                                                 viewModel.setPolicy(item.uid, newPolicy)
@@ -171,6 +180,9 @@ fun SuperuserScreen(
                                 } else {
                                     Switch(
                                         checked = item.policy == SuPolicy.ALLOW,
+                                        modifier = Modifier.semantics {
+                                            contentDescription = item.title
+                                        },
                                         onCheckedChange = { checked ->
                                             withSuAuthentication {
                                                 viewModel.setPolicy(
@@ -189,19 +201,22 @@ fun SuperuserScreen(
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                                 // 1. Policy selection
-                                val options = remember(item.showSlider) {
+                                val denyLabel = stringResource(CoreR.string.deny)
+                                val grantLabel = stringResource(CoreR.string.grant)
+                                val restrictLabel = stringResource(CoreR.string.restrict)
+                                val options = remember(item.showSlider, denyLabel, grantLabel, restrictLabel) {
                                     val list = mutableListOf(
                                         MagiskChipOption(
-                                            SuPolicy.DENY, context.getString(CoreR.string.deny)
+                                            SuPolicy.DENY, denyLabel
                                         ), MagiskChipOption(
-                                            SuPolicy.ALLOW, context.getString(CoreR.string.grant)
+                                            SuPolicy.ALLOW, grantLabel
                                         )
                                     )
                                     if (item.showSlider) {
                                         list.add(
                                             1, MagiskChipOption(
                                                 SuPolicy.RESTRICT,
-                                                context.getString(CoreR.string.restrict)
+                                                restrictLabel
                                             )
                                         )
                                     }
@@ -339,15 +354,41 @@ fun SuperuserTopBarActions(
 fun MagiskTriStateSwitch(
     policy: Int,
     onPolicyChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accessibilityLabel: String? = null
 ) {
+    val denyLabel = stringResource(CoreR.string.deny)
+    val restrictLabel = stringResource(CoreR.string.restrict)
+    val grantLabel = stringResource(CoreR.string.grant)
+    val currentStateLabel = when (policy) {
+        SuPolicy.DENY -> denyLabel
+        SuPolicy.RESTRICT -> restrictLabel
+        SuPolicy.ALLOW -> grantLabel
+        else -> denyLabel
+    }
+    val nextPolicy = when (policy) {
+        SuPolicy.DENY -> SuPolicy.RESTRICT
+        SuPolicy.RESTRICT -> SuPolicy.ALLOW
+        else -> SuPolicy.DENY
+    }
+    val nextStateLabel = when (nextPolicy) {
+        SuPolicy.RESTRICT -> restrictLabel
+        SuPolicy.ALLOW -> grantLabel
+        else -> denyLabel
+    }
+    val accessibilityToggleState = when (policy) {
+        SuPolicy.RESTRICT -> ToggleableState.Indeterminate
+        SuPolicy.ALLOW -> ToggleableState.On
+        else -> ToggleableState.Off
+    }
+
     val targetOffset = when (policy) {
         SuPolicy.DENY -> 0.dp
         SuPolicy.RESTRICT -> 22.dp
         SuPolicy.ALLOW -> 44.dp
         else -> 0.dp
     }
-    val offsetAnimation = MagiskMotionEngine.tweenSpec<androidx.compose.ui.unit.Dp>(
+    val offsetAnimation = MotionCenter.tweenSpec<androidx.compose.ui.unit.Dp>(
         MagiskMotionDuration.Short
     )
     val animatedOffset by animateDpAsState(
@@ -390,26 +431,41 @@ fun MagiskTriStateSwitch(
             .clip(CircleShape)
             .background(trackColor)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-            .padding(4.dp)
+            .clearAndSetSemantics {
+                accessibilityLabel?.let { contentDescription = it }
+                role = Role.Switch
+                toggleableState = accessibilityToggleState
+                stateDescription = currentStateLabel
+                onClick(label = nextStateLabel) {
+                    onPolicyChange(nextPolicy)
+                    true
+                }
+            }
     ) {
-        // Thumb
         Box(
             modifier = Modifier
-                .offset(x = animatedOffset)
-                .size(24.dp)
-                .clip(CircleShape)
-                .background(thumbColor),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(4.dp)
         ) {
-            Icon(
-                imageVector = thumbIcon,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = thumbContentColor
-            )
+            // Keep the visual thumb inset while the hit target below covers the whole track.
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(animatedOffset.roundToPx(), 0) }
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(thumbColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = thumbIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = thumbContentColor
+                )
+            }
         }
 
-        // Clickable regions
+        // These mutually exclusive targets consume the gesture before the clickable card header.
         Row(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier

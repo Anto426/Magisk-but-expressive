@@ -56,8 +56,13 @@ public class DynLoad {
         File update = StubApk.update(context);
 
         if (update.exists()) {
-            // Rename from update
-            update.renameTo(apk);
+            try {
+                StubApk.verifyAndPromoteUpdate(context, APPLICATION_ID);
+            } catch (IOException e) {
+                // Never replace the last known-good APK with a partial or untrusted update.
+                Log.e(DynLoad.class.getSimpleName(), "Rejecting pending APK update", e);
+                update.delete();
+            }
         }
 
         // Copy from external for easier development

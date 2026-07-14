@@ -51,6 +51,7 @@ fun LogItem(item: MagiskLogUiItem) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val copyText = remember(item) { item.toClipboardText() }
+    val copiedToClipboard = stringResource(CoreR.string.copied_to_clipboard)
     val levelColor = item.level.toColor()
     val isIssue = item.level == MagiskLogLevel.ERROR || item.level == MagiskLogLevel.FATAL
 
@@ -95,7 +96,7 @@ fun LogItem(item: MagiskLogUiItem) {
                     )
                     SystemToastManager.show(
                         context,
-                        context.getString(CoreR.string.copied_to_clipboard)
+                        copiedToClipboard
                     )
                 }
             }

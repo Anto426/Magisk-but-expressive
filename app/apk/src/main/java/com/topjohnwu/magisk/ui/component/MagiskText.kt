@@ -1,6 +1,7 @@
 package com.topjohnwu.magisk.ui.component
 
 import android.widget.TextView
+import android.text.method.LinkMovementMethod
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,6 +53,8 @@ fun MagiskMarkdown(
             TextView(context).apply {
                 setTextColor(textColor)
                 setLinkTextColor(linkColor)
+                movementMethod = LinkMovementMethod.getInstance()
+                setTextIsSelectable(true)
                 textSize = 14f
                 setLineSpacing(0f, 1.12f)
             }
@@ -72,8 +75,8 @@ fun MagiskIconBadge(
     size: Dp = MagiskComponentDefaults.IconBadgeSize,
     iconSize: Dp = 19.dp,
     shape: Shape = MagiskComponentDefaults.ControlShape,
-    containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer
+    containerColor: Color = MagiskComponentDefaults.AccentContainer,
+    iconTint: Color = MagiskComponentDefaults.AccentContent
 ) {
     Surface(
         modifier = modifier.size(size), shape = shape, color = containerColor
@@ -93,8 +96,8 @@ fun MagiskIconBadge(
 fun MagiskInfoPill(
     text: String,
     modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.onSecondaryContainer,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer
+    color: Color = MagiskComponentDefaults.AccentContent,
+    containerColor: Color = MagiskComponentDefaults.AccentContainer
 ) {
     Surface(
         modifier = modifier, shape = MagiskComponentDefaults.PillShape, color = containerColor
@@ -115,8 +118,8 @@ fun MagiskInfoPill(
 fun MagiskInfoPill(
     @StringRes text: Int,
     modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.onSecondaryContainer,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer
+    color: Color = MagiskComponentDefaults.AccentContent,
+    containerColor: Color = MagiskComponentDefaults.AccentContainer
 ) {
     MagiskInfoPill(
         text = stringResource(text),

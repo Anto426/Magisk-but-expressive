@@ -14,6 +14,7 @@ import android.content.res.loader.ResourcesProvider;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.system.Os;
 import android.system.OsConstants;
@@ -26,9 +27,11 @@ import com.topjohnwu.magisk.utils.APKInstall;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URL;
 import java.util.zip.InflaterInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -88,6 +91,10 @@ public class DownloadActivity extends Activity {
     }
 
     private void error(Throwable e) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread(() -> error(e));
+            return;
+        }
         Log.e(getClass().getSimpleName(), Log.getStackTraceString(e));
         finish();
     }
@@ -108,23 +115,94 @@ public class DownloadActivity extends Activity {
 
     private void dlAPK() {
         ProgressDialog.show(this, getString(dling), getString(dling) + " " + APP_NAME, true);
-        // Download and upgrade the app
-        var request = request(BuildConfig.APK_URL).setExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-        if (dynLoad) {
-            request.getAsFile(StubApk.current(this), file -> StubApk.restartProcess(this));
-        } else {
-            request.getAsInputStream(input -> {
-                var session = APKInstall.startSession(this);
-                try (input; var out = session.openStream(this)) {
-                    if (out != null)
-                        APKInstall.transfer(input, out);
-                } catch (IOException e) {
-                    error(e);
+        request(BuildConfig.UPDATE_URL).getAsJSONObject(json -> {
+            var app = json.optJSONObject("magisk");
+            if (app == null) {
+                var channels = json.optJSONObject("channels");
+                var stable = channels == null ? null : channels.optJSONObject("stable");
+                app = stable == null ? null : stable.optJSONObject("release");
+            }
+            var url = app == null ? "" : app.optString("link", "");
+            var expectedMbeVersionCode = app == null ? -1 : app.optInt("versionCode", -1);
+            try {
+                var parsed = new URL(url);
+                if (!"https".equalsIgnoreCase(parsed.getProtocol()) || parsed.getHost().isEmpty()) {
+                    throw new IOException("Invalid update URL");
                 }
-                Intent intent = session.waitIntent();
-                if (intent != null)
-                    startActivity(intent);
-            });
+                if (expectedMbeVersionCode <= 0) {
+                    throw new IOException("Invalid MBE version in update metadata");
+                }
+            } catch (Exception e) {
+                error(e);
+                return;
+            }
+            downloadApk(url, expectedMbeVersionCode);
+        });
+    }
+
+    private void downloadApk(String url, int expectedMbeVersionCode) {
+        // Download and upgrade the app only after resolving the centralized deployment channel.
+        final File candidate;
+        try {
+            candidate = StubApk.createUpdateTemp(this);
+        } catch (IOException e) {
+            error(e);
+            return;
+        }
+        var request = request(url)
+                .setExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+                .setErrorHandler((conn, e) -> {
+                    candidate.delete();
+                    error(e);
+                });
+        request.getAsFile(candidate, file -> handleDownloadedApk(file, expectedMbeVersionCode));
+    }
+
+    private void handleDownloadedApk(File candidate, int expectedMbeVersionCode) {
+        try {
+            var trusted = dynLoad
+                    ? StubApk.current(this)
+                    : new File(getPackageCodePath());
+            if (dynLoad) {
+                StubApk.verifyAndPromoteCandidate(
+                        this,
+                        candidate,
+                        trusted,
+                        BuildConfig.APPLICATION_ID,
+                        expectedMbeVersionCode
+                );
+                runOnUiThread(() -> StubApk.restartProcess(this));
+            } else {
+                StubApk.verifyUpdate(
+                        this,
+                        candidate,
+                        trusted,
+                        BuildConfig.APPLICATION_ID,
+                        expectedMbeVersionCode
+                );
+                installVerifiedApk(candidate);
+            }
+        } catch (Exception e) {
+            candidate.delete();
+            error(e);
+        }
+    }
+
+    private void installVerifiedApk(File apk) throws IOException {
+        var session = APKInstall.startSession(this);
+        try (var input = new FileInputStream(apk);
+             var out = session.openStream(this)) {
+            if (out == null) {
+                throw new IOException("Unable to open install session");
+            }
+            APKInstall.transfer(input, out);
+        } finally {
+            // PackageInstaller owns a private staged copy after the stream is closed.
+            apk.delete();
+        }
+        Intent intent = session.waitIntent();
+        if (intent != null) {
+            runOnUiThread(() -> startActivity(intent));
         }
     }
 

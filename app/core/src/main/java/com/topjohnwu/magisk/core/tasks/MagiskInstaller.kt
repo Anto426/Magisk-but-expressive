@@ -35,6 +35,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorInputStream
 import timber.log.Timber
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -202,10 +203,84 @@ abstract class MagiskInstallImpl protected constructor(
         override fun available() = 0
     }
 
+    private class SizeLimitedInputStream(
+        stream: InputStream,
+        private val maxBytes: Long
+    ) : FilterInputStream(stream) {
+        private var bytesRead = 0L
+
+        private fun checkEnd(): Int {
+            if (super.read() == -1)
+                return -1
+            throw IOException("Input file exceeds the supported size")
+        }
+
+        override fun read(): Int {
+            if (bytesRead == maxBytes)
+                return checkEnd()
+            return super.read().also { if (it >= 0) bytesRead++ }
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            if (length == 0)
+                return 0
+            if (bytesRead == maxBytes)
+                return checkEnd()
+            val allowed = minOf(length.toLong(), maxBytes - bytesRead).toInt()
+            return super.read(buffer, offset, allowed).also {
+                if (it > 0)
+                    bytesRead += it
+            }
+        }
+
+        override fun skip(byteCount: Long): Long {
+            val allowed = minOf(byteCount, maxBytes - bytesRead).coerceAtLeast(0)
+            return super.skip(allowed).also { bytesRead += it }
+        }
+    }
+
+    private fun InputStream.readFully(buffer: ByteArray): Boolean {
+        var offset = 0
+        while (offset < buffer.size) {
+            val count = read(buffer, offset, buffer.size - offset)
+            if (count < 0)
+                return false
+            if (count == 0) {
+                val byte = read()
+                if (byte < 0)
+                    return false
+                buffer[offset++] = byte.toByte()
+            } else {
+                offset += count
+            }
+        }
+        return true
+    }
+
+    private fun InputStream.readBytesLimited(maxBytes: Int): ByteArray {
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var total = 0
+        while (true) {
+            val count = read(buffer)
+            if (count < 0)
+                break
+            if (count == 0)
+                continue
+            if (count > maxBytes - total)
+                throw IOException("vbmeta.img exceeds the supported size")
+            output.write(buffer, 0, count)
+            total += count
+        }
+        return output.toByteArray()
+    }
+
     private class NoBootException : IOException()
 
-    inner class BootItem(private val entry: TarArchiveEntry) {
-        val name = entry.name.replace(".lz4", "")
+    inner class BootItem(
+        private val entry: TarArchiveEntry,
+        val name: String
+    ) {
         var file = installDir.getChildFile(name)
 
         suspend fun copyTo(tarOut: TarArchiveOutputStream) {
@@ -239,25 +314,26 @@ abstract class MagiskInstallImpl protected constructor(
         var recovery: BootItem? = null
 
         while (entry != null) {
-            val bootItem: BootItem?
-            if (entry.name.startsWith("boot.img")) {
-                bootItem = BootItem(entry)
-                boot = bootItem
-            } else if (entry.name.startsWith("init_boot.img")) {
-                bootItem = BootItem(entry)
-                initBoot = bootItem
-            } else if (Config.recovery && entry.name.contains("recovery.img")) {
-                bootItem = BootItem(entry)
-                recovery = bootItem
-            } else {
-                bootItem = null
+            val safeImage = MagiskTarEntryPolicy.resolveImage(
+                extractionDir = installDir,
+                entryName = entry.name,
+                recoveryMode = Config.recovery
+            )
+            val bootItem = safeImage?.let { BootItem(entry, it.outputName) }
+            when (safeImage?.kind) {
+                MagiskTarImageKind.BOOT -> boot = bootItem
+                MagiskTarImageKind.INIT_BOOT -> initBoot = bootItem
+                MagiskTarImageKind.RECOVERY -> recovery = bootItem
+                null -> Unit
             }
 
             if (bootItem != null) {
                 console.add("-- Extracting: ${bootItem.name}")
                 decompressedStream().copyAndCloseOut(bootItem.file.newOutputStream())
-            } else if (entry.name.contains("vbmeta.img")) {
-                val rawData = decompressedStream().readBytes()
+            } else if (MagiskTarEntryPolicy.isExactImage(entry.name, "vbmeta.img")) {
+                if (entry.size > MAX_VBMETA_SIZE)
+                    throw IOException("vbmeta.img exceeds the supported size")
+                val rawData = decompressedStream().readBytesLimited(MAX_VBMETA_SIZE)
                 // Valid vbmeta.img should be at least 256 bytes
                 if (rawData.size < 256)
                     continue
@@ -285,7 +361,7 @@ abstract class MagiskInstallImpl protected constructor(
                 tarOut.write(rawData)
                 tarOut.closeArchiveEntry()
                 continue
-            } else if (entry.name.contains("userdata.img")) {
+            } else if (MagiskTarEntryPolicy.isExactImage(entry.name, "userdata.img")) {
                 console.add("-- Skipping  : ${entry.name}")
             } else {
                 console.add("-- Copying   : ${entry.name}")
@@ -330,9 +406,10 @@ abstract class MagiskInstallImpl protected constructor(
 
         // Process input file
         try {
-            PushbackInputStream(uri.inputStream().buffered(1024 * 1024), 512).use { src ->
-                val head = ByteArray(512)
-                if (src.read(head) != head.size) {
+            val input = SizeLimitedInputStream(uri.inputStream(), MAX_INPUT_SIZE)
+            PushbackInputStream(input.buffered(1024 * 1024), HEADER_SIZE).use { src ->
+                val head = ByteArray(HEADER_SIZE)
+                if (!src.readFully(head)) {
                     console.add("! Invalid input file")
                     return false
                 }
@@ -362,16 +439,29 @@ abstract class MagiskInstallImpl protected constructor(
                     // raw image
                     outFile = MediaStoreUtils.getFile("$destName.img")
                     outStream = outFile.uri.outputStream()
-                    val channel = FileInputStream(uri.openFd().fileDescriptor).channel
                     val boot = installDir.getChildFile("boot.img")
 
                     try {
-                        if (magic.contentEquals("CrAU".toByteArray())) {
-                            DataSourceChannel(channel).use { source ->
-                                Payload(source).extract(boot, { console.add(it) }, { logs.add(it) })
+                        if (magic.contentEquals("CrAU".toByteArray()) ||
+                            magic.contentEquals("PK\u0003\u0004".toByteArray())
+                        ) {
+                            uri.openFd().use { descriptor ->
+                                FileInputStream(descriptor.fileDescriptor).use { fileInput ->
+                                    if (fileInput.channel.size() > MAX_INPUT_SIZE)
+                                        throw IOException("Input file exceeds the supported size")
+                                    DataSourceChannel(fileInput.channel).use { source ->
+                                        if (magic.contentEquals("CrAU".toByteArray())) {
+                                            Payload(source).extract(
+                                                boot,
+                                                { console.add(it) },
+                                                { logs.add(it) }
+                                            )
+                                        } else {
+                                            ExtractImage(boot, console, logs).consume(source)
+                                        }
+                                    }
+                                }
                             }
-                        } else if (magic.contentEquals("PK\u0003\u0004".toByteArray())) {
-                            ExtractImage(boot, console, logs).consume(DataSourceChannel(channel))
                         } else {
                             console.add("- Copying image to cache")
                             src.copyAndCloseOut(boot.newOutputStream())
@@ -545,21 +635,27 @@ abstract class MagiskInstallImpl protected constructor(
     protected abstract suspend fun operations(): Boolean
 
     open suspend fun exec(): Boolean {
-        if (haveActiveSession.getAndSet(true))
+        if (!haveActiveSession.compareAndSet(false, true))
             return false
 
-        val result = withContext(Dispatchers.IO) { operations() }
-        haveActiveSession.set(false)
-        if (result)
-            return true
+        try {
+            val result = withContext(Dispatchers.IO) { operations() }
+            if (result)
+                return true
 
-        // Not every operation initializes installDir
-        if (::installDir.isInitialized)
-            Shell.cmd("rm -rf $installDir").submit()
-        return false
+            // Not every operation initializes installDir
+            if (::installDir.isInitialized)
+                Shell.cmd("rm -rf $installDir").submit()
+            return false
+        } finally {
+            haveActiveSession.set(false)
+        }
     }
 
     companion object {
+        private const val HEADER_SIZE = 512
+        private const val MAX_VBMETA_SIZE = 16 * 1024 * 1024
+        private const val MAX_INPUT_SIZE = 16L * 1024 * 1024 * 1024
         private var haveActiveSession = AtomicBoolean(false)
     }
 }

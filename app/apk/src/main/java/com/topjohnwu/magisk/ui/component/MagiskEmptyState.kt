@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -40,8 +39,8 @@ fun MagiskEmptyState(
             icon = icon,
             size = 44.dp,
             iconSize = 22.dp,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            iconTint = MaterialTheme.colorScheme.onSurfaceVariant
+            containerColor = MagiskComponentDefaults.AccentContainer,
+            iconTint = MagiskComponentDefaults.AccentContent
         )
         Text(
             text = title,
@@ -60,20 +59,6 @@ fun MagiskEmptyState(
         if (action != null) {
             Row(content = action)
         }
-    }
-}
-
-@Composable
-fun MagiskLoadingState(
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        CircularProgressIndicator()
     }
 }
 

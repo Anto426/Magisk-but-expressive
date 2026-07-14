@@ -26,6 +26,7 @@
     <string name="home_item_source">Codice sorgente</string>
     <string name="home_support_content">Magisk è, e sempre sarà, gratuito ed open source. Puoi comunque mostrarci il tuo apprezzamento facendo una donazione.</string>
     <string name="home_installed_version">Installata</string>
+    <string name="home_state_up_to_date">Aggiornata</string>
     <string name="home_latest_version">Ultima</string>
     <string name="invalid_update_channel">Canale di aggiornamento non valido</string>
     <string name="uninstall_magisk_title">Disinstalla Magisk</string>
@@ -150,6 +151,11 @@
     <string name="module_updates_install_all">Aggiorna tutto</string>
     <string name="module_updates_install_one">Aggiorna</string>
     <string name="module_updates_latest_version">Ultima: %1$s</string>
+    <string name="module_remove_scheduled_title">Disinstallazione programmata</string>
+    <string name="module_remove_scheduled_summary">Il modulo verrà rimosso al prossimo riavvio.</string>
+    <string name="module_restart_required_title">Riavvio richiesto</string>
+    <string name="module_restart_required_summary">Il modulo è stato installato o aggiornato. Riavvia per applicare le modifiche.</string>
+    <string name="module_new_version_available">Nuova versione disponibile: %1$s</string>
     <string name="module_updates_ready_summary">Pronti da installare</string>
     <string name="module_updates_installed_count">Moduli installati: %1$d</string>
     <string name="module_updates_confirm_all_title">Aggiornare tutti i moduli?</string>
@@ -165,6 +171,8 @@
     <!--Settings -->
     <string name="confirm_install">Vuoi installare il modulo %1$s?</string>
     <string name="confirm_install_title">Conferma installazione</string>
+    <string name="install_confirm_direct_msg">Vuoi installare Magisk direttamente nella partizione di avvio (boot) del dispositivo?</string>
+    <string name="install_confirm_patch_msg">Vuoi effettuare il patching del file dell\'immagine di boot selezionato?</string>
     <string name="settings_dark_mode_title">Impostazioni tema</string>
     <string name="settings_dark_mode_message">Seleziona il tema che si adatta meglio al tuo stile!</string>
     <string name="settings_dark_mode_light">Chiaro</string>
@@ -178,6 +186,7 @@
     <string name="settings_restore_app_summary">Rendi l\'app nuovamente rilevabile e ripristina l\'APK originale</string>
     <string name="language">Lingua</string>
     <string name="system_default">(Sistema)</string>
+    <string name="language_system_summary">Lingua di sistema: %1$s</string>
     <string name="settings_check_update_title">Controlla aggiornamenti</string>
     <string name="settings_check_update_summary">Controlla automaticamente gli aggiornamenti in background</string>
     <string name="settings_update_channel_title">Canale di aggiornamento</string>
@@ -298,6 +307,12 @@
     <string name="theme_mode">Modalità</string>
     <string name="theme_appearance">Aspetto</string>
     <string name="theme_custom_themes">Temi personalizzati</string>
+    <string name="theme_subtitle_ruby">Stile Ruby Hoshino</string>
+    <string name="theme_subtitle_memcho">Stile Mem-Cho</string>
+    <string name="theme_subtitle_aqua">Stile Aqua</string>
+    <string name="theme_subtitle_sung_jinwoo">Stile Sung Jin-Woo</string>
+    <string name="theme_subtitle_dynamic">Material 3 dinamico</string>
+    <string name="theme_subtitle_custom">Personalizzato</string>
     <string name="theme_option_ruby">Ruby Hoshino</string>
     <string name="theme_option_memcho">Mem-Cho</string>
     <string name="theme_option_aqua">Aqua</string>
@@ -317,4 +332,9 @@
     <string name="donate_to_topjohnwu">Dona a topjohnwu</string>
     <string name="original_magisk_maintainer_label">Creatore &amp; manutentore originale di Magisk</string>
     <string name="donate">Dona</string>
+    <string name="bottom_bar_opacity_title">Opacità barra di navigazione</string>
+    <string name="bottom_bar_opacity_label">Opacità</string>
+    <string name="home_support_content_short">Dona o contribuisci al progetto</string>
+    <string name="support_hero_title">Supporta l\'Open Source</string>
+    <string name="support_hero_subtitle">Magisk è sviluppato da volontari nel tempo libero. Il tuo supporto aiuta a mantenere questo progetto gratuito, attivo e in crescita.</string>
 </resources>

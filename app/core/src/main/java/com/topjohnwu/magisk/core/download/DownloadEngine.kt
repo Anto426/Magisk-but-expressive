@@ -25,7 +25,7 @@ import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.intent
 import com.topjohnwu.magisk.core.ktx.set
 import com.topjohnwu.magisk.core.utils.ProgressInputStream
-import com.topjohnwu.magisk.view.Notifications
+import com.topjohnwu.magisk.view.NotificationCenter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,6 +57,7 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
         const val ACTION = "com.topjohnwu.magisk.DOWNLOAD"
         const val SUBJECT_KEY = "subject"
         private const val REQUEST_CODE = 1
+        private const val TRANSFER_PROGRESS_MAX = 0.99f
 
         private val progressBroadcast = MutableLiveData<Pair<Float, Subject>?>()
 
@@ -65,7 +66,6 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
         }
 
         fun observeProgress(owner: LifecycleOwner, callback: (Float, Subject) -> Unit) {
-            progressBroadcast.value = null
             progressBroadcast.observe(owner) {
                 val (progress, subject) = it ?: return@observe
                 callback(progress, subject)
@@ -151,6 +151,9 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
             try {
                 val stream = network.fetchFile(subject.url).toProgressStream(subject)
                 processor.handle(stream, subject)
+                // Transfer progress can reach 100% before verification/post-processing ends.
+                // Publish completion only after the artifact is fully ready for use.
+                broadcast(1f, subject)
                 val activity = AppContext.foregroundActivity
                 if (activity != null && subject.autoLaunch) {
                     notifyRemove(subject.notifyId)
@@ -178,8 +181,8 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
 
     private fun finalNotify(id: Int, editor: (Notification.Builder) -> Unit): Int {
         val notification = notifyRemove(id)?.also(editor) ?: return -1
-        val newId = Notifications.nextId()
-        Notifications.mgr.notify(newId, notification.build())
+        val newId = NotificationCenter.nextDynamicId()
+        NotificationCenter.post(newId, notification)
         return newId
     }
 
@@ -189,31 +192,30 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
             .setSmallIcon(android.R.drawable.stat_notify_error)
             .setProgress(0, 0, false)
             .setOngoing(false)
-        Notifications.run { notification.clearAndroid16ProgressStyle() }
+        NotificationCenter.run { notification.clearAndroid16ProgressStyle() }
     }
 
     private fun notifyFinish(subject: Subject) = finalNotify(subject.notifyId) { notification ->
-        broadcast(1f, subject)
         notification.setContentTitle(subject.title)
             .setContentText(context.getString(R.string.download_complete))
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setProgress(100, 100, false)
             .setOngoing(false)
             .setAutoCancel(true)
-        Notifications.run { notification.applyAndroid16ProgressStyle(100) }
+        NotificationCenter.run { notification.applyAndroid16ProgressStyle(100) }
         subject.pendingIntent(context)?.let { intent -> notification.setContentIntent(intent) }
     }
 
     @Synchronized
     override fun notifyUpdate(id: Int, editor: (Notification.Builder) -> Unit) {
-        val notification = (notifications[id] ?: Notifications.startProgress("").also {
+        val notification = (notifications[id] ?: NotificationCenter.progressBuilder("").also {
             notifications[id] = it
         }).apply(editor)
 
         if (attachedId < 0)
             attach(id, notification)
         else
-            Notifications.mgr.notify(id, notification.build())
+            NotificationCenter.post(id, notification)
     }
 
     @Synchronized
@@ -240,7 +242,7 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
             }
         }
 
-        Notifications.mgr.cancel(id)
+        NotificationCenter.cancel(id)
         return n
     }
 
@@ -256,17 +258,17 @@ class DownloadEngine(session: DownloadSession) : DownloadSession by session, Dow
             notifyUpdate(id) { notification ->
                 if (max > 0) {
                     val percent = ((it * 100) / max).toInt().coerceIn(0, 100)
-                    broadcast(progress / total, subject)
+                    broadcast((progress / total).coerceIn(0f, TRANSFER_PROGRESS_MAX), subject)
                     notification
                         .setProgress(100, percent, false)
                         .setContentText("%.2f / %.2f MB".format(progress, total))
-                    Notifications.run { notification.applyAndroid16ProgressStyle(percent) }
+                    NotificationCenter.run { notification.applyAndroid16ProgressStyle(percent) }
                 } else {
                     broadcast(-1f, subject)
                     notification
                         .setProgress(0, 0, true)
                         .setContentText("%.2f MB / ??".format(progress))
-                    Notifications.run { notification.applyAndroid16ProgressStyle(null) }
+                    NotificationCenter.run { notification.applyAndroid16ProgressStyle(null) }
                 }
             }
         }

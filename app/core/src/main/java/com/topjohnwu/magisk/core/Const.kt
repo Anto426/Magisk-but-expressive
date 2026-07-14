@@ -43,9 +43,6 @@ object Const {
         const val PAYPAL_URL = "https://www.paypal.me/topjohnwu"
         const val SOURCE_CODE_URL = "https://github.com/topjohnwu/Magisk"
 
-        const val UPDATE_REPO_OWNER = "Anto426"
-        const val UPDATE_REPO_NAME = "Magisk-but-expressive"
-        const val GITHUB_API_URL = "https://api.github.com/"
         const val GITHUB_PAGE_URL = "https://topjohnwu.github.io/magisk-files/"
         const val INVALID_URL = "https://example.com/"
     }
@@ -71,5 +68,7 @@ object Const {
         const val SETTINGS = "settings"
         const val MODULES = "modules"
         const val SUPERUSER = "superuser"
+        const val APP_UPDATE = "app_update"
+        const val MODULE_UPDATES = "module_updates"
     }
 }

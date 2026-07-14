@@ -20,7 +20,7 @@ object VMFactory : ViewModelProvider.Factory {
                 AppContext.packageManager
             )
             InstallViewModel::class.java ->
-                InstallViewModel(ServiceLocator.networkService)
+                InstallViewModel()
             SuRequestViewModel::class.java ->
                 SuRequestViewModel(ServiceLocator.policyDB, ServiceLocator.timeoutPrefs)
             else -> modelClass.getDeclaredConstructor().newInstance()

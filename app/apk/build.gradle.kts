@@ -17,6 +17,7 @@ android {
 
     defaultConfig {
         proguardFile("proguard-rules.pro")
+        manifestPlaceholders["mbeVersionCode"] = Config.mbeVersionCode.toString()
     }
 
     buildTypes {

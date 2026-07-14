@@ -1,7 +1,5 @@
 package com.topjohnwu.magisk.ui.home
 
-import android.R
-import android.content.Intent
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,7 +38,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,19 +52,23 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
+import com.topjohnwu.magisk.utils.openExternalUri
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.component.MagiskBottomSheet
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
-import com.topjohnwu.magisk.ui.component.MagiskDialog
-import com.topjohnwu.magisk.ui.component.MagiskDialogAction
+import com.topjohnwu.magisk.ui.component.MagiskConfirmSheet
+import com.topjohnwu.magisk.ui.component.MagiskIconBadge
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskListItem
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskSettingsGroup
+import com.topjohnwu.magisk.ui.component.MagiskSettingsListItem
 import com.topjohnwu.magisk.ui.component.MagiskOptionsSheet
 import com.topjohnwu.magisk.ui.component.MagiskSection
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
@@ -90,7 +91,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showUninstallDialog by remember { mutableStateOf(false) }
 
@@ -100,10 +101,7 @@ fun HomeScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -112,7 +110,7 @@ fun HomeScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is UiEffect.OpenUri -> {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, effect.uri))
+                    context.openExternalUri(effect.uri)
                 }
 
                 is UiEffect.Reboot -> {
@@ -132,85 +130,80 @@ fun HomeScreen(
 
     if (state.envFixCode != 0) {
         val isFullFix = state.envFixCode == 1
-        MagiskDialog(
+        MagiskConfirmSheet(
             title = stringResource(CoreR.string.env_fix_title),
-            onDismissRequest = viewModel::onEnvFixConsumed,
             text = stringResource(if (isFullFix) CoreR.string.env_full_fix_msg else CoreR.string.env_fix_msg),
-            confirmAction = if (!isFullFix) {
-                MagiskDialogAction(
-                    text = stringResource(CoreR.string.reboot), onClick = {
-                        viewModel.onEnvFixConsumed()
-                        viewModel.requestReboot()
-                    })
-            } else {
-                MagiskDialogAction(
-                    text = stringResource(CoreR.string.reinstall), onClick = {
-                        viewModel.onEnvFixConsumed()
-                        onNavigate(AppRoute.Install)
-                    })
-            },
-            dismissAction = MagiskDialogAction(
-                text = stringResource(android.R.string.cancel),
-                onClick = viewModel::onEnvFixConsumed
-            )
+            confirmText = stringResource(if (!isFullFix) CoreR.string.reboot else CoreR.string.reinstall),
+            onDismiss = viewModel::onEnvFixConsumed,
+            onConfirm = {
+                viewModel.onEnvFixConsumed()
+                if (!isFullFix) {
+                    viewModel.requestReboot()
+                } else {
+                    onNavigate(AppRoute.Install)
+                }
+            }
         )
     }
 
     if (state.showHideRestore) {
-        MagiskDialog(
+        MagiskConfirmSheet(
             title = stringResource(CoreR.string.restore),
-            onDismissRequest = viewModel::onHideRestoreConsumed,
             text = stringResource(CoreR.string.restore_img_msg),
-            confirmAction = MagiskDialogAction(
-                text = stringResource(android.R.string.ok), onClick = {
-                    viewModel.restoreImages()
-                    viewModel.onHideRestoreConsumed()
-                }),
-            dismissAction = MagiskDialogAction(
-                text = stringResource(android.R.string.cancel),
-                onClick = viewModel::onHideRestoreConsumed
-            )
+            onDismiss = viewModel::onHideRestoreConsumed,
+            onConfirm = {
+                viewModel.restoreImages()
+                viewModel.onHideRestoreConsumed()
+            }
         )
     }
 
     if (showUninstallDialog) {
-        MagiskDialog(
-            title = stringResource(CoreR.string.uninstall_magisk_title),
-            onDismissRequest = { showUninstallDialog = false },
-            icon = Icons.Rounded.DeleteSweep,
-            textContent = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = stringResource(CoreR.string.uninstall_magisk_msg),
-                        style = MaterialTheme.typography.bodyMedium
+        MagiskBottomSheet(
+            onDismissRequest = { showUninstallDialog = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
+            ) {
+                // Description warning message
+                MagiskWarningCard(
+                    message = stringResource(CoreR.string.uninstall_magisk_msg),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                MagiskSettingsGroup(
+                    title = stringResource(CoreR.string.uninstall_magisk_title),
+                    icon = Icons.Rounded.DeleteSweep,
+                    items = listOf(
+                        {
+                            MagiskSettingsListItem(
+                                title = stringResource(CoreR.string.restore_img),
+                                subtitle = stringResource(CoreR.string.uninstall_restore_images_subtitle),
+                                leadingIcon = Icons.Rounded.SettingsBackupRestore,
+                                onClick = {
+                                    showUninstallDialog = false
+                                    viewModel.restoreImages()
+                                }
+                            )
+                        },
+                        {
+                            MagiskSettingsListItem(
+                                title = stringResource(CoreR.string.complete_uninstall),
+                                subtitle = stringResource(CoreR.string.uninstall_complete_subtitle),
+                                leadingIcon = Icons.Rounded.DeleteForever,
+                                onClick = {
+                                    showUninstallDialog = false
+                                    onNavigate(AppRoute.Flash(Const.Value.UNINSTALL))
+                                }
+                            )
+                        }
                     )
-                    MagiskCard(onClick = {
-                        showUninstallDialog = false
-                        viewModel.restoreImages()
-                    }) {
-                        MagiskListItem(
-                            title = stringResource(CoreR.string.restore_img),
-                            subtitle = stringResource(CoreR.string.uninstall_restore_images_subtitle),
-                            leadingIcon = Icons.Rounded.SettingsBackupRestore
-                        )
-                    }
-                    MagiskCard(onClick = {
-                        showUninstallDialog = false
-                        onNavigate(AppRoute.Flash(Const.Value.UNINSTALL))
-                    }) {
-                        MagiskListItem(
-                            title = stringResource(CoreR.string.complete_uninstall),
-                            subtitle = stringResource(CoreR.string.uninstall_complete_subtitle),
-                            leadingIcon = Icons.Rounded.DeleteForever
-                        )
-                    }
-                }
-            },
-            dismissAction = MagiskDialogAction(
-                text = stringResource(android.R.string.cancel),
-                onClick = { showUninstallDialog = false }
-            )
-        )
+                )
+            }
+        }
     }
 
     // --- MAIN SCREEN LAYOUT ---
@@ -221,7 +214,7 @@ fun HomeScreen(
             start = MagiskComponentDefaults.ScreenHorizontalPadding,
             top = 12.dp,
             end = MagiskComponentDefaults.ScreenHorizontalPadding,
-            bottom = 132.dp
+            bottom = 160.dp
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -231,7 +224,7 @@ fun HomeScreen(
                 MagiskWarningCard(
                     title = stringResource(CoreR.string.home_safety_warning),
                     message = stringResource(CoreR.string.home_notice_content),
-                    dismissContentDescription = stringResource(R.string.cancel),
+                    dismissContentDescription = stringResource(android.R.string.cancel),
                     onDismiss = viewModel::hideNotice
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -254,21 +247,30 @@ fun HomeScreen(
                     MaterialTheme.colorScheme.error
                 },
                 icon = Icons.Rounded.Security,
-                iconContainerColor = MaterialTheme.colorScheme.primary,
-                iconTint = MaterialTheme.colorScheme.onPrimary,
-                metrics = listOf(
+                iconContainerColor = MagiskComponentDefaults.AccentContainer,
+                iconTint = MagiskComponentDefaults.AccentContent,
+                metrics = listOfNotNull(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),
-                        value = if (isInstalled) state.runtime.envVersionName else stringResource(
-                            CoreR.string.not_available
-                        )
+                        value = if (isInstalled) {
+                            val suffix = if (state.runtime.envDebug) " (D)" else ""
+                            "${state.runtime.envVersionName}$suffix"
+                        } else {
+                            stringResource(CoreR.string.not_available)
+                        }
                     ),
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_version_code),
                         value = if (isInstalled) state.runtime.envVersionCode.toString() else {
                             stringResource(CoreR.string.not_available)
                         }
-                    )
+                    ),
+                    if (state.magiskState == HomeViewModel.State.OUTDATED && state.managerRemoteVersion.isNotEmpty()) {
+                        MagiskStatusMetric(
+                            label = stringResource(CoreR.string.home_latest_version),
+                            value = state.managerRemoteVersion
+                        )
+                    } else null
                 ),
                 primaryAction = MagiskCardAction(
                     text = if (state.magiskState == HomeViewModel.State.OUTDATED) {
@@ -317,8 +319,8 @@ fun HomeScreen(
                     HomeViewModel.State.UP_TO_DATE -> MaterialTheme.colorScheme.primary
                 },
                 icon = Icons.Rounded.Android,
-                iconContainerColor = MaterialTheme.colorScheme.primary,
-                iconTint = MaterialTheme.colorScheme.onPrimary,
+                iconContainerColor = MagiskComponentDefaults.AccentContainer,
+                iconTint = MagiskComponentDefaults.AccentContent,
                 metrics = listOfNotNull(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),
@@ -366,29 +368,20 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Surface(
-                        modifier = Modifier.size(MagiskComponentDefaults.IconBadgeSize),
-                        shape = MagiskComponentDefaults.ControlShape,
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.Favorite,
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
+                    MagiskIconBadge(
+                        icon = Icons.Rounded.Favorite,
+                        containerColor = MagiskComponentDefaults.AccentContainer,
+                        iconTint = MagiskComponentDefaults.AccentContent
+                    )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = stringResource(CoreR.string.home_support_and_contributors),
+                            text = stringResource(CoreR.string.home_support_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MagiskComponentDefaults.PrimaryText
                         )
                         Text(
-                            text = stringResource(CoreR.string.home_support_content),
+                            text = stringResource(CoreR.string.home_support_content_short),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MagiskComponentDefaults.SecondaryText,
                             maxLines = 2,
@@ -411,7 +404,7 @@ fun HomeScreen(
 fun HomeTopBarActions(
     viewModel: HomeViewModel
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     if (!state.runtime.isRooted) return
 

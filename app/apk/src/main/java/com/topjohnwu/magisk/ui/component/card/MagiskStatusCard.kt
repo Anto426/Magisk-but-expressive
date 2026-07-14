@@ -44,7 +44,8 @@ data class MagiskCardAction(
     val text: String,
     val onClick: () -> Unit,
     val icon: ImageVector? = null,
-    val style: MagiskCardActionStyle = MagiskCardActionStyle.Primary
+    val style: MagiskCardActionStyle = MagiskCardActionStyle.Primary,
+    val enabled: Boolean = true
 )
 
 enum class MagiskCardActionStyle {
@@ -65,8 +66,8 @@ fun MagiskStatusCard(
     contentColor: Color = MagiskComponentDefaults.PrimaryText,
     supportingContentColor: Color = MagiskComponentDefaults.SecondaryText,
     border: BorderStroke? = MagiskComponentDefaults.CardBorder,
-    iconContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    iconContainerColor: Color = MagiskComponentDefaults.AccentContainer,
+    iconTint: Color = MagiskComponentDefaults.AccentContent,
     metrics: List<MagiskStatusMetric> = emptyList(),
     primaryAction: MagiskCardAction? = null,
     secondaryAction: MagiskCardAction? = null,
@@ -185,6 +186,7 @@ fun MagiskActionButton(
         MagiskCardActionStyle.Primary -> {
             Button(
                 onClick = action.onClick,
+                enabled = action.enabled,
                 modifier = modifier.heightIn(min = 40.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
@@ -195,6 +197,7 @@ fun MagiskActionButton(
         MagiskCardActionStyle.Secondary -> {
             OutlinedButton(
                 onClick = action.onClick,
+                enabled = action.enabled,
                 modifier = modifier.heightIn(min = 40.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
@@ -205,6 +208,7 @@ fun MagiskActionButton(
         MagiskCardActionStyle.Destructive -> {
             OutlinedButton(
                 onClick = action.onClick,
+                enabled = action.enabled,
                 modifier = modifier.heightIn(min = 40.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error

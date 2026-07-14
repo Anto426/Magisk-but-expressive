@@ -30,6 +30,17 @@ import com.topjohnwu.magisk.ui.component.bottomBarStyleOptions
 import com.topjohnwu.magisk.ui.component.themeModeOptions
 import com.topjohnwu.magisk.viewmodel.settings.SettingsViewModel
 import com.topjohnwu.magisk.core.R as CoreR
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.rounded.Opacity
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 
 
 @Composable
@@ -104,6 +115,19 @@ fun ThemeScreen(
                     }
                 )
             }
+
+            item {
+                MagiskSettingsGroup(
+                    title = stringResource(CoreR.string.bottom_bar_opacity_title),
+                    icon = Icons.Rounded.Opacity,
+                    items = listOf {
+                        BottomBarOpacityItem(
+                            value = state.bottomBarOpacity,
+                            onValueChange = { viewModel.setBottomBarOpacity(it) }
+                        )
+                    }
+                )
+            }
         }
     }
 
@@ -117,5 +141,50 @@ fun ThemeScreen(
             viewModel.setCustomTheme(customDraftColors)
             showCustomEditor = false
         })
+    }
+}
+
+@Composable
+private fun BottomBarOpacityItem(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(CoreR.string.bottom_bar_opacity_label),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MagiskComponentDefaults.PrimaryText
+            )
+            Text(
+                text = "$value%",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MagiskComponentDefaults.PrimaryIconTint
+            )
+        }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.toInt()) },
+            valueRange = 0f..100f,
+            steps = 9,
+            colors = SliderDefaults.colors(
+                thumbColor = MagiskComponentDefaults.PrimaryIconTint,
+                activeTrackColor = MagiskComponentDefaults.PrimaryIconTint,
+                inactiveTrackColor = MagiskComponentDefaults.SecondaryIconTint.copy(alpha = 0.24f)
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

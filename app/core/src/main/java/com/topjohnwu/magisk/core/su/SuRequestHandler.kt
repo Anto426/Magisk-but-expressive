@@ -11,7 +11,6 @@ import com.topjohnwu.magisk.core.ktx.getLabel
 import com.topjohnwu.magisk.core.ktx.getPackageInfo
 import com.topjohnwu.magisk.core.model.su.SuLog
 import com.topjohnwu.magisk.core.model.su.SuPolicy
-import com.topjohnwu.magisk.view.Notifications
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -141,7 +140,9 @@ class SuRequestHandler(
                 ServiceLocator.logRepo.insert(log)
 
                 val granted = policy.policy >= SuPolicy.ALLOW
-                SuCallbackHandler.notify(granted, appName)
+                if (policy.notification) {
+                    SuCallbackHandler.notify(granted, appName)
+                }
 
                 if (policyChanged) {
                     SuEvents.notifyPolicyChanged()

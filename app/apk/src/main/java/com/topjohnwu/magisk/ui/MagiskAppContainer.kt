@@ -1,14 +1,7 @@
 package com.topjohnwu.magisk.ui
 
 import android.net.Uri
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +10,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -32,8 +26,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -42,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NamedNavArgument
@@ -62,6 +63,8 @@ import com.topjohnwu.magisk.runtime.MagiskRuntimeState
 import com.topjohnwu.magisk.ui.component.MagiskBackButton
 import com.topjohnwu.magisk.ui.component.MagiskNavigationBar
 import com.topjohnwu.magisk.ui.component.MagiskNavigationBarStyle
+import com.topjohnwu.magisk.ui.component.MagiskLoadingController
+import com.topjohnwu.magisk.ui.component.MagiskLoadingOverlay
 import com.topjohnwu.magisk.ui.component.MagiskSnackbarHost
 import com.topjohnwu.magisk.ui.component.MagiskTopBar
 import com.topjohnwu.magisk.ui.deny.DenyListScreen
@@ -72,11 +75,10 @@ import com.topjohnwu.magisk.ui.home.HomeScreen
 import com.topjohnwu.magisk.ui.home.HomeTopBarActions
 import com.topjohnwu.magisk.ui.home.SupportScreen
 import com.topjohnwu.magisk.ui.install.InstallScreen
-import com.topjohnwu.magisk.ui.install.InstallTopBarActions
 import com.topjohnwu.magisk.ui.log.LogsScreen
 import com.topjohnwu.magisk.ui.log.LogsTopBarActions
 import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
-import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
+import com.topjohnwu.magisk.ui.motion.MotionCenter
 import com.topjohnwu.magisk.ui.module.ModuleActionScreen
 import com.topjohnwu.magisk.ui.module.ModuleActionTopBarActions
 import com.topjohnwu.magisk.ui.module.ModuleUpdatesScreen
@@ -96,6 +98,8 @@ import com.topjohnwu.magisk.ui.theme.MagiskThemeController
 import com.topjohnwu.magisk.ui.theme.ThemeScreen
 import com.topjohnwu.magisk.ui.theme.shouldUseDarkTheme
 import com.topjohnwu.magisk.ui.update.AppUpdateScreen
+import com.topjohnwu.magisk.ui.update.AppUpdateTopBarActions
+import com.topjohnwu.magisk.ui.update.ChangelogScreen
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.deny.DenyListViewModel
 import com.topjohnwu.magisk.viewmodel.flash.FlashViewModel
@@ -107,6 +111,7 @@ import com.topjohnwu.magisk.viewmodel.module.ModuleViewModel
 import com.topjohnwu.magisk.viewmodel.settings.SettingsViewModel
 import com.topjohnwu.magisk.viewmodel.superuser.SuperuserLogsViewModel
 import com.topjohnwu.magisk.viewmodel.superuser.SuperuserViewModel
+import com.topjohnwu.magisk.viewmodel.update.AppUpdateViewModel
 import com.topjohnwu.magisk.core.R as CoreR
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -116,6 +121,7 @@ fun MagiskAppContainer(
 ) {
     val navController = rememberNavController()
     val themeState by MagiskThemeController.state.collectAsState()
+    val loadingTransition by MagiskLoadingController.transition.collectAsState()
 
     MagiskTheme(
         themeOption = themeState.themeOption,
@@ -123,11 +129,19 @@ fun MagiskAppContainer(
         darkThemeMode = themeState.darkThemeMode,
         themeVersion = themeState.customColorVersion
     ) {
+        LaunchedEffect(loadingTransition.generation, loadingTransition.active) {
+            if (loadingTransition.active) {
+                // Wait for the applied theme/locale to reach a rendered frame, not a timer.
+                withFrameNanos { }
+                MagiskLoadingController.complete(loadingTransition.generation)
+            }
+        }
+
         LaunchedEffect(openSection) {
             val route = AppNavigationConfig.routeFromSection(openSection)
             if (route != AppNavigationConfig.startRoute) {
                 if (route.isAllowedByRuntime(MagiskRuntimeEngine.snapshot())) {
-                    navController.navigateTopLevel(AppNavigationConfig.specFor(route))
+                    navController.navigateToAppRoute(route)
                 } else {
                     SystemToastManager.show(AppContext, CoreR.string.root_required_operation)
                 }
@@ -152,6 +166,7 @@ fun MagiskAppContainer(
         )
         val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
+        Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
@@ -177,7 +192,7 @@ fun MagiskAppContainer(
                     }
 
                     // Hide bottom bar when scrolling
-                    val bottomBarAnimation = MagiskMotionEngine.tweenSpec<Float>(
+                    val bottomBarAnimation = MotionCenter.tweenSpec<Float>(
                         MagiskMotionDuration.Medium
                     )
                     val bottomBarOffset by animateFloatAsState(
@@ -193,6 +208,7 @@ fun MagiskAppContainer(
                         style = navigationBarStyle,
                         modifier = Modifier.graphicsLayer {
                             translationY = bottomBarOffset
+                            alpha = themeState.bottomBarOpacity / 100f
                         })
                 }
             },
@@ -204,7 +220,11 @@ fun MagiskAppContainer(
                 start = innerPadding.calculateStartPadding(layoutDirection),
                 top = innerPadding.calculateTopPadding(),
                 end = innerPadding.calculateEndPadding(layoutDirection),
-                bottom = 0.dp
+                bottom = if (currentSpec.isNavigationBarDestination) {
+                    0.dp
+                } else {
+                    innerPadding.calculateBottomPadding()
+                }
             )
 
             Box(
@@ -222,6 +242,10 @@ fun MagiskAppContainer(
             }
         }
         overlay()
+        if (loadingTransition.active) {
+            MagiskLoadingOverlay()
+        }
+        }
     }
 }
 
@@ -249,13 +273,43 @@ private fun MagiskNavHost(
         }
     }
 
+    val profile = MotionCenter.profile()
+
     NavHost(
         navController = navController,
         startDestination = AppNavigationConfig.startGraphKey,
-        enterTransition = { magiskEnterTransition(isPop = false) },
-        exitTransition = { magiskExitTransition(isPop = false) },
-        popEnterTransition = { magiskEnterTransition(isPop = true) },
-        popExitTransition = { magiskExitTransition(isPop = true) }) {
+        enterTransition = {
+            val fromIndex = initialState.destination.tabIndex()
+            val toIndex = targetState.destination.tabIndex()
+            if (fromIndex != -1 && toIndex != -1) {
+                val sign = if (toIndex > fromIndex) 1 else -1
+                slideInHorizontally(
+                    initialOffsetX = { it * sign },
+                    animationSpec = tween(300)
+                ) + fadeIn(tween(300))
+            } else {
+                MotionCenter.navigationEnter(isPop = false, enabled = profile.enabled)
+            }
+        },
+        exitTransition = {
+            val fromIndex = initialState.destination.tabIndex()
+            val toIndex = targetState.destination.tabIndex()
+            if (fromIndex != -1 && toIndex != -1) {
+                val sign = if (toIndex > fromIndex) 1 else -1
+                slideOutHorizontally(
+                    targetOffsetX = { -it * sign },
+                    animationSpec = tween(300)
+                ) + fadeOut(tween(300))
+            } else {
+                MotionCenter.navigationExit(isPop = false, enabled = profile.enabled)
+            }
+        },
+        popEnterTransition = {
+            MotionCenter.navigationEnter(isPop = true, enabled = profile.enabled)
+        },
+        popExitTransition = {
+            MotionCenter.navigationExit(isPop = true, enabled = profile.enabled)
+        }) {
         destination("home") {
             HomeScreen(
                 onNavigate = onNavigate,
@@ -270,7 +324,28 @@ private fun MagiskNavHost(
         }
         destination("app_update") {
             AppUpdateScreen(
+                onNavigate = onNavigate,
                 snackbarHostState = snackbarHostState
+            )
+        }
+        destination(
+            route = "changelog?module={module}&title={title}",
+            arguments = listOf(
+                navArgument("module") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("title") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { entry ->
+            ChangelogScreen(
+                moduleId = entry.arguments?.getString("module")?.let(Uri::decode),
+                title = entry.arguments?.getString("title")?.let(Uri::decode)
             )
         }
         destination("superuser") {
@@ -454,6 +529,17 @@ private fun appTopBarActions(
             lambda
         }
 
+        AppRoute.AppUpdate -> {
+            val viewModel: AppUpdateViewModel = viewModel(
+                viewModelStoreOwner = entry,
+                factory = AppUpdateViewModel.Factory
+            )
+            val lambda: @Composable RowScope.() -> Unit = {
+                AppUpdateTopBarActions(onRefresh = { viewModel.refresh(force = true) })
+            }
+            lambda
+        }
+
         AppRoute.DenyList -> {
             val viewModel: DenyListViewModel = viewModel(
                 viewModelStoreOwner = entry, factory = DenyListViewModel.Factory
@@ -584,18 +670,6 @@ private fun appTopBarActions(
             lambda
         }
 
-        AppRoute.Install -> {
-            val viewModel: InstallViewModel = viewModel(
-                viewModelStoreOwner = entry, factory = VMFactory
-            )
-            val state by viewModel.uiState.collectAsState()
-            val lambda: @Composable RowScope.() -> Unit = {
-                InstallTopBarActions(
-                    state = state, canInstall = viewModel.canInstall, onInstall = viewModel::install
-                )
-            }
-            lambda
-        }
 
         else -> null
     }
@@ -663,15 +737,7 @@ private fun NavHostController.navigateTopLevel(spec: AppRouteSpec) {
     }
 }
 
-private fun magiskEnterTransition(isPop: Boolean): EnterTransition {
-    return fadeIn(tween(300)) + slideInHorizontally(
-        initialOffsetX = { (it * 0.1f * (if (isPop) -1 else 1)).toInt() },
-        animationSpec = tween(300)
-    )
-}
-
-private fun magiskExitTransition(isPop: Boolean): ExitTransition {
-    return fadeOut(tween(300)) + slideOutHorizontally(
-        targetOffsetX = { (it * 0.1f * (if (isPop) 1 else -1)).toInt() }, animationSpec = tween(300)
-    )
+private fun NavDestination?.tabIndex(): Int {
+    val route = this?.route ?: return -1
+    return AppNavigationConfig.topLevelRoutes.indexOfFirst { it.graphKey == route }
 }

@@ -21,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -30,16 +29,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.core.download.DownloadEngine
 import com.topjohnwu.magisk.core.download.Subject
+import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.MainActivity
+import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
-import com.topjohnwu.magisk.ui.component.MagiskMarkdown
-import com.topjohnwu.magisk.ui.component.MagiskSection
+import com.topjohnwu.magisk.ui.component.MagiskLoader
+import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.ui.component.card.MagiskCardAction
 import com.topjohnwu.magisk.ui.component.card.MagiskStatusCard
@@ -55,11 +57,12 @@ import com.topjohnwu.magisk.core.R as CoreR
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppUpdateScreen(
+    onNavigate: (AppRoute) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     viewModel: AppUpdateViewModel = viewModel(factory = AppUpdateViewModel.Factory)
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
@@ -67,10 +70,7 @@ fun AppUpdateScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -78,14 +78,18 @@ fun AppUpdateScreen(
     DisposableEffect(lifecycleOwner) {
         DownloadEngine.observeProgress(lifecycleOwner) { progress, subject ->
             if (subject is Subject.App) {
-                viewModel.onDownloadProgress(progress)
+                viewModel.onDownloadProgress(
+                    progress = progress,
+                    url = subject.url,
+                    mbeVersionCode = subject.expectedMbeVersionCode
+                )
             }
         }
         onDispose { }
     }
 
     if (state.loading && !state.hasUpdateInfo) {
-        MagiskLoadingState(modifier = modifier.fillMaxSize())
+        MagiskLoader(modifier = modifier.fillMaxSize())
         return
     }
 
@@ -99,19 +103,21 @@ fun AppUpdateScreen(
                 title = stringResource(CoreR.string.home_app_title),
                 statusText = when {
                     state.downloadFailed -> stringResource(CoreR.string.download_file_error)
+                    state.refreshFailed -> stringResource(CoreR.string.no_connection)
                     state.updateAvailable -> stringResource(CoreR.string.update_available)
                     state.hasUpdateInfo -> stringResource(CoreR.string.updated_channel)
                     else -> stringResource(CoreR.string.no_connection)
                 },
                 statusColor = when {
                     state.downloadFailed -> MaterialTheme.colorScheme.error
+                    state.refreshFailed -> MaterialTheme.colorScheme.error
                     state.updateAvailable -> MaterialTheme.colorScheme.primary
                     state.hasUpdateInfo -> MaterialTheme.colorScheme.primary
                     else -> MaterialTheme.colorScheme.error
                 },
                 icon = Icons.Rounded.Android,
-                iconContainerColor = MaterialTheme.colorScheme.primary,
-                iconTint = MaterialTheme.colorScheme.onPrimary,
+                iconContainerColor = MagiskComponentDefaults.AccentContainer,
+                iconTint = MagiskComponentDefaults.AccentContent,
                 metrics = listOf(
                     MagiskStatusMetric(
                         label = stringResource(CoreR.string.home_installed_version),
@@ -148,6 +154,7 @@ fun AppUpdateScreen(
                         } else {
                             Icons.Rounded.Download
                         },
+                        enabled = !state.downloadInProgress,
                         onClick = {
                             val activity = context as? MainActivity ?: return@MagiskCardAction
                             if (downloadReady) {
@@ -166,11 +173,17 @@ fun AppUpdateScreen(
                 } else {
                     null
                 },
-                secondaryAction = MagiskCardAction(
-                    text = stringResource(CoreR.string.settings_check_update_title),
-                    icon = Icons.Rounded.Refresh,
-                    onClick = { viewModel.refresh(force = true) }
-                ),
+                secondaryAction = if (state.changelogAvailable) {
+                    MagiskCardAction(
+                        text = stringResource(CoreR.string.release_notes),
+                        icon = Icons.AutoMirrored.Rounded.Article,
+                        onClick = {
+                            onNavigate(AppRoute.Changelog(title = state.latestVersion))
+                        }
+                    )
+                } else {
+                    null
+                },
                 actionsStacked = true
             )
         }
@@ -197,21 +210,7 @@ fun AppUpdateScreen(
             }
         }
 
-        if (state.update.note.isNotBlank()) {
-            item {
-                MagiskSection(
-                    title = stringResource(CoreR.string.release_notes),
-                    icon = Icons.AutoMirrored.Rounded.Article
-                ) {
-                    MagiskCard(modifier = Modifier.fillMaxWidth()) {
-                        MagiskMarkdown(
-                            markdown = state.update.note,
-                            modifier = Modifier.padding(12.dp)
-                        )
-                    }
-                }
-            }
-        } else if (!state.loading && !state.hasUpdateInfo) {
+        if (!state.loading && !state.hasUpdateInfo) {
             item {
                 MagiskEmptyState(
                     title = stringResource(CoreR.string.no_connection),
@@ -222,12 +221,21 @@ fun AppUpdateScreen(
     }
 }
 
+@Composable
+fun AppUpdateTopBarActions(onRefresh: () -> Unit) {
+    MagiskTopBarIconButton(
+        icon = Icons.Rounded.Refresh,
+        contentDescription = stringResource(CoreR.string.settings_check_update_title),
+        onClick = onRefresh
+    )
+}
+
 private fun startAppDownload(
     activity: MainActivity,
     viewModel: AppUpdateViewModel,
     state: com.topjohnwu.magisk.viewmodel.update.AppUpdateUiState
 ) {
-    viewModel.onDownloadStarted()
+    if (!viewModel.onDownloadStarted(state.update.link, state.update.versionCode)) return
     DownloadEngine.startWithActivity(
         activity = activity,
         extension = activity.extension,

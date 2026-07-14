@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
-import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
+import com.topjohnwu.magisk.ui.motion.MotionCenter
 
 @Composable
 fun MagiskCard(
@@ -37,7 +37,7 @@ fun MagiskCard(
 
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    val scaleAnimation = MagiskMotionEngine.tweenSpec<Float>(MagiskMotionDuration.Short)
+    val scaleAnimation = MotionCenter.tweenSpec<Float>(MagiskMotionDuration.Short)
     val scale by animateFloatAsState(
         targetValue = if (onClick != null && enabled && isPressed) {
             0.985f

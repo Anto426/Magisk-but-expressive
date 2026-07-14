@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -52,6 +54,7 @@ data class ModuleUiItem(
 data class ModuleUiState(
     val loading: Boolean = true,
     val checkingUpdates: Boolean = false,
+    val updateCheckFailed: Boolean = false,
     val modules: List<ModuleUiItem> = emptyList(),
     val filteredModules: List<ModuleUiItem> = emptyList(),
     val searchQuery: String = "",
@@ -76,16 +79,21 @@ class ModuleViewModel(
 
     init {
         viewModelScope.launch {
-            UpdateManager.moduleUpdatesState.collect { moduleUpdate ->
+            UpdateManager.state
+                .map { it.modules }
+                .distinctUntilChanged()
+                .collect { moduleUpdate ->
                 val runtime = MagiskRuntimeEngine.snapshot()
                 val list = synchronized(cacheLock) { moduleCache.values.toList() }
                 val expanded = _state.value.modules.filter { it.expanded }.map { it.id }.toSet()
-                val updatedUi = list.map { it.toUiItem(runtime, expanded.contains(it.id)) }
+                val updatedUi = list.map {
+                    it.toUiItem(runtime, moduleUpdate.updateFor(it.id), expanded.contains(it.id))
+                }
                 _state.update {
                     it.withModules(
                         modules = updatedUi,
                         checkingUpdates = moduleUpdate.isChecking
-                    )
+                    ).copy(updateCheckFailed = moduleUpdate.hasFailed)
                 }
             }
         }
@@ -117,15 +125,26 @@ class ModuleViewModel(
             val expanded = _state.value.modules.filter { it.expanded }.map { it.id }.toSet()
             _state.update {
                 it.withModules(
-                    modules = list.map { module -> module.toUiItem(runtime, expanded.contains(module.id)) },
+                    modules = list.map { module ->
+                        module.toUiItem(
+                            runtime,
+                            UpdateManager.state.value.modules.updateFor(module.id),
+                            expanded.contains(module.id)
+                        )
+                    },
                     loading = false,
                     checkingUpdates = false
                 )
             }
+            UpdateManager.reconcileInstalledModules(list)
             if (list.isNotEmpty() && (force || now - lastMetadataRefreshAt >= MIN_METADATA_REFRESH_INTERVAL_MS)) {
                 lastMetadataRefreshAt = now
-                metadataJob = launch {
-                    UpdateManager.checkForModuleUpdates(list, showNotification = true)
+                metadataJob = viewModelScope.launch {
+                    UpdateManager.refreshModules(
+                        installed = list,
+                        force = force,
+                        publishNotification = true
+                    )
                 }
             }
         }
@@ -175,7 +194,14 @@ class ModuleViewModel(
             }
             val expanded = _state.value.modules.find { it.id == id }?.expanded ?: false
             val runtime = MagiskRuntimeEngine.snapshot()
-            val updatedUi = module.toUiItem(runtime, expanded)
+            val updatedUi = module.toUiItem(
+                runtime,
+                UpdateManager.state.value.modules.updateFor(module.id),
+                expanded
+            )
+            UpdateManager.reconcileInstalledModules(
+                synchronized(cacheLock) { moduleCache.values.toList() }
+            )
             withContext(Dispatchers.Main) {
                 _state.update { state ->
                     val index = state.modules.indexOfFirst { it.id == id }
@@ -243,7 +269,11 @@ private fun List<ModuleUiItem>.filteredBy(query: String): List<ModuleUiItem> {
     return if (normalized.isEmpty()) this else filter { it.searchKey.contains(normalized) }
 }
 
-private fun LocalModule.toUiItem(runtime: MagiskRuntimeState, expanded: Boolean = false): ModuleUiItem {
+private fun LocalModule.toUiItem(
+    runtime: MagiskRuntimeState,
+    update: OnlineModule?,
+    expanded: Boolean = false
+): ModuleUiItem {
     val zygiskLabel = AppContext.getString(CoreR.string.zygisk)
     val safeName = name.ifBlank { id }
     val safeDescription = description
@@ -263,11 +293,11 @@ private fun LocalModule.toUiItem(runtime: MagiskRuntimeState, expanded: Boolean 
         updated = updated,
         showAction = hasAction && noticeText == null,
         noticeText = noticeText,
-        showUpdate = updateInfo != null,
-        updateReady = outdated && !remove && enable,
-        update = updateInfo,
+        showUpdate = update != null,
+        updateReady = update != null && !remove && enable && !updated,
+        update = update,
         badges = buildList {
-            if (outdated) add(AppContext.getString(CoreR.string.module_badge_update))
+            if (update != null) add(AppContext.getString(CoreR.string.module_badge_update))
             if (updated) add(AppContext.getString(CoreR.string.module_badge_updated))
             if (remove) add(AppContext.getString(CoreR.string.module_badge_removing))
             if (!enable) add(AppContext.getString(CoreR.string.module_badge_disabled))

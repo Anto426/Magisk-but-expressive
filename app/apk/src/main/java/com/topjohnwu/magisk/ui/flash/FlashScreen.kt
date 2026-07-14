@@ -12,21 +12,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,14 +36,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.POST_NOTIFICATIONS_PERMISSION
 import com.topjohnwu.magisk.arch.UIActivity
 import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.core.ktx.activity
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.MagiskTerminal
 import com.topjohnwu.magisk.ui.component.MagiskTerminalActions
 import com.topjohnwu.magisk.ui.component.MagiskTerminalButton
@@ -64,8 +65,8 @@ fun FlashScreen(
     modifier: Modifier = Modifier,
     viewModel: FlashViewModel = viewModel(factory = FlashViewModel.Factory)
 ) {
-    val state by viewModel.state.collectAsState()
-    val lines by viewModel.lines.collectAsState(initial = emptyList())
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val lines by viewModel.lines.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
     val listState = rememberLazyListState()
@@ -74,7 +75,7 @@ fun FlashScreen(
     BackHandler(enabled = state.running) {}
 
     LaunchedEffect(action, additionalData) {
-        val uri = additionalData?.let { Uri.parse(it) }
+        val uri = additionalData?.toUri()
         val remoteDownload = uri?.scheme == "http" || uri?.scheme == "https"
         val needsNotificationPermission =
             remoteDownload &&
@@ -95,10 +96,7 @@ fun FlashScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -121,6 +119,7 @@ fun FlashScreen(
             lines = lines,
             state = listState,
             emptyText = stringResource(CoreR.string.waiting_for_logs),
+            running = state.running,
             modifier = Modifier.weight(1f)
         )
 
@@ -131,7 +130,7 @@ fun FlashScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                MagiskLoader(inline = true)
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = stringResource(CoreR.string.flashing),

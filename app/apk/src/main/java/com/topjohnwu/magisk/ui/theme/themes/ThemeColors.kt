@@ -7,7 +7,10 @@ internal val White = Color(0xFFFFFFFF)
 internal val Black = Color(0xFF000000)
 
 internal fun contentColorFor(color: Color): Color {
-    return if (color.luminance() > 0.42f) Black else White
+    // 0.179 is the luminance crossover where black and white have equal
+    // WCAG contrast. Using the higher-contrast side keeps custom and bundled
+    // palettes readable, especially with pink, yellow and light-blue accents.
+    return if (color.luminance() > 0.179f) Black else White
 }
 
 internal fun blend(base: Color, overlay: Color, amount: Float): Color {

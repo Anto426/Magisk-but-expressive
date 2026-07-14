@@ -1,38 +1,27 @@
 package com.topjohnwu.magisk.viewmodel.install
 
 import android.net.Uri
-import androidx.lifecycle.viewModelScope
 import com.topjohnwu.magisk.arch.BaseViewModel
 import com.topjohnwu.magisk.arch.UiEffect
-import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.Const
-import com.topjohnwu.magisk.core.repository.NetworkService
-import com.topjohnwu.magisk.core.update.AppVersion
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import timber.log.Timber
-import java.io.File
-import java.io.IOException
 import com.topjohnwu.magisk.core.R as CoreR
 
-class InstallViewModel(svc: NetworkService) : BaseViewModel() {
+class InstallViewModel : BaseViewModel() {
 
     enum class Method { NONE, PATCH, DIRECT, INACTIVE_SLOT }
 
     data class UiState(
         val step: Int = 0,
         val method: Method = Method.NONE,
-        val notes: String = "",
         val patchUri: Uri? = null,
         val requestFilePicker: Boolean = false,
-        val showSecondSlotWarning: Boolean = false,
+        val showConfirm: Boolean = false,
     )
 
     private val runtime = MagiskRuntimeEngine.snapshot()
@@ -42,28 +31,6 @@ class InstallViewModel(svc: NetworkService) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(UiState(step = if (skipOptions) 1 else 0))
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
-
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val noteFile = File(AppContext.cacheDir, "mbe-${AppVersion.installedCode}.md")
-                val noteText = when {
-                    noteFile.exists() -> noteFile.readText()
-                    else -> {
-                        val note = svc.fetchUpdate(AppVersion.installedCode)?.note.orEmpty()
-                        if (note.isEmpty()) return@launch
-                        noteFile.writeText(note)
-                        note
-                    }
-                }
-                withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(notes = normalizeMarkdown(noteText)) }
-                }
-            } catch (e: IOException) {
-                Timber.e(e)
-            }
-        }
-    }
 
     fun nextStep() {
         _uiState.update { it.copy(step = 1) }
@@ -78,8 +45,8 @@ class InstallViewModel(svc: NetworkService) : BaseViewModel() {
                 sendEffect(UiEffect.RequestFilePicker)
             }
 
-            Method.INACTIVE_SLOT -> {
-                _uiState.update { it.copy(showSecondSlotWarning = true) }
+            Method.DIRECT, Method.INACTIVE_SLOT -> {
+                _uiState.update { it.copy(showConfirm = true) }
             }
 
             else -> {}
@@ -90,18 +57,19 @@ class InstallViewModel(svc: NetworkService) : BaseViewModel() {
         _uiState.update { it.copy(requestFilePicker = false) }
     }
 
-    fun onSecondSlotWarningConsumed() {
-        _uiState.update { it.copy(showSecondSlotWarning = false) }
+    fun onConfirmDismissed() {
+        _uiState.update { it.copy(showConfirm = false) }
     }
 
     fun onPatchFileSelected(uri: Uri) {
-        _uiState.update { it.copy(patchUri = uri) }
-        if (_uiState.value.method == Method.PATCH) {
-            install()
-        }
+        _uiState.update { it.copy(patchUri = uri, showConfirm = true) }
     }
 
     fun install() {
+        _uiState.update { it.copy(showConfirm = true) }
+    }
+
+    fun executeInstall() {
         val state = _uiState.value
         val route = when (state.method) {
             Method.PATCH -> AppRoute.Flash(
@@ -126,7 +94,4 @@ class InstallViewModel(svc: NetworkService) : BaseViewModel() {
             }
         }
 
-    private fun normalizeMarkdown(input: String): String {
-        return input.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\r\n", "\n").trim()
-    }
 }

@@ -11,11 +11,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +31,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,16 +42,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.navigation.FlashPayloadStore
+import com.topjohnwu.magisk.ui.component.MagiskConfirmSheet
 import com.topjohnwu.magisk.ui.component.MagiskDialog
 import com.topjohnwu.magisk.ui.component.MagiskDialogAction
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
@@ -68,9 +76,9 @@ fun ModuleUpdatesScreen(
     modifier: Modifier = Modifier,
     viewModel: ModuleViewModel = viewModel(factory = ModuleViewModel.Factory)
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val updates = state.modules.updatable()
+    val updates = remember(state.modules) { state.modules.updatable() }
     val updateUrls = remember(updates) {
         updates.mapNotNull { item ->
             item.update?.zipUrl?.trim()?.takeIf(String::isNotBlank)
@@ -84,10 +92,7 @@ fun ModuleUpdatesScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -104,7 +109,7 @@ fun ModuleUpdatesScreen(
     }
 
     if (state.loading && state.modules.isEmpty()) {
-        MagiskLoadingState(modifier = modifier.fillMaxSize())
+        MagiskLoader(modifier = modifier.fillMaxSize())
         return
     }
 
@@ -118,6 +123,7 @@ fun ModuleUpdatesScreen(
                 updateCount = updates.size,
                 moduleCount = state.modules.size,
                 checking = state.checkingUpdates,
+                failed = state.updateCheckFailed,
                 onRefresh = { viewModel.refresh(force = true) },
                 onInstallAll = updateUrls.takeIf { it.isNotEmpty() }?.let { urls ->
                     {
@@ -130,7 +136,10 @@ fun ModuleUpdatesScreen(
         if (updates.isEmpty() && !state.checkingUpdates) {
             item {
                 MagiskEmptyState(
-                    title = stringResource(CoreR.string.module_updates_empty),
+                    title = stringResource(
+                        if (state.updateCheckFailed) CoreR.string.no_connection
+                        else CoreR.string.module_updates_empty
+                    ),
                     icon = Icons.Rounded.SystemUpdate
                 )
             }
@@ -142,6 +151,19 @@ fun ModuleUpdatesScreen(
         ) { index ->
             ModuleUpdateCard(
                 item = updates[index],
+                onChangelog = updates[index].update
+                    ?.changelog
+                    ?.takeIf(String::isNotBlank)
+                    ?.let {
+                        {
+                            onNavigate(
+                                AppRoute.Changelog(
+                                    moduleId = updates[index].id,
+                                    title = updates[index].name
+                                )
+                            )
+                        }
+                    },
                 onInstall = onInstall@{
                     val update = updates[index].update ?: return@onInstall
                     val zipUrl = update.zipUrl.trim().takeIf(String::isNotBlank) ?: return@onInstall
@@ -160,6 +182,7 @@ private fun ModuleUpdatesHeader(
     updateCount: Int,
     moduleCount: Int,
     checking: Boolean,
+    failed: Boolean,
     onRefresh: () -> Unit,
     onInstallAll: (() -> Unit)?,
 ) {
@@ -203,10 +226,10 @@ private fun ModuleUpdatesHeader(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = if (updateCount > 0) {
-                        stringResource(CoreR.string.module_updates_ready_summary)
-                    } else {
-                        stringResource(CoreR.string.module_updates_empty)
+                    text = when {
+                        failed -> stringResource(CoreR.string.no_connection)
+                        updateCount > 0 -> stringResource(CoreR.string.module_updates_ready_summary)
+                        else -> stringResource(CoreR.string.module_updates_empty)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -228,27 +251,27 @@ private fun ModuleUpdatesHeader(
         }
 
         if (onInstallAll != null) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(
-                    onClick = onRefresh,
-                    modifier = Modifier.weight(1f),
-                    shape = MagiskComponentDefaults.ControlShape
-                ) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(CoreR.string.settings_check_update_title))
-                }
                 Button(
                     onClick = onInstallAll,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = MagiskComponentDefaults.ControlShape
                 ) {
                     Icon(Icons.Rounded.SystemUpdate, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = stringResource(CoreR.string.module_updates_install_all))
+                }
+                OutlinedButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MagiskComponentDefaults.ControlShape
+                ) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(CoreR.string.settings_check_update_title))
                 }
             }
         } else {
@@ -276,7 +299,7 @@ private fun ModuleUpdateInstallDialog(
         is ModuleUpdateInstallTarget.All -> target.urls.size
     }
 
-    MagiskDialog(
+    MagiskConfirmSheet(
         title = stringResource(
             if (count == 1) {
                 CoreR.string.confirm_install_title
@@ -294,113 +317,196 @@ private fun ModuleUpdateInstallDialog(
             }
         },
         icon = Icons.Rounded.SystemUpdate,
-        onDismissRequest = onDismiss,
-        confirmAction = MagiskDialogAction(
-            text = stringResource(android.R.string.ok),
-            onClick = onConfirmClick@{
-                val route = when (target) {
-                    is ModuleUpdateInstallTarget.Single -> {
-                        AppRoute.Flash(
-                            action = Const.Value.FLASH_ZIP,
-                            additionalData = target.zipUrl
-                        )
-                    }
-
-                    is ModuleUpdateInstallTarget.All -> {
-                        val urls = target.urls.takeIf { it.isNotEmpty() } ?: return@onConfirmClick
-                        AppRoute.Flash(
-                            action = Const.Value.FLASH_MULTIPLE_ZIPS,
-                            additionalData = FlashPayloadStore.putUrls(urls)
-                        )
-                    }
+        onDismiss = onDismiss,
+        onConfirm = {
+            val route = when (target) {
+                is ModuleUpdateInstallTarget.Single -> {
+                    AppRoute.Flash(
+                        action = Const.Value.FLASH_ZIP,
+                        additionalData = target.zipUrl
+                    )
                 }
-                onConfirm(route)
+
+                is ModuleUpdateInstallTarget.All -> {
+                    val urls = target.urls.takeIf { it.isNotEmpty() } ?: return@MagiskConfirmSheet
+                    AppRoute.Flash(
+                        action = Const.Value.FLASH_MULTIPLE_ZIPS,
+                        additionalData = FlashPayloadStore.putUrls(urls)
+                    )
+                }
             }
-        ),
-        dismissAction = MagiskDialogAction(
-            text = stringResource(android.R.string.cancel),
-            onClick = onDismiss
-        )
+            onConfirm(route)
+        }
     )
 }
 
 @Composable
 private fun ModuleUpdateCard(
     item: ModuleUiItem,
+    onChangelog: (() -> Unit)?,
     onInstall: () -> Unit,
 ) {
     val update = item.update ?: return
 
     MagiskCard(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentPadding = PaddingValues(16.dp)
+        containerColor = MagiskComponentDefaults.CardContainer,
+        contentPadding = PaddingValues(16.dp),
+        border = MagiskComponentDefaults.CardBorder
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Surface(
-                modifier = Modifier.size(44.dp),
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            // Header: Icon + Title & Status
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.Extension,
-                        contentDescription = null
+                Surface(
+                    modifier = Modifier.size(44.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.Extension,
+                            contentDescription = null
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(8.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary
+                        ) {}
+                        Text(
+                            text = stringResource(CoreR.string.update_available),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
+            // Divider + Metrics
+            HorizontalDivider(color = MagiskComponentDefaults.DividerColor)
+
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = item.versionAuthor,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = stringResource(CoreR.string.module_updates_latest_version, update.version),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // Metric 1: Installed Version
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 3.dp, height = 24.dp)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(
+                            text = stringResource(CoreR.string.home_installed_version),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = item.versionAuthor,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Metric 2: Latest Version
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 3.dp, height = 24.dp)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(
+                            text = stringResource(CoreR.string.home_latest_version),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = update.version,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
+            onChangelog?.let { openChangelog ->
+                OutlinedButton(
+                    onClick = openChangelog,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MagiskComponentDefaults.ControlShape
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Article,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(CoreR.string.release_notes))
+                }
+            }
+
+            // Install Button
             Button(
                 onClick = onInstall,
-                shape = MagiskComponentDefaults.ControlShape,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                shape = MagiskComponentDefaults.ControlShape
             ) {
+                Icon(
+                    imageVector = Icons.Rounded.SystemUpdate,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(CoreR.string.module_updates_install_one))
             }
-        }
-
-        if (update.changelog.isNotBlank() && !update.changelog.startsWith("http")) {
-            Text(
-                text = update.changelog,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 56.dp)
-            )
         }
     }
 }

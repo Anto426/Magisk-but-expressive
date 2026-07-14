@@ -1,6 +1,7 @@
 package com.topjohnwu.magisk.ui.deny
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,8 +36,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.ui.component.AppIcon
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
@@ -46,13 +48,13 @@ import com.topjohnwu.magisk.ui.component.MagiskExpandableListItem
 import com.topjohnwu.magisk.ui.component.MagiskInfoPill
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskListItem
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.MagiskAnimatedSearchField
 import com.topjohnwu.magisk.ui.component.MagiskSearchActionButton
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
-import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
+import com.topjohnwu.magisk.ui.motion.MotionCenter
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.deny.DenyListAppUi
 import com.topjohnwu.magisk.viewmodel.deny.DenyListProcessUi
@@ -66,8 +68,9 @@ fun DenyListScreen(
     modifier: Modifier = Modifier,
     viewModel: DenyListViewModel = viewModel(factory = DenyListViewModel.Factory)
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val appAlphaAnimation = MotionCenter.tweenSpec<Float>(MagiskMotionDuration.Short)
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -75,10 +78,7 @@ fun DenyListScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -99,7 +99,7 @@ fun DenyListScreen(
 
             when {
                 state.loading && state.items.isEmpty() -> {
-                    item { MagiskLoadingState() }
+                    item { MagiskLoader() }
                 }
 
                 state.items.isEmpty() -> {
@@ -119,6 +119,7 @@ fun DenyListScreen(
                     ) { app ->
                         DenyListAppItem(
                             app = app,
+                            alphaAnimation = appAlphaAnimation,
                             onToggleExpanded = { viewModel.toggleExpanded(app.packageName) },
                             onToggleApp = {
                                 viewModel.setAppChecked(
@@ -220,12 +221,12 @@ fun DenyListTopBarActions(
 @Composable
 private fun DenyListAppItem(
     app: DenyListAppUi,
+    alphaAnimation: FiniteAnimationSpec<Float>,
     onToggleExpanded: () -> Unit,
     onToggleApp: () -> Unit,
     onToggleProcess: (DenyListProcessUi) -> Unit
 ) {
     val active = app.checkedCount > 0
-    val alphaAnimation = MagiskMotionEngine.tweenSpec<Float>(MagiskMotionDuration.Short)
     val alpha by animateFloatAsState(
         targetValue = if (active) 1f else 0.65f,
         animationSpec = alphaAnimation,

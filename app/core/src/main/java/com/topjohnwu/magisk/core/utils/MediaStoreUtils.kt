@@ -21,9 +21,30 @@ object MediaStoreUtils {
 
     private val cr get() = AppContext.contentResolver
 
-    private fun relativePath(name: String) =
-        if (name.isEmpty()) Environment.DIRECTORY_DOWNLOADS
-        else Environment.DIRECTORY_DOWNLOADS + File.separator + name
+    /**
+     * Normalize a user supplied subdirectory while keeping it strictly below Downloads.
+     * Returning null means the value contains traversal or characters unsupported by
+     * common Android external-storage filesystems.
+     */
+    fun normalizeDownloadDirectory(value: String): String? {
+        val normalized = value.trim().trim('/', '\\').replace('\\', '/')
+        if (normalized.isEmpty()) return ""
+        val parts = normalized.split('/').filter(String::isNotEmpty)
+        if (parts.isEmpty() || parts.any { part ->
+                part == "." || part == ".." ||
+                    part.any { it.code < 32 || it in "\"*:<>?|" }
+            }
+        ) {
+            return null
+        }
+        return parts.joinToString(File.separator)
+    }
+
+    private fun relativePath(name: String): String {
+        val safeName = normalizeDownloadDirectory(name).orEmpty()
+        return if (safeName.isEmpty()) Environment.DIRECTORY_DOWNLOADS
+        else Environment.DIRECTORY_DOWNLOADS + File.separator + safeName
+    }
 
     fun fullPath(name: String): String =
         File(Environment.getExternalStorageDirectory(), relativePath(name)).canonicalPath

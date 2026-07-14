@@ -14,7 +14,10 @@ object AppVersion {
         get() = formatCode(installedCode)
 
     fun isUpdateAvailable(update: UpdateInfo): Boolean {
-        return update.versionCode > installedCode
+        return UpdatePolicy.isAppUpdateAvailable(
+            info = update,
+            installedMbeVersionCode = installedCode
+        )
     }
 
     fun remoteDisplay(update: UpdateInfo): String {

@@ -2,6 +2,7 @@ package com.topjohnwu.magisk.core.download
 
 import android.net.Uri
 import com.topjohnwu.magisk.StubApk
+import com.topjohnwu.magisk.core.BuildConfig.APP_PACKAGE_NAME
 import com.topjohnwu.magisk.core.R
 import com.topjohnwu.magisk.core.isRunningAsStub
 import com.topjohnwu.magisk.core.ktx.cachedFile
@@ -30,14 +31,22 @@ class DownloadProcessor(notifier: DownloadNotifier) : DownloadNotifier by notifi
     }
 
     suspend fun handleApp(stream: InputStream, subject: Subject.App) {
-        val external = subject.file.outputStream()
-
+        if (subject.expectedMbeVersionCode <= 0) {
+            throw IOException("Invalid MBE version in update metadata")
+        }
         if (isRunningAsStub) {
-            val updateApk = StubApk.update(context)
+            val candidateApk = StubApk.createUpdateTemp(context)
             try {
-                // Download full APK to stub update path
-                stream.copyAndClose(TeeOutputStream(external, updateApk.outputStream()))
-
+                val external = subject.file.outputStream()
+                // Keep partial bytes on a unique path that no stub process will ever load.
+                stream.copyAndClose(TeeOutputStream(external, candidateApk.outputStream()))
+                StubApk.verifyUpdate(
+                    context,
+                    candidateApk,
+                    StubApk.current(context),
+                    APP_PACKAGE_NAME,
+                    subject.expectedMbeVersionCode
+                )
                 // Also upgrade stub
                 notifyUpdate(subject.notifyId) {
                     it.setProgress(0, 0, true)
@@ -47,24 +56,52 @@ class DownloadProcessor(notifier: DownloadNotifier) : DownloadNotifier by notifi
 
                 // Extract stub
                 val apk = context.cachedFile("stub.apk")
-                ZipFile.Builder().setFile(updateApk).get().use { zf ->
+                try {
+                    ZipFile.Builder().setFile(candidateApk).get().use { zf ->
+                        apk.delete()
+                        val entry = zf.getEntry("assets/stub.apk")
+                            ?: throw IOException("Updated APK is missing assets/stub.apk")
+                        zf.getInputStream(entry).writeTo(apk)
+                    }
+
+                    // Patch and install before publishing the full APK to another stub process.
+                    subject.intent = AppMigration.upgradeStub(context, apk)
+                        ?: throw IOException("HideAPK patch error")
+                } finally {
                     apk.delete()
-                    zf.getInputStream(zf.getEntry("assets/stub.apk")).writeTo(apk)
                 }
 
-                // Patch and install
-                subject.intent = AppMigration.upgradeStub(context, apk)
-                    ?: throw IOException("HideAPK patch error")
-                apk.delete()
+                // Atomic handoff: update.apk becomes visible only after download and verification.
+                StubApk.verifyAndStageUpdate(
+                    context,
+                    candidateApk,
+                    StubApk.current(context),
+                    APP_PACKAGE_NAME,
+                    subject.expectedMbeVersionCode
+                )
             } catch (e: Exception) {
-                // If any error occurred, do not let stub load the new APK
-                updateApk.delete()
+                candidateApk.delete()
                 throw e
             }
         } else {
-            val session = APKInstall.startSession(context)
-            stream.copyAndClose(TeeOutputStream(external, session.openStream(context)))
-            subject.intent = session.waitIntent()
+            val candidateApk = StubApk.createUpdateTemp(context)
+            try {
+                val external = subject.file.outputStream()
+                stream.copyAndClose(TeeOutputStream(external, candidateApk.outputStream()))
+                StubApk.verifyUpdate(
+                    context,
+                    candidateApk,
+                    null,
+                    APP_PACKAGE_NAME,
+                    subject.expectedMbeVersionCode
+                )
+
+                val session = APKInstall.startSession(context)
+                candidateApk.inputStream().copyAndClose(session.openStream(context))
+                subject.intent = session.waitIntent()
+            } finally {
+                candidateApk.delete()
+            }
         }
     }
 
@@ -115,8 +152,18 @@ class DownloadProcessor(notifier: DownloadNotifier) : DownloadNotifier by notifi
             o2.write(b, off, len)
         }
         override fun close() {
-            o1.close()
-            o2.close()
+            var failure: Throwable? = null
+            try {
+                o1.close()
+            } catch (e: Throwable) {
+                failure = e
+            }
+            try {
+                o2.close()
+            } catch (e: Throwable) {
+                failure?.addSuppressed(e) ?: run { failure = e }
+            }
+            failure?.let { throw it }
         }
     }
 }

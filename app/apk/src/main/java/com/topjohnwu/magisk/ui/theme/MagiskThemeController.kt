@@ -1,6 +1,7 @@
 package com.topjohnwu.magisk.ui.theme
 
 import com.topjohnwu.magisk.core.Config
+import com.topjohnwu.magisk.ui.component.MagiskLoadingController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,6 +10,7 @@ data class MagiskThemeState(
     val themeOption: ThemeOption = ThemeOption.selected,
     val darkThemeMode: Int = Config.darkTheme,
     val bottomBarStyle: Int = Config.bottomBarStyle,
+    val bottomBarOpacity: Int = Config.bottomBarOpacity,
     val customColorVersion: Int = customColorVersion()
 )
 
@@ -21,13 +23,13 @@ object MagiskThemeController {
     }
 
     fun setDarkMode(mode: Int) {
-        Config.darkTheme = mode
-        refresh()
+        if (Config.darkTheme == mode) return
+        applyThemeChange { Config.darkTheme = mode }
     }
 
     fun setTheme(option: ThemeOption) {
-        Config.themeOrdinal = option.configOrdinal
-        refresh()
+        if (ThemeOption.selected == option) return
+        applyThemeChange { Config.themeOrdinal = option.configOrdinal }
     }
 
     fun setThemeIndex(index: Int) {
@@ -35,8 +37,13 @@ object MagiskThemeController {
     }
 
     fun setCustomColors(colors: ThemeCustomColors) {
-        colors.persistToConfig()
-        setTheme(ThemeOption.Custom)
+        if (ThemeOption.selected == ThemeOption.Custom && ThemeCustomColors.fromConfig() == colors) {
+            return
+        }
+        applyThemeChange {
+            colors.persistToConfig()
+            Config.themeOrdinal = ThemeOption.Custom.configOrdinal
+        }
     }
 
     fun setBottomBarStyle(style: Int) {
@@ -45,6 +52,22 @@ object MagiskThemeController {
             Config.Value.BOTTOM_BAR_FIXED
         )
         refresh()
+    }
+
+    fun setBottomBarOpacity(opacity: Int) {
+        Config.bottomBarOpacity = opacity.coerceIn(0, 100)
+        refresh()
+    }
+
+    private inline fun applyThemeChange(change: () -> Unit) {
+        val generation = MagiskLoadingController.begin()
+        try {
+            change()
+            refresh()
+        } catch (error: Throwable) {
+            MagiskLoadingController.complete(generation)
+            throw error
+        }
     }
 
     private fun snapshot() = MagiskThemeState()

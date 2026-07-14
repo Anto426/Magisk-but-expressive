@@ -36,7 +36,6 @@ object ServiceLocator {
     val networkService by lazy {
         NetworkService(
             createApiService(retrofit, Const.Url.INVALID_URL),
-            createApiService(retrofit, Const.Url.GITHUB_API_URL),
         )
     }
 }
