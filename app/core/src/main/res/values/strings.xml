@@ -28,6 +28,8 @@
     <string name="home_notice_content">Download Magisk ONLY from the official GitHub page. Files from unknown sources can be malicious!</string>
     <string name="home_safety_warning">Safety warning</string>
     <string name="home_support_title">Support Us</string>
+    <string name="support_hero_title">Support Open Source</string>
+    <string name="support_hero_subtitle">Magisk is developed by volunteers in their free time. Your support helps keep this project free, active, and continuously growing.</string>
     <string name="home_support_and_contributors">Support &amp; Contributors</string>
     <string name="mbe_section_title">Magisk-but-expressive (MBE)</string>
     <string name="official_magisk_section_title">Official Magisk Project</string>
@@ -39,6 +41,7 @@
     <string name="home_follow_title">Follow Us</string>
     <string name="home_item_source">Source</string>
     <string name="home_support_content">Magisk is, and always will be, free, and open source. However, you can show us that you care by making a donation.</string>
+    <string name="home_support_content_short">Donate or contribute to the project</string>
     <string name="donate">Donate</string>
     <string name="documents">Documents</string>
     <string name="report_bugs">Report Bugs</string>
@@ -200,6 +203,11 @@
     <string name="module_updates_install_all">Update all</string>
     <string name="module_updates_install_one">Update</string>
     <string name="module_updates_latest_version">Latest: %1$s</string>
+    <string name="module_remove_scheduled_title">Removal scheduled</string>
+    <string name="module_remove_scheduled_summary">The module will be removed on the next reboot.</string>
+    <string name="module_restart_required_title">Reboot required</string>
+    <string name="module_restart_required_summary">The module was installed or updated. Reboot to apply the changes.</string>
+    <string name="module_new_version_available">New version available: %1$s</string>
     <string name="module_updates_ready_summary">Ready to install</string>
     <string name="module_updates_installed_count">Installed modules: %1$d</string>
     <string name="module_updates_confirm_all_title">Update all modules?</string>
@@ -213,6 +221,8 @@
     <string name="module_empty">No module installed</string>
     <string name="confirm_install">Install module %1$s?</string>
     <string name="confirm_install_title">Install confirmation</string>
+    <string name="install_confirm_direct_msg">Do you want to install Magisk directly to your device boot partition?</string>
+    <string name="install_confirm_patch_msg">Do you want to patch the selected boot image file?</string>
     <string name="module_log_fallback">module</string>
 
     <!--Settings-->
@@ -229,6 +239,7 @@
     <string name="settings_restore_app_summary">Unhide the app and restore the original APK</string>
     <string name="language">Language</string>
     <string name="system_default">(System default)</string>
+    <string name="language_system_summary">System language: %1$s</string>
     <string name="settings_check_update_title">Check for updates</string>
     <string name="settings_check_update_summary">Periodically check for updates in the background</string>
     <string name="settings_update_channel_title">Update channel</string>
@@ -373,7 +384,7 @@
     <string name="home_status_ready_subtitle">System modified and secured</string>
     <string name="home_status_inactive_subtitle">Follow the guide to install</string>
     <string name="home_ramdisk">Ramdisk</string>
-    <string name="home_state_up_to_date">UP TO DATE</string>
+    <string name="home_state_up_to_date">Up to date</string>
     <string name="home_state_update_ready">UPDATE READY</string>
     <string name="home_state_inactive">INACTIVE</string>
     <string name="home_uninstall_environment">Uninstall Magisk Environment</string>
@@ -406,6 +417,12 @@
     <string name="theme_mode">Mode</string>
     <string name="theme_appearance">Appearance</string>
     <string name="theme_custom_themes">Custom themes</string>
+    <string name="theme_subtitle_ruby">Ruby Hoshino style</string>
+    <string name="theme_subtitle_memcho">Mem-Cho style</string>
+    <string name="theme_subtitle_aqua">Aqua style</string>
+    <string name="theme_subtitle_sung_jinwoo">Sung Jin-Woo style</string>
+    <string name="theme_subtitle_dynamic">Dynamic Material 3</string>
+    <string name="theme_subtitle_custom">Custom</string>
     <string name="theme_option_ruby">Ruby Hoshino</string>
     <string name="theme_option_memcho">Mem-Cho</string>
     <string name="theme_option_aqua">Aqua</string>
@@ -445,4 +462,6 @@
     <string name="bottom_bar_style_floating_subtitle">Keep the bottom bar floating above the screen</string>
     <string name="bottom_bar_style_fixed">Always Pinned</string>
     <string name="bottom_bar_style_fixed_subtitle">Lock the bottom bar to the bottom edge</string>
+    <string name="bottom_bar_opacity_title">Navigation Bar Opacity</string>
+    <string name="bottom_bar_opacity_label">Opacity</string>
 </resources>

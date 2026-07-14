@@ -318,7 +318,7 @@
     <string name="flash_copy_to_cache_failed">Није могуће копирати у кеш</string>
     <string name="flash_extract_failed">Није могуће издвојити датотеке</string>
     <string name="flash_installation_failed">Инсталација није успела</string>
-    <string name="flash_installing_file">- Инсталирање %1$с</string>
+    <string name="flash_installing_file">- Инсталирање %1$s</string>
     <string name="flash_invalid_uri">Неважећи УРИ</string>
     <string name="home_channel">Канал</string>
     <string name="home_contributor">Цонтрибутор</string>
@@ -343,7 +343,7 @@
     <string name="install_direct_install_subtitle">Препоручено за већину корисника</string>
     <string name="install_inactive_slot_subtitle">Корисно након ОТА ажурирања</string>
     <string name="install_select_patch_file_subtitle">Изаберите слику за покретање коју желите да закрпите</string>
-    <string name="isolated_process_label">(изоловано) %1$с</string>
+    <string name="isolated_process_label">(изоловано) %1$s</string>
     <string name="log_clear_confirm_msg">Ово уклања тренутни дневник догађаја Магиск-а.</string>
     <string name="log_clear_confirm_title">Обришите дневник?</string>
     <string name="log_clear_summary">Обришите тренутну историју</string>
@@ -409,7 +409,7 @@
     <string name="settings_header_subtitle">Конфигуришите окружење и апликацију</string>
     <string name="settings_search">Подешавања претраге</string>
     <string name="settings_update_mbe">МБЕ</string>
-    <string name="shared_uid_label">[СхаредУИД] %1$с</string>
+    <string name="shared_uid_label">[СхаредУИД] %1$s</string>
     <string name="superuser_logs">Дневници суперкорисника</string>
     <string name="superuser_logs_summary">Погледајте историју одобрених или одбијених захтева</string>
     <string name="superuser_toggle_logging">Логгинг</string>
@@ -440,7 +440,7 @@
     <string name="theme_option_ruby">Руби Хосхино</string>
     <string name="theme_option_sung_jinwoo">Сунг Јин-Воо</string>
     <string name="theme_personalize_experience">Персонализујте своје искуство</string>
-    <string name="uid_label">[УИД] %1$д</string>
+    <string name="uid_label">[УИД] %1$d</string>
     <string name="uninstall_complete_subtitle">Потпуно уклоните Магиск</string>
     <string name="uninstall_restore_images_subtitle">Вратите слике за покретање</string>
     <string name="waiting_for_logs">Чека се евиденција...</string>

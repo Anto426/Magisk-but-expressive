@@ -6,7 +6,9 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.EaseInOutCubic
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -15,6 +17,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
@@ -45,7 +49,7 @@ data class MagiskMotionProfile(
 
 val LocalMagiskMotionProfile = compositionLocalOf { MagiskMotionProfile() }
 
-object MagiskMotionEngine {
+object MotionCenter {
 
     @Composable
     fun profile(): MagiskMotionProfile = LocalMagiskMotionProfile.current
@@ -137,10 +141,50 @@ object MagiskMotionEngine {
     fun iconTransform(): ContentTransform {
         return scaleEnter().togetherWith(scaleExit())
     }
+
+    fun navigationEnter(isPop: Boolean, enabled: Boolean): EnterTransition {
+        if (!enabled) return EnterTransition.None
+        return if (isPop) {
+            slideInHorizontally(
+                initialOffsetX = { -(it * 0.15f).toInt() },
+                animationSpec = tween(350, easing = FastOutSlowInEasing)
+            ) + fadeIn(
+                initialAlpha = 0.5f,
+                animationSpec = tween(50, delayMillis = 66, easing = LinearEasing)
+            )
+        } else {
+            slideInHorizontally(
+                initialOffsetX = { (it * 0.15f).toInt() },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            ) + fadeIn(
+                initialAlpha = 0.5f,
+                animationSpec = tween(200, delayMillis = 66, easing = LinearEasing)
+            )
+        }
+    }
+
+    fun navigationExit(isPop: Boolean, enabled: Boolean): ExitTransition {
+        if (!enabled) return ExitTransition.None
+        return if (isPop) {
+            slideOutHorizontally(
+                targetOffsetX = { (it * 0.10f).toInt() },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            ) + fadeOut(
+                animationSpec = tween(50, easing = LinearEasing)
+            )
+        } else {
+            slideOutHorizontally(
+                targetOffsetX = { -(it * 0.10f).toInt() },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            ) + fadeOut(
+                animationSpec = tween(50, easing = LinearEasing)
+            )
+        }
+    }
 }
 
 @Composable
-fun ProvideMagiskMotionEngine(
+fun ProvideMotionCenter(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -164,8 +208,8 @@ fun MagiskAnimatedVisibility(
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = MagiskMotionEngine.expandEnter(),
-        exit = MagiskMotionEngine.shrinkExit()
+        enter = MotionCenter.expandEnter(),
+        exit = MotionCenter.shrinkExit()
     ) {
         content()
     }
@@ -177,7 +221,7 @@ fun <T> MagiskAnimatedContent(
     modifier: Modifier = Modifier,
     content: @Composable (T) -> Unit
 ) {
-    val transform = MagiskMotionEngine.contentTransform()
+    val transform = MotionCenter.contentTransform()
     AnimatedContent(
         targetState = targetState,
         modifier = modifier,
@@ -196,7 +240,7 @@ fun MagiskAutoScrollToLatest(
     always: Boolean = false,
     trailingThreshold: Int = 4
 ) {
-    val profile = MagiskMotionEngine.profile()
+    val profile = MotionCenter.profile()
     LaunchedEffect(itemCount, enabled, always, profile.enabled) {
         val last = itemCount - 1
         if (!enabled || last < 0) return@LaunchedEffect

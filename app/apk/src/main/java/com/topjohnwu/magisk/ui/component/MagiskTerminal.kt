@@ -1,5 +1,12 @@
 package com.topjohnwu.magisk.ui.component
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.Button
@@ -19,8 +27,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,6 +46,7 @@ fun MagiskTerminal(
     lines: List<String>,
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
+    running: Boolean = false,
     emptyText: String? = null
 ) {
     MagiskAutoScrollToLatest(itemCount = lines.size, state = state, always = true)
@@ -46,9 +60,11 @@ fun MagiskTerminal(
                 text = emptyText, icon = Icons.Rounded.Terminal, modifier = Modifier.padding(12.dp)
             )
         } else {
+            val horizontalScrollState = rememberScrollState()
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
+                    .horizontalScroll(horizontalScrollState)
                     .padding(10.dp),
                 state = state,
                 verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -56,8 +72,12 @@ fun MagiskTerminal(
                 itemsIndexed(
                     items = lines,
                     key = { index, _ -> index },
-                    contentType = { _, _ -> "terminal_line" }) { _, line ->
-                    MagiskTerminalLine(line)
+                    contentType = { _, _ -> "terminal_line" }) { index, line ->
+                    MagiskTerminalLine(
+                        line = line,
+                        isLastLine = index == lines.lastIndex,
+                        running = running
+                    )
                 }
             }
         }
@@ -65,29 +85,51 @@ fun MagiskTerminal(
 }
 
 @Composable
-private fun MagiskTerminalLine(line: String) {
+private fun MagiskTerminalLine(line: String, isLastLine: Boolean, running: Boolean) {
     val lineColor = terminalLineColor(line)
     val displayLine = remember(line) { line.withoutTerminalStatusPrefix() }
-    val textStyle = MaterialTheme.typography.bodySmall.copy(
+    val textStyle = TextStyle(
         color = lineColor,
         fontFamily = FontFamily.Monospace,
-        fontSize = 11.sp,
-        lineHeight = 13.sp
+        fontSize = 12.5.sp,
+        lineHeight = 15.sp
     )
     val inverseForeground = MaterialTheme.colorScheme.surface
-    val text = remember(displayLine, textStyle, inverseForeground) {
+
+    var annotatedString = remember(displayLine, textStyle, inverseForeground) {
         displayLine.toTerminalAnnotatedString(
             baseStyle = textStyle,
             inverseForeground = inverseForeground
         )
     }
 
+    if (isLastLine && running) {
+        val transition = rememberInfiniteTransition(label = "cursor")
+        val alpha by transition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 500, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "cursor"
+        )
+
+        annotatedString = remember(annotatedString, alpha) {
+            AnnotatedString.Builder(annotatedString).apply {
+                pushStyle(SpanStyle(color = lineColor.copy(alpha = alpha)))
+                append(" ▊")
+                pop()
+            }.toAnnotatedString()
+        }
+    }
+
     Text(
-        text = text,
-        modifier = Modifier.fillMaxWidth(),
+        text = annotatedString,
+        modifier = Modifier,
         style = textStyle,
-        maxLines = 8,
-        overflow = TextOverflow.Ellipsis
+        maxLines = 1,
+        softWrap = false
     )
 }
 
@@ -139,6 +181,7 @@ fun MagiskTerminalButton(
 private fun terminalLineColor(line: String) = when {
     line.startsWith("!") -> MaterialTheme.colorScheme.error
     line.startsWith("-") -> MaterialTheme.colorScheme.primary
+    line.startsWith("*") -> MaterialTheme.colorScheme.secondary
     else -> MaterialTheme.colorScheme.onSurface
 }
 

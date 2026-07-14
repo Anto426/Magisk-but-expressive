@@ -45,6 +45,11 @@ object AppNavigationConfig {
             AppDestinationType.NavigationBar
         ),
         AppRouteSpec(AppRoute.ModuleUpdates, "module_updates", CoreR.string.module_updates_title),
+        AppRouteSpec(
+            AppRoute.Changelog(moduleId = "{module}", title = "{title}"),
+            "changelog?module={module}&title={title}",
+            CoreR.string.release_notes
+        ),
         AppRouteSpec(AppRoute.Logs, "logs", CoreR.string.logs, AppDestinationType.NavigationBar),
         AppRouteSpec(
             AppRoute.Settings,
@@ -76,6 +81,8 @@ object AppNavigationConfig {
         Const.Nav.SUPERUSER -> AppRoute.Superuser
         Const.Nav.MODULES -> AppRoute.Modules
         Const.Nav.SETTINGS -> AppRoute.Settings
+        Const.Nav.APP_UPDATE -> AppRoute.AppUpdate
+        Const.Nav.MODULE_UPDATES -> AppRoute.ModuleUpdates
         else -> startRoute
     }
 
@@ -105,6 +112,17 @@ object AppNavigationConfig {
         AppRoute.SuperuserLogs -> "superuser_logs"
         AppRoute.Modules -> "modules"
         AppRoute.ModuleUpdates -> "module_updates"
+        is AppRoute.Changelog -> {
+            val query = buildList {
+                route.moduleId?.takeIf(String::isNotBlank)?.let {
+                    add("module=${Uri.encode(it)}")
+                }
+                route.title?.takeIf(String::isNotBlank)?.let {
+                    add("title=${Uri.encode(it)}")
+                }
+            }.joinToString("&")
+            if (query.isEmpty()) "changelog" else "changelog?$query"
+        }
         AppRoute.Logs -> "logs"
         AppRoute.Settings -> "settings"
         AppRoute.Install -> "install"

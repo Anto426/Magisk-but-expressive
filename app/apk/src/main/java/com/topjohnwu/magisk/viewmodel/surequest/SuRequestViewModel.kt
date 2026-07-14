@@ -67,14 +67,13 @@ class SuRequestViewModel(
     }
 
     fun setSelectedItemPosition(position: Int) {
-        _uiState.update { it.copy(selectedItemPosition = position) }
+        _uiState.update { it.copy(selectedItemPosition = validTimeoutPosition(position)) }
     }
 
     fun onAuthenticationResult(granted: Boolean) {
-        if (respondAfterAuth && granted) {
-            respond(ALLOW)
-        }
+        if (!respondAfterAuth) return
         respondAfterAuth = false
+        respond(if (granted) ALLOW else DENY)
     }
 
     fun handleRequest(intent: Intent) {
@@ -98,7 +97,7 @@ class SuRequestViewModel(
                     CoreR.string.shared_uid_label, info.sharedUserId.orEmpty()
                 ),
                 packageName = packageName,
-                selectedItemPosition = timeoutPrefs.getInt(packageName, 0),
+                selectedItemPosition = validTimeoutPosition(timeoutPrefs.getInt(packageName, 0)),
                 useTapjackProtection = Config.suTapjack,
                 showUi = true
             )
@@ -113,7 +112,9 @@ class SuRequestViewModel(
                 title = title,
                 packageName = info.packageName,
                 iconPackageName = info.packageName,
-                selectedItemPosition = timeoutPrefs.getInt(info.packageName, 0),
+                selectedItemPosition = validTimeoutPosition(
+                    timeoutPrefs.getInt(info.packageName, 0)
+                ),
                 useTapjackProtection = Config.suTapjack,
                 showUi = true
             )
@@ -130,13 +131,17 @@ class SuRequestViewModel(
         cancelTimer()
 
         val state = _uiState.value
-        timeoutPrefs.edit().putInt(state.packageName, state.selectedItemPosition).apply()
+        val timeoutPosition = validTimeoutPosition(state.selectedItemPosition)
+        timeoutPrefs.edit().putInt(state.packageName, timeoutPosition).apply()
 
         viewModelScope.launch {
-            handler.respond(action, Config.Value.TIMEOUT_LIST[state.selectedItemPosition])
+            handler.respond(action, Config.Value.TIMEOUT_LIST[timeoutPosition])
             sendEffect(UiEffect.Finish)
         }
     }
+
+    private fun validTimeoutPosition(position: Int) =
+        position.coerceIn(Config.Value.TIMEOUT_LIST.indices)
 
     private fun startTimer() {
         timerJob?.cancel()
@@ -167,6 +172,5 @@ class SuRequestViewModel(
 
     override fun onCleared() {
         respond(DENY)
-        super.onCleared()
     }
 }

@@ -18,7 +18,8 @@ import com.topjohnwu.magisk.runtime.MagiskInstallState
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import com.topjohnwu.magisk.runtime.MagiskRuntimeState
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -62,7 +63,10 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
 
     init {
         viewModelScope.launch {
-            UpdateManager.appUpdateState.collect { appUpdate ->
+            UpdateManager.state
+                .map { it.app }
+                .distinctUntilChanged()
+                .collect { appUpdate ->
                 val appState = when {
                     appUpdate.isChecking -> HomeViewModel.State.LOADING
                     appUpdate.hasFailed -> HomeViewModel.State.INVALID
@@ -92,8 +96,11 @@ class HomeViewModel(private val svc: NetworkService) : ViewModel() {
         lastRefreshAt = now
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            val update = async { UpdateManager.checkForAppUpdate(svc, force = force) }
-            update.await()
+            UpdateManager.refreshApp(
+                service = svc,
+                force = force,
+                publishNotification = true
+            )
             val runtime = MagiskRuntimeEngine.snapshot()
             val magiskState = runtime.toHomeState()
             _state.update {

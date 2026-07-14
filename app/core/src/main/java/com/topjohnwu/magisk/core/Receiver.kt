@@ -8,7 +8,7 @@ import com.topjohnwu.magisk.core.base.BaseReceiver
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.download.DownloadEngine
 import com.topjohnwu.magisk.core.download.Subject
-import com.topjohnwu.magisk.view.Notifications
+import com.topjohnwu.magisk.view.NotificationCenter
 import com.topjohnwu.magisk.view.Shortcuts
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.GlobalScope
@@ -61,7 +61,7 @@ open class Receiver : BaseReceiver() {
                 @Suppress("DEPRECATION")
                 val installer = context.packageManager.getInstallerPackageName(context.packageName)
                 if (installer == context.packageName) {
-                    Notifications.updateDone()
+                    NotificationCenter.showAppUpdated()
                 }
             }
         }

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
 
 enum class DenyListSortMethod(@param:StringRes val labelRes: Int) {
@@ -77,6 +78,7 @@ class DenyListViewModel : ViewModel() {
     }
 
     fun toggleSearch() {
+        queryApplyJob?.cancel()
         val current = _state.value
         if (current.searchVisible) {
             _state.update { it.copy(query = "", searchVisible = false) }
@@ -224,11 +226,12 @@ class DenyListViewModel : ViewModel() {
 
     private fun applyFilters(shouldSort: Boolean = true) {
         val current = _state.value
-        val query = current.query.trim().lowercase()
+        val query = current.query.trim().lowercase(Locale.ROOT)
 
         if (!shouldSort) {
+            val appsByPackage = allApps.associateBy(DenyListAppUi::packageName)
             val updatedItems = current.items.map { item ->
-                allApps.firstOrNull { it.packageName == item.packageName } ?: item
+                appsByPackage[item.packageName] ?: item
             }
             _state.update { it.copy(items = updatedItems) }
             return
@@ -291,7 +294,6 @@ class DenyListViewModel : ViewModel() {
     override fun onCleared() {
         queryApplyJob?.cancel()
         refreshJob?.cancel()
-        super.onCleared()
     }
 
     companion object {

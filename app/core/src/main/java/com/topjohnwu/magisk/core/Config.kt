@@ -57,6 +57,9 @@ object Config : PreferenceConfig, DBConfig {
         const val DOH = "doh"
         const val RAND_NAME = "rand_name"
         const val BOTTOM_BAR_STYLE = "bottom_bar_style"
+        const val BOTTOM_BAR_OPACITY = "bottom_bar_opacity"
+        const val LAST_APP_UPDATE_NOTIFICATION = "last_app_update_notification"
+        const val LAST_MODULE_UPDATE_NOTIFICATION = "last_module_update_notification"
 
         val NO_MIGRATION = setOf(ASKED_HOME, SU_REQUEST_TIMEOUT,
             SU_AUTO_RESPONSE, SU_REAUTH, SU_TAPJACK)
@@ -134,6 +137,9 @@ object Config : PreferenceConfig, DBConfig {
     var downloadDir by preference(Key.DOWNLOAD_DIR, "")
     var randName by preference(Key.RAND_NAME, true)
     var bottomBarStyle by preference(Key.BOTTOM_BAR_STYLE, 0)
+    var bottomBarOpacity by preference(Key.BOTTOM_BAR_OPACITY, 100)
+    internal var lastAppUpdateNotification by preference(Key.LAST_APP_UPDATE_NOTIFICATION, "")
+    internal var lastModuleUpdateNotification by preference(Key.LAST_MODULE_UPDATE_NOTIFICATION, "")
     var checkUpdate
         get() = checkUpdatePrefs
         set(value) {
@@ -155,7 +161,21 @@ object Config : PreferenceConfig, DBConfig {
 
     var suDefaultTimeout by preferenceStrInt(Key.SU_REQUEST_TIMEOUT, 10)
     var suAutoResponse by preferenceStrInt(Key.SU_AUTO_RESPONSE, Value.SU_PROMPT)
-    var suNotification by preferenceStrInt(Key.SU_NOTIFICATION, Value.NOTIFICATION_TOAST)
+    private var suNotificationPrefs by preferenceStrInt(
+        Key.SU_NOTIFICATION,
+        Value.NOTIFICATION_TOAST
+    )
+    var suNotification
+        get() = suNotificationPrefs.coerceIn(
+            Value.NO_NOTIFICATION,
+            Value.NOTIFICATION_STATUS_BAR
+        )
+        set(value) {
+            suNotificationPrefs = value.coerceIn(
+                Value.NO_NOTIFICATION,
+                Value.NOTIFICATION_STATUS_BAR
+            )
+        }
     var rootMode by dbSettings(Key.ROOT_ACCESS, Value.ROOT_ACCESS_APPS_AND_ADB)
     var suMntNamespaceMode by dbSettings(Key.SU_MNT_NS, Value.NAMESPACE_MODE_REQUESTER)
     var suMultiuserMode by dbSettings(Key.SU_MULTIUSER_MODE, Value.MULTIUSER_MODE_OWNER_ONLY)
@@ -171,7 +191,7 @@ object Config : PreferenceConfig, DBConfig {
 
     private const val SU_FINGERPRINT = "su_fingerprint"
     private const val UPDATE_CHANNEL = "update_channel"
-    const val MBE_CHANNEL_URL = "https://raw.githubusercontent.com/Anto426/Magisk-but-expressive/master/update.json"
+    val MBE_CHANNEL_URL: String get() = BuildConfig.UPDATE_URL
 
     fun toBundle(): Bundle {
         val map = prefs.all - Key.NO_MIGRATION

@@ -56,7 +56,7 @@ import com.topjohnwu.magisk.navigation.AppNavigationConfig
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.navigation.AppRouteSpec
 import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
-import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
+import com.topjohnwu.magisk.ui.motion.MotionCenter
 
 enum class MagiskNavigationBarStyle {
     Docked,
@@ -118,7 +118,7 @@ fun MagiskNavigationBar(
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 3.dp,
                     shadowElevation = 8.dp,
-                    border = MagiskComponentDefaults.CardBorder
+                    border = null
                 ) {
                     CompositionLocalProvider(
                         LocalTextStyle provides LocalTextStyle.current.copy(
@@ -154,8 +154,8 @@ private fun MagiskFloatingNavigationItem(
     showLabel: Boolean,
     onClick: () -> Unit
 ) {
-    val itemAnimation = MagiskMotionEngine.tweenSpec<Float>(MagiskMotionDuration.Short)
-    val colorAnimation = MagiskMotionEngine.tweenSpec<Color>(MagiskMotionDuration.Short)
+    val itemAnimation = MotionCenter.tweenSpec<Float>(MagiskMotionDuration.Short)
+    val colorAnimation = MotionCenter.tweenSpec<Color>(MagiskMotionDuration.Short)
     val alpha by animateFloatAsState(
         targetValue = if (selected) 1f else 0.58f,
         animationSpec = itemAnimation,
@@ -233,6 +233,7 @@ fun AppRoute.navigationIcon(): ImageVector = when (this) {
     AppRoute.SuperuserLogs -> Icons.Rounded.History
     AppRoute.Modules -> Icons.Rounded.Extension
     AppRoute.ModuleUpdates -> Icons.Rounded.SystemUpdate
+    is AppRoute.Changelog -> Icons.AutoMirrored.Rounded.Article
     AppRoute.Logs -> Icons.AutoMirrored.Rounded.Article
     AppRoute.Settings -> Icons.Rounded.Settings
     AppRoute.Install -> Icons.Rounded.SystemUpdate

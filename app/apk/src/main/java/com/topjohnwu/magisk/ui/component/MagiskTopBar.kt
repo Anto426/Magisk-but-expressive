@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.util.lerp
 import com.github.yohannestz.iconsax_compose.iconsax.Iconsax
 import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
-import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
+import com.topjohnwu.magisk.ui.motion.MotionCenter
 
 data class MagiskTopBarAction(
     val icon: ImageVector,
@@ -172,7 +172,7 @@ private fun MagiskTopBarTitle(
         }
         val expandedFontSize = if (measuredOverflow) 22.sp else 32.sp
         val collapsedFontSize = if (measuredOverflow) 18.sp else 22.sp
-        val fontAnimation = MagiskMotionEngine.tweenSpec<Float>(MagiskMotionDuration.Short)
+        val fontAnimation = MotionCenter.tweenSpec<Float>(MagiskMotionDuration.Short)
         val fontSize by animateFloatAsState(
             targetValue = lerp(
                 expandedFontSize.value,
@@ -205,8 +205,8 @@ fun MagiskBackButton(
             .padding(start = 12.dp, end = 12.dp)
             .size(MagiskComponentDefaults.IconButtonSize),
         colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            contentColor = MaterialTheme.colorScheme.onSurface
+            containerColor = MagiskComponentDefaults.AccentContainer,
+            contentColor = MagiskComponentDefaults.AccentContent
         )
     ) {
         Icon(
@@ -233,11 +233,11 @@ fun MagiskTopBarIconButton(
             .width(40.dp)
             .height(40.dp),
         colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            contentColor = MaterialTheme.colorScheme.onSurface
+            containerColor = MagiskComponentDefaults.AccentContainer,
+            contentColor = MagiskComponentDefaults.AccentContent
         )
     ) {
-        val iconTransform = MagiskMotionEngine.iconTransform()
+        val iconTransform = MotionCenter.iconTransform()
         AnimatedContent(
             targetState = icon,
             transitionSpec = {
@@ -266,8 +266,8 @@ private fun MagiskTopBarActionButton(
         actionVisible.value = true
     }
 
-    val enter = MagiskMotionEngine.scaleEnter()
-    val exit = MagiskMotionEngine.scaleExit()
+    val enter = MotionCenter.scaleEnter()
+    val exit = MotionCenter.scaleExit()
     AnimatedVisibility(
         visible = actionVisible.value,
         enter = enter,

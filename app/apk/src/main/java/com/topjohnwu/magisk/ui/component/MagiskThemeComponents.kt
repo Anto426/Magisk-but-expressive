@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -52,6 +53,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,11 +62,14 @@ import androidx.compose.ui.platform.LocalContext
 import com.topjohnwu.magisk.ui.theme.dynamicThemeSeed
 import com.topjohnwu.magisk.core.Config
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
+import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
+import com.topjohnwu.magisk.ui.motion.MotionCenter
 import com.topjohnwu.magisk.ui.theme.ThemeCustomColorSlot
 import com.topjohnwu.magisk.ui.theme.ThemeCustomColors
 import com.topjohnwu.magisk.ui.theme.ThemeOption
 import com.topjohnwu.magisk.ui.theme.shouldUseDarkTheme
 import com.topjohnwu.magisk.ui.theme.themes.ThemeCatalog
+import com.topjohnwu.magisk.ui.theme.themes.contentColorFor
 import android.graphics.Color as AndroidColor
 import com.topjohnwu.magisk.core.R as CoreR
 import androidx.compose.animation.animateColorAsState
@@ -73,6 +78,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -153,9 +159,11 @@ fun BottomBarStyleItem(
         leadingIcon = Icons.Rounded.Tune,
         selected = selected,
         trailingContent = {
-            RadioButton(selected = selected, onClick = onClick)
+            RadioButton(selected = selected, onClick = null)
         },
-        onClick = onClick
+        onClick = onClick,
+        interactionRole = Role.RadioButton,
+        selectionValue = selected
     )
 }
 
@@ -186,14 +194,17 @@ fun ThemeCardGrid(
     }
 }
 
-fun ThemeOption.subtitle(): String = when (this) {
-    ThemeOption.Ruby -> "Stile Ruby Hoshino"
-    ThemeOption.MemCho -> "Stile Mem-Cho"
-    ThemeOption.Aqua -> "Stile Aqua"
-    ThemeOption.SungJinWoo -> "Stile Sung Jin-Woo"
-    ThemeOption.Default -> "Material 3 Dinamico"
-    ThemeOption.Custom -> "Personalizzato"
-}
+@Composable
+fun ThemeOption.subtitle(): String = stringResource(
+    when (this) {
+        ThemeOption.Ruby -> CoreR.string.theme_subtitle_ruby
+        ThemeOption.MemCho -> CoreR.string.theme_subtitle_memcho
+        ThemeOption.Aqua -> CoreR.string.theme_subtitle_aqua
+        ThemeOption.SungJinWoo -> CoreR.string.theme_subtitle_sung_jinwoo
+        ThemeOption.Default -> CoreR.string.theme_subtitle_dynamic
+        ThemeOption.Custom -> CoreR.string.theme_subtitle_custom
+    }
+)
 
 @Composable
 fun MockAppPreview(
@@ -306,7 +317,7 @@ fun MockAppPreview(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(6.dp),
-                                tint = Color.White
+                                tint = contentColorFor(primary)
                             )
                         }
                         
@@ -405,12 +416,24 @@ fun ThemeOptionCard(
     val primary = if (dark) seed.darkPrimary else seed.lightPrimary
     val secondary = if (dark) seed.darkSecondary else seed.lightSecondary
 
-    val borderThickness by animateDpAsState(targetValue = if (selected) 2.5.dp else 1.dp, label = "BorderThickness")
+    val selectionDpSpec = MotionCenter.tweenSpec<androidx.compose.ui.unit.Dp>(MagiskMotionDuration.Short)
+    val selectionColorSpec = MotionCenter.tweenSpec<Color>(MagiskMotionDuration.Short)
+    val selectionFloatSpec = MotionCenter.tweenSpec<Float>(MagiskMotionDuration.Short)
+    val borderThickness by animateDpAsState(
+        targetValue = if (selected) 2.5.dp else 1.dp,
+        animationSpec = selectionDpSpec,
+        label = "BorderThickness"
+    )
     val borderColor by animateColorAsState(
         targetValue = if (selected) primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        animationSpec = selectionColorSpec,
         label = "BorderColor"
     )
-    val scale by animateFloatAsState(targetValue = if (selected) 1.03f else 1f, label = "Scale")
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.03f else 1f,
+        animationSpec = selectionFloatSpec,
+        label = "Scale"
+    )
 
     val border = BorderStroke(borderThickness, borderColor)
 
@@ -420,15 +443,20 @@ fun ThemeOptionCard(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-            },
+            }
+            .clip(MagiskComponentDefaults.CardShape)
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick
+            ),
         containerColor = if (selected) {
             MaterialTheme.colorScheme.surfaceContainerHigh
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
         border = border,
-        contentPadding = PaddingValues(0.dp),
-        onClick = onClick
+        contentPadding = PaddingValues(0.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
@@ -444,30 +472,28 @@ fun ThemeOptionCard(
                         )
                     )
             ) {
-                val hasCharacter = option.characterRes() != null
-                MockAppPreview(
-                    option = option,
-                    darkMode = darkMode,
-                    modifier = if (hasCharacter) {
-                        Modifier
+                Box(
+                    modifier = Modifier
+                        .width(140.dp)
+                        .fillMaxHeight()
+                        .align(Alignment.BottomCenter)
+                        .offset(y = 4.dp)
+                ) {
+                    MockAppPreview(
+                        option = option,
+                        darkMode = darkMode,
+                        modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .offset(x = 12.dp, y = 4.dp)
                             .size(105.dp, 100.dp)
-                    } else {
-                        Modifier
-                            .align(Alignment.Center)
-                            .offset(y = 8.dp)
-                            .size(150.dp, 100.dp)
-                    }
-                )
+                    )
 
-                if (hasCharacter) {
                     ThemeCharacter(
                         option = option,
+                        primary = primary,
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
+                            .align(Alignment.BottomStart)
                             .height(125.dp)
-                            .offset(x = 10.dp, y = 2.dp)
+                            .offset(x = 88.dp, y = 2.dp)
                     )
                 }
 
@@ -486,7 +512,7 @@ fun ThemeOptionCard(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = Color.White
+                                tint = contentColorFor(primary)
                             )
                         }
                     }
@@ -531,6 +557,7 @@ fun ThemeOptionCard(
 @Composable
 fun ThemeCharacter(
     option: ThemeOption,
+    primary: Color,
     modifier: Modifier = Modifier
 ) {
     val characterRes = option.characterRes()
@@ -544,12 +571,14 @@ fun ThemeCharacter(
         return
     }
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    Box(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
         Icon(
             imageVector = if (option == ThemeOption.Custom) Icons.Rounded.Brush else Icons.Rounded.AutoAwesome,
             contentDescription = null,
-            modifier = Modifier.size(54.dp),
-            tint = Color.White.copy(alpha = 0.78f)
+            modifier = Modifier
+                .size(54.dp)
+                .offset(y = (-16).dp),
+            tint = primary.copy(alpha = 0.85f)
         )
     }
 }
@@ -576,9 +605,11 @@ fun ThemeModeItem(
         leadingIcon = option.icon,
         selected = selected,
         trailingContent = {
-            RadioButton(selected = selected, onClick = onClick)
+            RadioButton(selected = selected, onClick = null)
         },
-        onClick = onClick
+        onClick = onClick,
+        interactionRole = Role.RadioButton,
+        selectionValue = selected
     )
 }
 

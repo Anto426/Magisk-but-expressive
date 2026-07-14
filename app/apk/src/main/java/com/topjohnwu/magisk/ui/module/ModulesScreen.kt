@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -44,7 +45,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,8 +56,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
@@ -68,7 +70,7 @@ import com.topjohnwu.magisk.ui.component.MagiskExpandableListItem
 import com.topjohnwu.magisk.ui.component.MagiskInfoPill
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskListItem
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.MagiskAnimatedSearchField
 import com.topjohnwu.magisk.ui.component.MagiskSearchActionButton
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
@@ -76,7 +78,7 @@ import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.ui.component.card.MagiskWarningCard
 import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
 import com.topjohnwu.magisk.ui.motion.MagiskMotionDuration
-import com.topjohnwu.magisk.ui.motion.MagiskMotionEngine
+import com.topjohnwu.magisk.ui.motion.MotionCenter
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.module.ModuleUiItem
 import com.topjohnwu.magisk.viewmodel.module.ModuleViewModel
@@ -90,9 +92,10 @@ fun ModulesScreen(
     modifier: Modifier = Modifier,
     viewModel: ModuleViewModel = viewModel(factory = ModuleViewModel.Factory)
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    val moduleAlphaAnimation = MotionCenter.tweenSpec<Float>(MagiskMotionDuration.Short)
 
     // Dialog state for update confirmation
     var pendingUpdateModule by remember { mutableStateOf<ModuleUiItem?>(null) }
@@ -115,10 +118,7 @@ fun ModulesScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -153,7 +153,7 @@ fun ModulesScreen(
     }
 
     if (state.loading) {
-        MagiskLoadingState(modifier = modifier.fillMaxSize())
+        MagiskLoader(modifier = modifier.fillMaxSize())
     } else {
         Column(modifier = modifier.fillMaxSize()) {
             MagiskAnimatedSearchField(
@@ -167,7 +167,7 @@ fun ModulesScreen(
                 modifier = Modifier.weight(1f),
                 state = listState,
                 contentPadding = PaddingValues(
-                    top = 8.dp, bottom = 120.dp, start = 16.dp, end = 16.dp
+                    top = 8.dp, bottom = 160.dp, start = 16.dp, end = 16.dp
                 )
             ) {
                 item(key = "install_from_storage") {
@@ -189,12 +189,9 @@ fun ModulesScreen(
                         key = { index -> state.filteredModules[index].id }) { index ->
                         val item = state.filteredModules[index]
                         val isActive = item.enabled && !item.removed
-                        val alphaAnimation = MagiskMotionEngine.tweenSpec<Float>(
-                            MagiskMotionDuration.Short
-                        )
                         val alpha by animateFloatAsState(
                             targetValue = if (isActive) 1f else 0.65f,
-                            animationSpec = alphaAnimation,
+                            animationSpec = moduleAlphaAnimation,
                             label = "ModuleCardAlpha"
                         )
                         MagiskExpandableListItem(
@@ -208,7 +205,10 @@ fun ModulesScreen(
                             headerTrailingContent = {
                                 if (item.updateReady && item.update != null) {
                                     MagiskInfoPill(
-                                        text = "Aggiorna: " + item.update.version,
+                                        text = stringResource(
+                                            CoreR.string.module_updates_latest_version,
+                                            item.update.version
+                                        ),
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                                         containerColor = MaterialTheme.colorScheme.primaryContainer
                                     )
@@ -260,13 +260,13 @@ fun ModulesScreen(
                                             )
                                             Column {
                                                 Text(
-                                                    text = "Disinstallazione programmata",
+                                                    text = stringResource(CoreR.string.module_remove_scheduled_title),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onErrorContainer
                                                 )
                                                 Text(
-                                                    text = "Il modulo verrà rimosso al prossimo riavvio.",
+                                                    text = stringResource(CoreR.string.module_remove_scheduled_summary),
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     color = MaterialTheme.colorScheme.onErrorContainer.copy(
                                                         alpha = 0.8f
@@ -297,13 +297,13 @@ fun ModulesScreen(
                                             )
                                             Column {
                                                 Text(
-                                                    text = "Riavvio richiesto",
+                                                    text = stringResource(CoreR.string.module_restart_required_title),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                                 )
                                                 Text(
-                                                    text = "Modulo aggiornato/installato. Riavvia per applicare le modifiche.",
+                                                    text = stringResource(CoreR.string.module_restart_required_summary),
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(
                                                         alpha = 0.8f
@@ -316,10 +316,10 @@ fun ModulesScreen(
                                     Surface(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = MaterialTheme.shapes.medium,
-                                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                                        color = MagiskComponentDefaults.AccentContainer,
                                         border = BorderStroke(
                                             1.dp,
-                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
+                                            MagiskComponentDefaults.PrimaryIconTint.copy(alpha = 0.5f)
                                         )
                                     ) {
                                         Column(
@@ -333,23 +333,37 @@ fun ModulesScreen(
                                                 Icon(
                                                     imageVector = Icons.Rounded.Update,
                                                     contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                                    tint = MagiskComponentDefaults.AccentContent
                                                 )
                                                 Text(
-                                                    text = "Nuova versione disponibile: " + item.update.version,
+                                                    text = stringResource(
+                                                        CoreR.string.module_new_version_available,
+                                                        item.update.version
+                                                    ),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                                    color = MagiskComponentDefaults.AccentContent
                                                 )
                                             }
                                             if (item.update.changelog.isNotBlank()) {
-                                                Text(
-                                                    text = "Changelog:\n" + item.update.changelog,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(
-                                                        alpha = 0.8f
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        onNavigate(
+                                                            AppRoute.Changelog(
+                                                                moduleId = item.id,
+                                                                title = item.name
+                                                            )
+                                                        )
+                                                    },
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.AutoMirrored.Rounded.Article,
+                                                        contentDescription = null
                                                     )
-                                                )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(text = stringResource(CoreR.string.release_notes))
+                                                }
                                             }
                                         }
                                     }

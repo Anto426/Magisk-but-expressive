@@ -7,13 +7,8 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.MotionEvent
-import android.view.View
-import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
-import android.view.accessibility.AccessibilityEvent
-import android.view.accessibility.AccessibilityNodeInfo
-import android.view.accessibility.AccessibilityNodeProvider
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
@@ -87,7 +82,7 @@ import com.topjohnwu.magisk.ui.component.AppIcon
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.card.MagiskElevatedPanel
 import com.topjohnwu.magisk.ui.theme.MagiskTheme
 import com.topjohnwu.magisk.viewmodel.surequest.SuRequestUiState
@@ -126,12 +121,15 @@ class SuRequestActivity : ComponentActivity(), UntrackedActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             window.setHideOverlayWindows(true)
         }
-        if (Config.suTapjack) {
-            window.decorView.rootView.accessibilityDelegate = EmptyAccessibilityDelegate
-        }
-
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            window.navigationBarDividerColor = android.graphics.Color.TRANSPARENT
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
 
         onBackPressedDispatcher.addCallback(this) {
             viewModel.denyPressed()
@@ -183,27 +181,6 @@ class SuRequestActivity : ComponentActivity(), UntrackedActivity {
         }
     }
 
-    private object EmptyAccessibilityDelegate : View.AccessibilityDelegate() {
-        override fun sendAccessibilityEvent(host: View, eventType: Int) {}
-        override fun performAccessibilityAction(host: View, action: Int, args: Bundle?) = true
-        override fun sendAccessibilityEventUnchecked(host: View, event: AccessibilityEvent) {}
-        override fun dispatchPopulateAccessibilityEvent(host: View, event: AccessibilityEvent) =
-            true
-
-        override fun onPopulateAccessibilityEvent(host: View, event: AccessibilityEvent) {}
-        override fun onInitializeAccessibilityEvent(host: View, event: AccessibilityEvent) {}
-        override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {}
-
-        override fun addExtraDataToAccessibilityNodeInfo(
-            host: View, info: AccessibilityNodeInfo, extraDataKey: String, arguments: Bundle?
-        ) = Unit
-
-        override fun onRequestSendAccessibilityEvent(
-            host: ViewGroup, child: View, event: AccessibilityEvent
-        ) = false
-
-        override fun getAccessibilityNodeProvider(host: View): AccessibilityNodeProvider? = null
-    }
 }
 
 @Composable
@@ -249,7 +226,7 @@ private fun SuRequestScreen(
             contentAlignment = Alignment.Center
         ) {
             if (!state.showUi) {
-                MagiskLoadingState(modifier = Modifier.widthIn(max = 280.dp))
+                MagiskLoader(modifier = Modifier.widthIn(max = 280.dp))
             } else {
                 SuRequestPanel(
                     state = state,
@@ -346,7 +323,7 @@ private fun SuRequestPanel(
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 

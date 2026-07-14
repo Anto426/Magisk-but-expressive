@@ -6,11 +6,13 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.core.net.toUri
 import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.core.AppContext
 import com.topjohnwu.magisk.core.di.ServiceLocator
 import com.topjohnwu.magisk.core.di.createApiService
-import com.topjohnwu.magisk.core.repository.NetworkService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import retrofit2.http.GET
@@ -50,7 +53,7 @@ interface SupportGitHubService {
     suspend fun getContributors(@Query("per_page") perPage: Int = 30): List<Map<String, Any?>>
 }
 
-class SupportViewModel(private val svc: NetworkService) : ViewModel() {
+class SupportViewModel : ViewModel() {
 
     val mbeDonateUrl = "https://buymeacoffee.com/anto426"
     val mbeSourceUrl = "https://github.com/Anto426/Magisk-but-expressive"
@@ -66,20 +69,22 @@ class SupportViewModel(private val svc: NetworkService) : ViewModel() {
     private val gitHubService: SupportGitHubService by lazy {
         createApiService(ServiceLocator.retrofit, "https://api.github.com/")
     }
+    private var refreshJob: Job? = null
 
     init {
         refresh()
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        if (refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch {
             _state.update { it.copy(contributorsLoading = true) }
             loadContributors()
         }
     }
 
     private suspend fun loadContributors() {
-        val cached = cachedContributors()
+        val cached = withContext(Dispatchers.IO) { cachedContributors() }
         if (cached != null) {
             _state.update { it.copy(contributors = cached, contributorsLoading = false) }
             return
@@ -98,7 +103,7 @@ class SupportViewModel(private val svc: NetworkService) : ViewModel() {
             val fetchedMap = fetched.associateBy { it.login.lowercase(Locale.US) }
             val ordered = priorityOrder.mapNotNull { fetchedMap[it] }
             val finalList = withPinnedContributors(ordered.ifEmpty { fetched })
-            cacheContributors(finalList)
+            withContext(Dispatchers.IO) { cacheContributors(finalList) }
             _state.update { it.copy(contributors = finalList, contributorsLoading = false) }
         }.onFailure { e ->
             Timber.e(e)
@@ -112,7 +117,7 @@ class SupportViewModel(private val svc: NetworkService) : ViewModel() {
     }
 
     fun openLink(url: String) {
-        _effects.tryEmit(UiEffect.OpenUri(android.net.Uri.parse(url)))
+        _effects.tryEmit(UiEffect.OpenUri(url.toUri()))
     }
 
     companion object {
@@ -123,7 +128,7 @@ class SupportViewModel(private val svc: NetworkService) : ViewModel() {
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return SupportViewModel(ServiceLocator.networkService) as T
+                return SupportViewModel() as T
             }
         }
     }
@@ -164,6 +169,12 @@ private val forkMaintainer = createContributor(
     login = "Anto426",
     avatarUrl = "https://github.com/Anto426.png",
     htmlUrl = "https://github.com/Anto426"
+)
+
+private val originalCreator = createContributor(
+    login = "topjohnwu",
+    avatarUrl = "https://github.com/topjohnwu.png",
+    htmlUrl = "https://github.com/topjohnwu"
 )
 
 private fun createContributor(login: String, avatarUrl: String, htmlUrl: String): Contributor {
@@ -230,4 +241,4 @@ private fun cacheContributors(list: List<Contributor>) {
 }
 
 private fun withPinnedContributors(list: List<Contributor>): List<Contributor> =
-    (listOf(forkMaintainer) + list).distinctBy { it.login.lowercase(Locale.US) }
+    (listOf(forkMaintainer, originalCreator) + list).distinctBy { it.login.lowercase(Locale.US) }

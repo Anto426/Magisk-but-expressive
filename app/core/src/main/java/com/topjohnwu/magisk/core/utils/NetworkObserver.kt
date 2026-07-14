@@ -17,6 +17,7 @@ import com.topjohnwu.magisk.core.update.UpdateManager
 
 class NetworkObserver(context: Context) {
     private val manager = context.getSystemService<ConnectivityManager>()!!
+    private var lastConnected: Boolean? = null
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         private val activeList = ArraySet<Network>()
@@ -62,8 +63,12 @@ class NetworkObserver(context: Context) {
         )
     }
 
+    @Synchronized
     private fun postValue(b: Boolean) {
-        UpdateManager.resetAppUpdate()
+        if (lastConnected != b && b) {
+            UpdateManager.expireAppCache()
+        }
+        lastConnected = b
         Info.isConnected.postValue(b)
     }
 

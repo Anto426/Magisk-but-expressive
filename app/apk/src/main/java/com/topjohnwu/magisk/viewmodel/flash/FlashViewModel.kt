@@ -1,13 +1,10 @@
 package com.topjohnwu.magisk.viewmodel.flash
 
-import android.Manifest
-import android.app.Notification.Builder as NotificationBuilder
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.StringRes
-import androidx.core.content.ContextCompat
 import androidx.core.net.toFile
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -28,9 +25,10 @@ import com.topjohnwu.magisk.core.utils.MediaStoreUtils.outputStream
 import com.topjohnwu.magisk.core.utils.ProgressInputStream
 import com.topjohnwu.magisk.navigation.FlashPayloadStore
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
-import com.topjohnwu.magisk.view.Notifications
+import com.topjohnwu.magisk.view.NotificationCenter
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -67,6 +65,7 @@ class FlashViewModel : ViewModel() {
     private val terminal = TerminalLogStore()
     val lines = terminal.lines
     private var started = false
+    private var saveLogJob: Job? = null
 
     fun start(action: String, uri: Uri?) {
         if (started) return
@@ -139,7 +138,7 @@ class FlashViewModel : ViewModel() {
             terminal.addLine(errorLine(CoreR.string.flash_invalid_uri))
             return false
         }
-        val uris = rawUrls.map { Uri.parse(it) }
+        val uris = rawUrls.map(String::toUri)
         var allSuccess = uris.isNotEmpty()
         uris.forEachIndexed { index, uri ->
             terminal.addLine("--- ${AppContext.getString(CoreR.string.download)}: ${index + 1} / ${uris.size} ---")
@@ -250,56 +249,38 @@ class FlashViewModel : ViewModel() {
     }
 
     private suspend fun downloadUrlToFile(uri: Uri, file: File, title: String) {
-        val postNotification = canPostProgressNotifications()
-        val notificationId = if (postNotification) Notifications.nextId() else -1
-        val notification = if (postNotification) Notifications.startProgress(title) else null
-
-        fun post(editor: (NotificationBuilder) -> Unit = {}) {
-            val builder = notification ?: return
-            editor(builder)
-            runCatching {
-                Notifications.mgr.notify(notificationId, builder.build())
-            }
-        }
-
-        post()
+        val notification = NotificationCenter.startProgress(title)
         try {
             val connection = URL(uri.toString()).openConnection()
-            val max = connection.contentLengthLong
+            val max = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                connection.contentLengthLong
+            } else {
+                connection.contentLength.toLong()
+            }
             connection.getInputStream().use { raw ->
                 ProgressInputStream(raw) { downloaded ->
-                    post { builder ->
-                        updateDownloadProgress(builder, downloaded, max)
-                    }
+                    updateDownloadProgress(notification, downloaded, max)
                 }.use { input ->
                     input.writeTo(file)
                 }
             }
-            post { builder ->
-                builder
-                    .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                    .setContentText(AppContext.getString(CoreR.string.download_complete))
-                    .setProgress(100, 100, false)
-                    .setOngoing(false)
-                    .setAutoCancel(true)
-                Notifications.run { builder.applyAndroid16ProgressStyle(100) }
-            }
+            NotificationCenter.finishProgress(
+                notification,
+                AppContext.getString(CoreR.string.download_complete),
+                success = true
+            )
         } catch (e: IOException) {
-            post { builder ->
-                builder
-                    .setSmallIcon(android.R.drawable.stat_notify_error)
-                    .setContentText(AppContext.getString(CoreR.string.download_file_error))
-                    .setProgress(0, 0, false)
-                    .setOngoing(false)
-                    .setAutoCancel(true)
-                Notifications.run { builder.clearAndroid16ProgressStyle() }
-            }
+            NotificationCenter.finishProgress(
+                notification,
+                AppContext.getString(CoreR.string.download_file_error),
+                success = false
+            )
             throw e
         }
     }
 
     private fun updateDownloadProgress(
-        builder: NotificationBuilder,
+        notification: NotificationCenter.ProgressHandle?,
         downloaded: Long,
         max: Long
     ) {
@@ -307,28 +288,23 @@ class FlashViewModel : ViewModel() {
         if (max > 0) {
             val total = max.toFloat() / 1048576
             val percent = ((downloaded.toDouble() / max) * 100).toInt().coerceIn(0, 100)
-            builder
-                .setProgress(100, percent, false)
-                .setContentText("%.2f / %.2f MB".format(progress, total))
-            Notifications.run { builder.applyAndroid16ProgressStyle(percent) }
+            NotificationCenter.updateProgress(
+                notification,
+                percent,
+                "%.2f / %.2f MB".format(progress, total)
+            )
         } else {
-            builder
-                .setProgress(0, 0, true)
-                .setContentText("%.2f MB / ??".format(progress))
-            Notifications.run { builder.applyAndroid16ProgressStyle(null) }
+            NotificationCenter.updateProgress(
+                notification,
+                progress = null,
+                text = "%.2f MB / ??".format(progress)
+            )
         }
     }
 
-    private fun canPostProgressNotifications(): Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(
-                AppContext,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-    }
-
     fun saveLog() {
-        viewModelScope.launch(Dispatchers.IO) {
+        if (saveLogJob?.isActive == true) return
+        saveLogJob = viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val name = "magisk_install_log_%s.log".format(
                     System.currentTimeMillis().toTime(timeFormatStandard)

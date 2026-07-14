@@ -53,6 +53,15 @@ fun LanguageScreen(
     val state by viewModel.state.collectAsState()
     val languages = remember { LocaleSetting.available.names.toList() }
     val tags = remember { LocaleSetting.available.tags.toList() }
+    val systemLocale = LocaleSetting.instance.systemLocale
+    val systemDefaultTitle = stringResource(CoreR.string.system_default)
+    val systemLanguageName = systemLocale.getDisplayName(systemLocale).replaceFirstChar {
+        if (it.isLowerCase()) it.titlecase() else it.toString()
+    }
+    val systemLanguageSummary = stringResource(
+        CoreR.string.language_system_summary,
+        systemLanguageName
+    )
 
     val filteredIndices = remember(state.languageSearchQuery, languages) {
         if (state.languageSearchQuery.isBlank()) {
@@ -88,17 +97,16 @@ fun LanguageScreen(
                     title = stringResource(CoreR.string.language),
                     icon = Icons.Rounded.Language,
                     items = filteredIndices.map { index ->
-                        val name = languages[index]
                         val selected = state.languageIndex == index
                         val tag = tags.getOrNull(index).orEmpty()
                         val isDefault = tag.isEmpty()
+                        val locale = if (isDefault) systemLocale else Locale.forLanguageTag(tag)
+                        val name = if (isDefault) systemDefaultTitle else languages[index]
 
-                        val langCode = if (isDefault) "SYS"
-                        else tag.substringBefore("-").substringBefore("_").take(3).uppercase()
+                        val langCode = locale.language.take(3).uppercase(Locale.ROOT)
 
-                        val subtitleText = if (isDefault) "Default system language"
+                        val subtitleText = if (isDefault) systemLanguageSummary
                         else {
-                            val locale = Locale.forLanguageTag(tag)
                             val englishName = locale.getDisplayName(Locale.ENGLISH)
                                 .replaceFirstChar { it.uppercase() }
                             "$englishName ($tag)"

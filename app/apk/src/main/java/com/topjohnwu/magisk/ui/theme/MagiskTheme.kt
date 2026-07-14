@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.topjohnwu.magisk.core.Config
-import com.topjohnwu.magisk.ui.motion.ProvideMagiskMotionEngine
+import com.topjohnwu.magisk.ui.motion.ProvideMotionCenter
 import com.topjohnwu.magisk.ui.theme.themes.Black
 import com.topjohnwu.magisk.ui.theme.themes.ThemeCatalog
 import com.topjohnwu.magisk.ui.theme.themes.ThemeSeed
@@ -69,10 +69,10 @@ fun MagiskTheme(
                     modifier = Modifier.fillMaxSize(),
                     color = colorScheme.background
                 ) {
-                    ProvideMagiskMotionEngine(content)
+                    ProvideMotionCenter(content)
                 }
             } else {
-                ProvideMagiskMotionEngine(content)
+                ProvideMotionCenter(content)
             }
         }
     }
@@ -113,12 +113,15 @@ private val MagiskTypography = BaseTypography.copy(
 )
 
 private fun ThemeSeed.toColorScheme(darkTheme: Boolean): ColorScheme {
-    val primary = if (darkTheme) darkPrimary else lightPrimary
-    val secondary = if (darkTheme) darkSecondary else lightSecondary
-    val tertiary = if (darkTheme) darkTertiary else lightTertiary
-    val surface = if (darkTheme) darkSurface else lightSurface
-    val onSurface = if (darkTheme) darkOnSurface else lightOnSurface
-    val error = if (darkTheme) darkError else lightError
+    // Material color roles are composited by their consumers. Keeping seed
+    // alpha here would make custom palettes doubly translucent and can expose
+    // unrelated content below surfaces, so normalize every base role first.
+    val primary = (if (darkTheme) darkPrimary else lightPrimary).copy(alpha = 1f)
+    val secondary = (if (darkTheme) darkSecondary else lightSecondary).copy(alpha = 1f)
+    val tertiary = (if (darkTheme) darkTertiary else lightTertiary).copy(alpha = 1f)
+    val surface = (if (darkTheme) darkSurface else lightSurface).copy(alpha = 1f)
+    val onSurface = (if (darkTheme) darkOnSurface else lightOnSurface).copy(alpha = 1f)
+    val error = (if (darkTheme) darkError else lightError).copy(alpha = 1f)
     val target = if (darkTheme) Black else White
     val opposite = if (darkTheme) White else Black
 

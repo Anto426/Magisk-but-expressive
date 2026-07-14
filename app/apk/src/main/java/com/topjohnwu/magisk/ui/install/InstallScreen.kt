@@ -27,7 +27,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,15 +36,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.arch.VMFactory
 import com.topjohnwu.magisk.core.Config
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.navigation.AppRoute
-import com.topjohnwu.magisk.ui.component.MagiskDialog
-import com.topjohnwu.magisk.ui.component.MagiskDialogAction
+import com.topjohnwu.magisk.ui.component.MagiskConfirmSheet
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskMarkdown
 import com.topjohnwu.magisk.ui.component.MagiskSection
@@ -65,7 +67,9 @@ fun InstallScreen(
     modifier: Modifier = Modifier,
     viewModel: InstallViewModel = viewModel(factory = VMFactory)
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val updateCache by UpdateManager.state.collectAsStateWithLifecycle()
+    val cachedChangelog = updateCache.app.changelog
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -104,12 +108,7 @@ fun InstallScreen(
                 }
 
                 is UiEffect.Message -> {
-                    val messageString = when (val text = effect.text) {
-                        is UiText.Plain -> text.value
-                        is UiText.Resource -> context.getString(
-                            text.resId, *text.args.toTypedArray()
-                        )
-                    }
+                    val messageString = effect.text.resolve(context)
                     SystemToastManager.show(context, messageString)
                 }
 
@@ -118,23 +117,34 @@ fun InstallScreen(
         }
     }
 
-    if (state.showSecondSlotWarning) {
-        MagiskDialog(
-            onDismissRequest = viewModel::onSecondSlotWarningConsumed,
-            title = stringResource(CoreR.string.install_inactive_slot),
-            text = stringResource(CoreR.string.install_inactive_slot_msg),
-            icon = Icons.Rounded.Restore,
-            confirmAction = MagiskDialogAction(
-                text = stringResource(android.R.string.ok),
-                onClick = {
-                    viewModel.onSecondSlotWarningConsumed()
-                    viewModel.install()
-                }
-            ),
-            dismissAction = MagiskDialogAction(
-                text = stringResource(android.R.string.cancel),
-                onClick = viewModel::onSecondSlotWarningConsumed
-            )
+    if (state.showConfirm) {
+        val title = stringResource(when (state.method) {
+            InstallViewModel.Method.PATCH -> CoreR.string.confirm_install_title
+            InstallViewModel.Method.DIRECT -> CoreR.string.confirm_install_title
+            InstallViewModel.Method.INACTIVE_SLOT -> CoreR.string.install_inactive_slot
+            else -> CoreR.string.confirm_install_title
+        })
+        val text = stringResource(when (state.method) {
+            InstallViewModel.Method.PATCH -> CoreR.string.install_confirm_patch_msg
+            InstallViewModel.Method.DIRECT -> CoreR.string.install_confirm_direct_msg
+            InstallViewModel.Method.INACTIVE_SLOT -> CoreR.string.install_inactive_slot_msg
+            else -> android.R.string.ok
+        })
+        val icon = when (state.method) {
+            InstallViewModel.Method.PATCH -> Icons.AutoMirrored.Rounded.Article
+            InstallViewModel.Method.DIRECT -> Icons.Rounded.Bolt
+            InstallViewModel.Method.INACTIVE_SLOT -> Icons.Rounded.Restore
+            else -> Icons.Rounded.Build
+        }
+        MagiskConfirmSheet(
+            title = title,
+            text = text,
+            icon = icon,
+            onDismiss = viewModel::onConfirmDismissed,
+            onConfirm = {
+                viewModel.onConfirmDismissed()
+                viewModel.executeInstall()
+            }
         )
     }
 
@@ -238,15 +248,17 @@ fun InstallScreen(
                 )
             }
 
-            // Changelog Section
-            if (state.notes.isNotBlank()) {
+            if (cachedChangelog.isNotBlank()) {
                 item {
                     MagiskSection(
-                        title = stringResource(CoreR.string.app_changelog),
+                        title = stringResource(CoreR.string.release_notes),
                         icon = Icons.AutoMirrored.Rounded.Article
                     ) {
                         MagiskCard(modifier = Modifier.fillMaxWidth()) {
-                            ChangelogContent(markdown = state.notes)
+                            MagiskMarkdown(
+                                markdown = cachedChangelog,
+                                modifier = Modifier.padding(12.dp)
+                            )
                         }
                     }
                 }
@@ -254,35 +266,6 @@ fun InstallScreen(
 
         }
     }
-}
-
-@Composable
-fun InstallTopBarActions(
-    state: InstallViewModel.UiState,
-    canInstall: Boolean,
-    onInstall: () -> Unit
-) {
-    if (state.step == 1 && state.method != InstallViewModel.Method.NONE) {
-        MagiskTopBarIconButton(
-            icon = Icons.Rounded.PlayArrow,
-            contentDescription = stringResource(CoreR.string.install_start),
-            onClick = onInstall,
-            enabled = canInstall
-        )
-    }
-}
-
-@Composable
-private fun ChangelogContent(
-    markdown: String,
-    modifier: Modifier = Modifier
-) {
-    MagiskMarkdown(
-        markdown = markdown,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(12.dp)
-    )
 }
 
 
@@ -319,8 +302,10 @@ fun InstallMethodItem(
         leadingIcon = option.icon,
         selected = selected,
         trailingContent = {
-            RadioButton(selected = selected, onClick = onClick)
+            RadioButton(selected = selected, onClick = null)
         },
-        onClick = onClick
+        onClick = onClick,
+        interactionRole = Role.RadioButton,
+        selectionValue = selected
     )
 }

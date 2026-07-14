@@ -27,6 +27,13 @@ sealed interface AppRoute {
         override val id = "module_updates"
     }
 
+    data class Changelog(
+        val moduleId: String? = null,
+        val title: String? = null
+    ) : AppRoute {
+        override val id = "changelog"
+    }
+
     data object Logs : AppRoute {
         override val id = "logs"
     }

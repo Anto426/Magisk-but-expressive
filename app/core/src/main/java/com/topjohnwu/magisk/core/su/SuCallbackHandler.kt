@@ -13,7 +13,7 @@ import com.topjohnwu.magisk.core.ktx.getPackageInfo
 import com.topjohnwu.magisk.core.ktx.toast
 import com.topjohnwu.magisk.core.model.su.SuPolicy
 import com.topjohnwu.magisk.core.model.su.createSuLog
-import com.topjohnwu.magisk.view.Notifications
+import com.topjohnwu.magisk.view.NotificationCenter
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
@@ -73,7 +73,9 @@ object SuCallbackHandler {
 
         runBlocking { ServiceLocator.logRepo.insert(log) }
 
-        if (notify || Config.suNotification == Config.Value.NOTIFICATION_STATUS_BAR)
+        // The native flag is the per-app "Notifications" policy. Honour it for
+        // both presentation modes; the global setting only selects toast vs bar.
+        if (notify)
             notify(context, log.action >= SuPolicy.ALLOW, log.appName)
         SuEvents.notifyLogUpdated()
     }
@@ -93,15 +95,7 @@ object SuCallbackHandler {
     }
 
     fun notify(granted: Boolean, appName: String) {
-        when (Config.suNotification) {
-            Config.Value.NOTIFICATION_TOAST -> {
-                val resId = if (granted) R.string.su_allow_toast else R.string.su_deny_toast
-                AppContext.toast(AppContext.getString(resId, appName), Toast.LENGTH_SHORT)
-            }
-            Config.Value.NOTIFICATION_STATUS_BAR -> {
-                Notifications.suNotification(granted, appName)
-            }
-        }
+        notify(AppContext, granted, appName)
     }
 
     private fun notify(context: Context, granted: Boolean, appName: String) {
@@ -111,7 +105,10 @@ object SuCallbackHandler {
                 context.toast(context.getString(resId, appName), Toast.LENGTH_SHORT)
             }
             Config.Value.NOTIFICATION_STATUS_BAR -> {
-                Notifications.suNotification(granted, appName)
+                if (!NotificationCenter.showRootPermission(granted, appName)) {
+                    val resId = if (granted) R.string.su_allow_toast else R.string.su_deny_toast
+                    context.toast(context.getString(resId, appName), Toast.LENGTH_SHORT)
+                }
             }
         }
     }

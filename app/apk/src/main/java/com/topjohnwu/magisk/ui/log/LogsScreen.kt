@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.component.LogItem
 import com.topjohnwu.magisk.ui.motion.MagiskAnimatedVisibility
@@ -39,7 +40,7 @@ import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.MagiskAnimatedSearchField
 import com.topjohnwu.magisk.ui.component.MagiskSearchActionButton
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
@@ -66,10 +67,7 @@ fun LogsScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -88,7 +86,7 @@ fun LogsScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         if (state.loading) {
-            MagiskLoadingState(modifier = Modifier.fillMaxSize())
+            MagiskLoader(modifier = Modifier.fillMaxSize())
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
                 MagiskAnimatedSearchField(
@@ -109,7 +107,7 @@ fun LogsScreen(
                         modifier = Modifier.weight(1f),
                         state = logListState,
                         contentPadding = PaddingValues(
-                            top = 4.dp, bottom = 96.dp, start = 16.dp, end = 16.dp
+                            top = 4.dp, bottom = 160.dp, start = 16.dp, end = 16.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {

@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.topjohnwu.magisk.core.R as CoreR
@@ -24,8 +26,10 @@ import com.topjohnwu.magisk.core.R as CoreR
 data class AppUpdateUiState(
     val loading: Boolean = true,
     val update: UpdateInfo = UpdateInfo(),
+    val changelogAvailable: Boolean = false,
     val downloadProgress: Float? = null,
-    val downloadFailed: Boolean = false
+    val downloadFailed: Boolean = false,
+    val refreshFailed: Boolean = false
 ) {
     val hasUpdateInfo: Boolean get() = update.versionCode > 0 && update.link.isNotBlank()
     val updateAvailable: Boolean get() = hasUpdateInfo && AppVersion.isUpdateAvailable(update)
@@ -33,6 +37,8 @@ data class AppUpdateUiState(
     val installedVersionCode: String get() = AppVersion.installedCodeText
     val latestVersion: String get() = if (hasUpdateInfo) AppVersion.remoteDisplay(update) else ""
     val latestVersionCode: String get() = if (hasUpdateInfo) AppVersion.remoteCodeText(update) else ""
+    val downloadInProgress: Boolean
+        get() = downloadProgress?.let { it < 1f } == true && !downloadFailed
 }
 
 class AppUpdateViewModel(
@@ -48,12 +54,21 @@ class AppUpdateViewModel(
 
     init {
         viewModelScope.launch {
-            UpdateManager.appUpdateState.collect { appUpdate ->
-                _state.update {
-                    it.copy(
+            UpdateManager.state
+                .map { it.app }
+                .distinctUntilChanged()
+                .collect { appUpdate ->
+                _state.update { current ->
+                    val nextUpdate = appUpdate.updateInfo ?: UpdateInfo()
+                    val sameArtifact = current.update.link == nextUpdate.link &&
+                        current.update.versionCode == nextUpdate.versionCode
+                    current.copy(
                         loading = appUpdate.isChecking,
-                        update = appUpdate.updateInfo ?: UpdateInfo(),
-                        downloadFailed = appUpdate.hasFailed
+                        update = nextUpdate,
+                        changelogAvailable = appUpdate.changelog.isNotBlank(),
+                        downloadProgress = current.downloadProgress.takeIf { sameArtifact },
+                        downloadFailed = current.downloadFailed && sameArtifact,
+                        refreshFailed = appUpdate.hasFailed
                     )
                 }
             }
@@ -64,15 +79,22 @@ class AppUpdateViewModel(
     fun refresh(force: Boolean = false) {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            val update = UpdateManager.checkForAppUpdate(svc, force = force)
+            val update = UpdateManager.refreshApp(
+                service = svc,
+                force = force,
+                publishNotification = true
+            )
             if (update == null) {
                 _messages.emit(uiText(CoreR.string.no_connection))
             }
         }
     }
 
-    fun onDownloadProgress(progress: Float) {
+    fun onDownloadProgress(progress: Float, url: String, mbeVersionCode: Int) {
         _state.update {
+            if (url != it.update.link || mbeVersionCode != it.update.versionCode) {
+                return@update it
+            }
             when {
                 progress == -2f -> it.copy(downloadProgress = null, downloadFailed = true)
                 progress >= 1f -> it.copy(downloadProgress = 1f, downloadFailed = false)
@@ -82,8 +104,18 @@ class AppUpdateViewModel(
         }
     }
 
-    fun onDownloadStarted() {
-        _state.update { it.copy(downloadProgress = 0f, downloadFailed = false) }
+    @Synchronized
+    fun onDownloadStarted(url: String, mbeVersionCode: Int): Boolean {
+        val current = _state.value
+        if (
+            current.downloadInProgress ||
+            url != current.update.link ||
+            mbeVersionCode != current.update.versionCode
+        ) {
+            return false
+        }
+        _state.value = current.copy(downloadProgress = 0f, downloadFailed = false)
+        return true
     }
 
     companion object {

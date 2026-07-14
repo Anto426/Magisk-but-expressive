@@ -23,7 +23,7 @@ interface PreferenceConfig {
     ) = object: ReadWriteProperty<PreferenceConfig, Int> {
         val base = StringProperty(name, default.toString(), commit)
         override fun getValue(thisRef: PreferenceConfig, property: KProperty<*>): Int =
-                base.getValue(thisRef, property).toInt()
+                base.getValue(thisRef, property).toIntOrNull() ?: default
 
         override fun setValue(thisRef: PreferenceConfig, property: KProperty<*>, value: Int) =
                 base.setValue(thisRef, property, value.toString())

@@ -1,6 +1,8 @@
 package com.topjohnwu.magisk.ui.component
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,7 +59,7 @@ fun MagiskSettingsGroup(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = MagiskComponentDefaults.PrimaryIconTint
+                color = MagiskComponentDefaults.PrimaryText
             )
         }
 
@@ -91,14 +93,31 @@ fun MagiskSettingsListItem(
     leadingContent: (@Composable () -> Unit)? = null,
     selected: Boolean = false,
     onClick: (() -> Unit)? = null,
-    trailingContent: (@Composable () -> Unit)? = null
+    trailingContent: (@Composable () -> Unit)? = null,
+    interactionRole: Role = Role.Button,
+    toggleValue: Boolean? = null,
+    selectionValue: Boolean? = null
 ) {
+    val interactionModifier = when {
+        onClick == null -> Modifier
+        toggleValue != null -> Modifier.toggleable(
+            value = toggleValue,
+            role = interactionRole,
+            onValueChange = { onClick() }
+        )
+        selectionValue != null -> Modifier.selectable(
+            selected = selectionValue,
+            role = interactionRole,
+            onClick = onClick
+        )
+        else -> Modifier.clickable(role = interactionRole, onClick = onClick)
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = if (subtitle.isNullOrBlank()) 56.dp else 72.dp)
-            .clickable(
-                enabled = onClick != null, role = Role.Button, onClick = { onClick?.invoke() })
+            .then(interactionModifier)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -109,7 +128,7 @@ fun MagiskSettingsListItem(
             Icon(
                 imageVector = leadingIcon,
                 contentDescription = null,
-                tint = if (selected) MagiskComponentDefaults.PrimaryIconTint else MagiskComponentDefaults.SecondaryIconTint,
+                tint = MagiskComponentDefaults.PrimaryIconTint,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -118,7 +137,7 @@ fun MagiskSettingsListItem(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                color = if (selected) MagiskComponentDefaults.PrimaryIconTint else MagiskComponentDefaults.PrimaryText,
+                color = MagiskComponentDefaults.PrimaryText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -151,9 +170,12 @@ fun MagiskSettingsSwitchItem(
         leadingIcon = leadingIcon,
         modifier = modifier,
         onClick = { onCheckedChange(!checked) },
+        interactionRole = Role.Switch,
+        toggleValue = checked,
         trailingContent = {
             Switch(
-                checked = checked, onCheckedChange = onCheckedChange
+                checked = checked,
+                onCheckedChange = null
             )
         })
 }

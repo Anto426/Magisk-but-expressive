@@ -60,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,7 +68,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UIActivity
 import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.core.Config
+import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.tasks.AppMigration
 import com.topjohnwu.magisk.core.utils.LocaleSetting
 import com.topjohnwu.magisk.navigation.AppRoute
@@ -84,6 +87,7 @@ import com.topjohnwu.magisk.ui.component.MagiskSettingsGroup
 import com.topjohnwu.magisk.ui.component.MagiskSettingsListItem
 import com.topjohnwu.magisk.ui.component.MagiskSettingsSwitchItem
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
+import com.topjohnwu.magisk.view.NotificationCenter
 import com.topjohnwu.magisk.view.SystemToastManager
 import com.topjohnwu.magisk.viewmodel.settings.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -134,10 +138,7 @@ fun SettingsScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -180,6 +181,7 @@ fun SettingsScreen(
     // Custom Channel URL Bottom Sheet
     if (showCustomChannelUrlDialog) {
         var tempUrl by remember { mutableStateOf(state.customChannelUrl) }
+        val customUrlValid = SettingsViewModel.normalizeCustomChannelUrl(tempUrl) != null
         MagiskBottomSheet(onDismissRequest = { showCustomChannelUrlDialog = false }) {
             Column(
                 modifier = Modifier
@@ -258,10 +260,11 @@ fun SettingsScreen(
                     }
                     Button(
                         onClick = {
-                            showCustomChannelUrlDialog = false
-                            viewModel.setCustomChannelUrl(tempUrl)
+                            if (viewModel.setCustomChannelUrl(tempUrl)) {
+                                showCustomChannelUrlDialog = false
+                            }
                         },
-                        enabled = tempUrl.isNotBlank(),
+                        enabled = customUrlValid,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MagiskComponentDefaults.PrimaryIconTint
                         ),
@@ -279,6 +282,7 @@ fun SettingsScreen(
 
     if (showDownloadPathDialog) {
         var tempDir by remember(state.downloadDir) { mutableStateOf(state.downloadDir) }
+        val downloadDirectoryValid = MediaStoreUtils.normalizeDownloadDirectory(tempDir) != null
         MagiskBottomSheet(onDismissRequest = { showDownloadPathDialog = false }) {
             Column(
                 modifier = Modifier
@@ -354,9 +358,11 @@ fun SettingsScreen(
                     }
                     Button(
                         onClick = {
-                            showDownloadPathDialog = false
-                            viewModel.setDownloadDir(tempDir.trim().trim('/', '\\'))
+                            if (viewModel.setDownloadDir(tempDir)) {
+                                showDownloadPathDialog = false
+                            }
                         },
+                        enabled = downloadDirectoryValid,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MagiskComponentDefaults.PrimaryIconTint
                         ),
@@ -489,21 +495,20 @@ fun SettingsScreen(
 
         val options: List<String> = when (picker) {
             PickerType.LANGUAGE -> LocaleSetting.available.names.toList()
-            PickerType.UPDATE_CHANNEL -> context.resources.getStringArray(CoreR.array.update_channel)
+            PickerType.UPDATE_CHANNEL -> stringArrayResource(CoreR.array.update_channel).toList()
+
+            PickerType.SU_ACCESS -> stringArrayResource(CoreR.array.su_access).toList()
+            PickerType.MULTIUSER -> stringArrayResource(CoreR.array.multiuser_mode)
                 .toList()
 
-            PickerType.SU_ACCESS -> context.resources.getStringArray(CoreR.array.su_access).toList()
-            PickerType.MULTIUSER -> context.resources.getStringArray(CoreR.array.multiuser_mode)
+            PickerType.NAMESPACE -> stringArrayResource(CoreR.array.namespace).toList()
+            PickerType.AUTO_RESPONSE -> stringArrayResource(CoreR.array.auto_response)
                 .toList()
 
-            PickerType.NAMESPACE -> context.resources.getStringArray(CoreR.array.namespace).toList()
-            PickerType.AUTO_RESPONSE -> context.resources.getStringArray(CoreR.array.auto_response)
+            PickerType.TIMEOUT -> stringArrayResource(CoreR.array.request_timeout)
                 .toList()
 
-            PickerType.TIMEOUT -> context.resources.getStringArray(CoreR.array.request_timeout)
-                .toList()
-
-            PickerType.NOTIFICATION -> context.resources.getStringArray(CoreR.array.su_notification)
+            PickerType.NOTIFICATION -> stringArrayResource(CoreR.array.su_notification)
                 .toList()
         }
 
@@ -527,9 +532,10 @@ fun SettingsScreen(
                     when (picker) {
                         PickerType.LANGUAGE -> viewModel.setLanguageByIndex(index)
                         PickerType.UPDATE_CHANNEL -> {
-                            viewModel.setUpdateChannel(index)
                             if (index == Config.Value.CUSTOM_CHANNEL) {
                                 showCustomChannelUrlDialog = true
+                            } else {
+                                viewModel.setUpdateChannel(index)
                             }
                         }
                         PickerType.SU_ACCESS -> viewModel.setRootMode(index)
@@ -539,7 +545,33 @@ fun SettingsScreen(
                             viewModel.setSuAutoResponse(index)
                         }
                         PickerType.TIMEOUT -> viewModel.setSuTimeoutIndex(index)
-                        PickerType.NOTIFICATION -> viewModel.setSuNotification(index)
+                        PickerType.NOTIFICATION -> {
+                            if (index == Config.Value.NOTIFICATION_STATUS_BAR) {
+                                val activity = context as? UIActivity<*>
+                                if (activity == null) {
+                                    viewModel.setMessageRes(CoreR.string.post_notifications_denied)
+                                } else {
+                                    activity.withPermission("android.permission.POST_NOTIFICATIONS") { granted ->
+                                        if (granted && NotificationCenter.canPostRootNotifications()) {
+                                            viewModel.setSuNotification(index)
+                                        } else {
+                                            viewModel.setMessageRes(CoreR.string.post_notifications_denied)
+                                            runCatching {
+                                                activity.startActivity(
+                                                    if (granted) {
+                                                        NotificationCenter.rootNotificationSettingsIntent()
+                                                    } else {
+                                                        NotificationCenter.appNotificationSettingsIntent()
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                viewModel.setSuNotification(index)
+                            }
+                        }
                     }
                     activePicker = null
                 }
@@ -767,6 +799,7 @@ fun SettingsScreen(
                 title = stringResource(CoreR.string.settings_group_magisk_features),
                 icon = Icons.Rounded.Security,
                 items = buildList {
+                    if (state.showMagiskAdvanced) {
                     add(
                         SettingScreenItem(
                             title = "Zygisk",
@@ -811,6 +844,7 @@ fun SettingsScreen(
                                 }
                             )
                         )
+                    }
                     }
                     add(
                         SettingScreenItem(
@@ -922,6 +956,7 @@ fun SettingsScreen(
                 title = stringResource(CoreR.string.settings_group_superuser_security),
                 icon = Icons.Rounded.AdminPanelSettings,
                 items = buildList {
+                    if (state.showReauthenticate) {
                     add(
                         SettingScreenItem(
                             title = stringResource(CoreR.string.settings_su_reauth_title),
@@ -937,6 +972,7 @@ fun SettingsScreen(
                             }
                         )
                     )
+                    }
                     if (state.deviceSecure) {
                         add(
                             SettingScreenItem(
@@ -1028,7 +1064,7 @@ fun SettingsScreen(
 
         MagiskLazyContent(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 120.dp, start = 16.dp, end = 16.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 160.dp, start = 16.dp, end = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             if (filteredGroups.isEmpty()) {

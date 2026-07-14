@@ -11,8 +11,11 @@ import android.content.res.Configuration
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.topjohnwu.magisk.arch.POST_NOTIFICATIONS_PERMISSION
@@ -27,9 +30,12 @@ import com.topjohnwu.magisk.core.isRunningAsStub
 import com.topjohnwu.magisk.core.ktx.reflectField
 import com.topjohnwu.magisk.core.ktx.toast
 import com.topjohnwu.magisk.core.tasks.AppMigration
+import com.topjohnwu.magisk.core.update.UpdateManager
 import com.topjohnwu.magisk.core.wrap
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import com.topjohnwu.magisk.view.Shortcuts
+import com.topjohnwu.magisk.ui.theme.MagiskThemeController
+import com.topjohnwu.magisk.ui.theme.shouldUseDarkTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import com.topjohnwu.magisk.core.R as CoreR
@@ -82,12 +88,22 @@ class MainActivity : UIActivity<Unit>(), SplashScreenHost {
         askForHomeShortcut()
 
         if (Config.checkUpdate) {
-            extension.withPermission(POST_NOTIFICATIONS_PERMISSION) {
-                Config.checkUpdate = it
+            // A denied notification permission must not disable update checks.
+            // NotificationCenter will publish after permission is granted and
+            // UpdateManager deliberately does not persist a missed fingerprint.
+            extension.withPermission(POST_NOTIFICATIONS_PERMISSION) { granted ->
+                if (granted) UpdateManager.publishCachedNotifications()
             }
         }
 
         enableEdgeToEdge()
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            window.navigationBarDividerColor = android.graphics.Color.TRANSPARENT
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
         val openRoute = if (intent.action == Intent.ACTION_APPLICATION_PREFERENCES) {
             Const.Nav.SETTINGS
         } else {
@@ -95,6 +111,8 @@ class MainActivity : UIActivity<Unit>(), SplashScreenHost {
         }
 
         setContent {
+            val themeState by MagiskThemeController.state.collectAsStateWithLifecycle()
+            SystemBarAppearance(darkTheme = shouldUseDarkTheme(themeState.darkThemeMode))
             MagiskAppContainer(openSection = openRoute) {
                 MainActivityDialogs(activity = this@MainActivity)
             }
@@ -158,6 +176,17 @@ class MainActivity : UIActivity<Unit>(), SplashScreenHost {
         ) {
             Config.askedHome = true
             showShortcutPrompt.value = true
+        }
+    }
+}
+
+@Composable
+private fun MainActivity.SystemBarAppearance(darkTheme: Boolean) {
+    val view = LocalView.current
+    SideEffect {
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightNavigationBars = !darkTheme
         }
     }
 }

@@ -37,12 +37,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.arch.resolve
 import com.topjohnwu.magisk.ui.component.AppIcon
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenu
 import com.topjohnwu.magisk.ui.component.MagiskDropdownMenuItem
 import com.topjohnwu.magisk.ui.component.MagiskEmptyState
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.MagiskTopBarIconButton
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.view.SystemToastManager
@@ -62,10 +63,7 @@ fun SuperuserLogsScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { text ->
-            val messageString = when (text) {
-                is UiText.Plain -> text.value
-                is UiText.Resource -> context.getString(text.resId, *text.args.toTypedArray())
-            }
+            val messageString = text.resolve(context)
             SystemToastManager.show(context, messageString)
         }
     }
@@ -79,7 +77,7 @@ fun SuperuserLogsScreen(
     Column(modifier = modifier.fillMaxSize()) {
         when {
             state.loading -> {
-                MagiskLoadingState(modifier = Modifier.weight(1f))
+                MagiskLoader(modifier = Modifier.weight(1f))
             }
 
             state.items.isEmpty() -> {

@@ -21,6 +21,7 @@ import com.topjohnwu.magisk.core.utils.MediaStoreUtils
 import com.topjohnwu.magisk.core.utils.RootUtils
 import com.topjohnwu.magisk.runtime.MagiskRuntimeEngine
 import com.topjohnwu.magisk.runtime.MagiskRuntimeState
+import com.topjohnwu.magisk.ui.component.MagiskLoadingController
 import com.topjohnwu.magisk.ui.theme.MagiskThemeController
 import com.topjohnwu.magisk.ui.theme.ThemeCustomColors
 import com.topjohnwu.magisk.ui.theme.ThemeOption
@@ -37,34 +38,31 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.URI
+import java.util.Locale
 import com.topjohnwu.magisk.core.R as CoreR
 
-private val updateChannelArray by lazy { AppContext.resources.getStringArray(CoreR.array.update_channel) }
-private val suAccessArray by lazy { AppContext.resources.getStringArray(CoreR.array.su_access) }
-private val multiuserModeArray by lazy { AppContext.resources.getStringArray(CoreR.array.multiuser_mode) }
-private val multiuserSummaryArray by lazy { AppContext.resources.getStringArray(CoreR.array.multiuser_summary) }
-private val namespaceArray by lazy { AppContext.resources.getStringArray(CoreR.array.namespace) }
-private val namespaceSummaryArray by lazy { AppContext.resources.getStringArray(CoreR.array.namespace_summary) }
-private val autoResponseArray by lazy { AppContext.resources.getStringArray(CoreR.array.auto_response) }
-private val requestTimeoutArray by lazy { AppContext.resources.getStringArray(CoreR.array.request_timeout) }
-private val suNotificationArray by lazy { AppContext.resources.getStringArray(CoreR.array.su_notification) }
+private val updateChannelArray get() = AppContext.resources.getStringArray(CoreR.array.update_channel)
+private val suAccessArray get() = AppContext.resources.getStringArray(CoreR.array.su_access)
+private val multiuserModeArray get() = AppContext.resources.getStringArray(CoreR.array.multiuser_mode)
+private val multiuserSummaryArray get() = AppContext.resources.getStringArray(CoreR.array.multiuser_summary)
+private val namespaceArray get() = AppContext.resources.getStringArray(CoreR.array.namespace)
+private val namespaceSummaryArray get() = AppContext.resources.getStringArray(CoreR.array.namespace_summary)
+private val autoResponseArray get() = AppContext.resources.getStringArray(CoreR.array.auto_response)
+private val requestTimeoutArray get() = AppContext.resources.getStringArray(CoreR.array.request_timeout)
+private val suNotificationArray get() = AppContext.resources.getStringArray(CoreR.array.su_notification)
 
 data class SettingsUiState(
     val runtime: MagiskRuntimeState = MagiskRuntimeEngine.snapshot(),
     val darkThemeMode: Int = Config.darkTheme,
     val bottomBarStyle: Int = Config.bottomBarStyle,
+    val bottomBarOpacity: Int = Config.bottomBarOpacity,
     val themeOrdinal: Int = Config.themeOrdinal,
     val selectedThemeIndex: Int = ThemeOption.displayOrder.indexOf(ThemeOption.selected)
         .coerceAtLeast(0),
     @param:StringRes val themeNameRes: Int = ThemeOption.selected.labelRes,
-    val useLocaleManager: Boolean = LocaleSetting.useLocaleManager,
-    val languageSystemName: String = LocaleSetting.instance.appLocale?.let { it.getDisplayName(it) }
-        ?: AppContext.getString(CoreR.string.system_default),
-    val languageIndex: Int = LocaleSetting.available.tags.indexOf(currentLanguageTag())
-        .let { if (it < 0) 0 else it },
-    val languageName: String = LocaleSetting.available.names.getOrElse(
-        LocaleSetting.available.tags.indexOf(currentLanguageTag())
-            .let { if (it < 0) 0 else it }) { AppContext.getString(CoreR.string.system_default) },
+    val languageIndex: Int = currentLanguageIndex(),
+    val languageName: String = selectedLanguageName(currentLanguageIndex()),
     val canAddShortcut: Boolean = isRunningAsStub && ShortcutManagerCompat.isRequestPinShortcutSupported(
         AppContext
     ),
@@ -169,11 +167,25 @@ class SettingsViewModel : ViewModel() {
         updateSnapshot()
     }
 
+    fun setBottomBarOpacity(opacity: Int) {
+        MagiskThemeController.setBottomBarOpacity(opacity)
+        updateSnapshot()
+    }
+
     fun setLanguageByIndex(index: Int) {
         val tags = LocaleSetting.available.tags
         if (tags.isEmpty()) return
-        Config.locale = tags[index.coerceIn(0, tags.lastIndex)]
-        updateSnapshot()
+        val locale = tags[index.coerceIn(0, tags.lastIndex)]
+        if (currentLanguageTag() == locale) return
+
+        val generation = MagiskLoadingController.begin()
+        try {
+            Config.locale = locale
+            updateSnapshot()
+        } catch (_: Exception) {
+            MagiskLoadingController.complete(generation)
+            _messages.tryEmit(uiText(CoreR.string.failure))
+        }
     }
 
     fun addShortcut() {
@@ -219,15 +231,25 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setUpdateChannel(value: Int) {
-        Config.updateChannel = value.coerceIn(Config.Value.MBE_CHANNEL, Config.Value.CUSTOM_CHANNEL)
-        UpdateManager.resetAppUpdate()
+        val channel = value.coerceIn(Config.Value.MBE_CHANNEL, Config.Value.CUSTOM_CHANNEL)
+        if (channel == Config.Value.CUSTOM_CHANNEL && normalizeCustomChannelUrl(
+                Config.customChannelUrl
+            ) == null
+        ) {
+            return
+        }
+        Config.updateChannel = channel
+        UpdateManager.invalidateApp()
         updateSnapshot()
     }
 
-    fun setCustomChannelUrl(url: String) {
-        Config.customChannelUrl = url.trim()
-        UpdateManager.resetAppUpdate()
+    fun setCustomChannelUrl(url: String): Boolean {
+        val normalized = normalizeCustomChannelUrl(url) ?: return false
+        Config.customChannelUrl = normalized
+        Config.updateChannel = Config.Value.CUSTOM_CHANNEL
+        UpdateManager.invalidateApp()
         updateSnapshot()
+        return true
     }
 
     fun setDoH(value: Boolean) {
@@ -235,9 +257,11 @@ class SettingsViewModel : ViewModel() {
         updateSnapshot()
     }
 
-    fun setDownloadDir(value: String) {
-        Config.downloadDir = value
+    fun setDownloadDir(value: String): Boolean {
+        val normalized = MediaStoreUtils.normalizeDownloadDirectory(value) ?: return false
+        Config.downloadDir = normalized
         updateSnapshot()
+        return true
     }
 
     fun setRandName(value: Boolean) {
@@ -306,7 +330,10 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun setSuNotification(value: Int) {
-        Config.suNotification = value
+        Config.suNotification = value.coerceIn(
+            Config.Value.NO_NOTIFICATION,
+            Config.Value.NOTIFICATION_STATUS_BAR
+        )
         updateSnapshot()
     }
 
@@ -352,8 +379,7 @@ class SettingsViewModel : ViewModel() {
             Config.Value.CUSTOM_CHANNEL
         )
         val suTimeoutIndex = SU_TIMEOUT_VALUES.indexOf(Config.suDefaultTimeout).let { if (it < 0) 0 else it }
-        val currentLang = currentLanguageTag()
-        val languageIndex = LocaleSetting.available.tags.indexOf(currentLang).let { if (it < 0) 0 else it }
+        val languageIndex = currentLanguageIndex()
         val isHiddenApp = isHiddenMagiskApp()
         val canMigrateApp = runtime.canMigrateApp
 
@@ -362,17 +388,17 @@ class SettingsViewModel : ViewModel() {
                 runtime = runtime,
                 darkThemeMode = Config.darkTheme,
                 bottomBarStyle = Config.bottomBarStyle,
+                bottomBarOpacity = Config.bottomBarOpacity,
                 themeOrdinal = Config.themeOrdinal,
                 selectedThemeIndex = ThemeOption.displayOrder.indexOf(ThemeOption.selected).coerceAtLeast(0),
                 themeNameRes = ThemeOption.selected.labelRes,
-                useLocaleManager = LocaleSetting.useLocaleManager,
-                languageSystemName = LocaleSetting.instance.appLocale?.let { locale -> locale.getDisplayName(locale) } ?: AppContext.getString(CoreR.string.system_default),
                 languageIndex = languageIndex,
-                languageName = LocaleSetting.available.names.getOrElse(languageIndex) { AppContext.getString(CoreR.string.system_default) },
+                languageName = selectedLanguageName(languageIndex),
                 canMigrateApp = canMigrateApp,
                 isHiddenApp = isHiddenApp,
                 canRestoreApp = canMigrateApp && isHiddenApp,
                 canHideApp = canMigrateApp && !isHiddenApp,
+                checkUpdate = Config.checkUpdate,
                 updateChannel = updateChannel,
                 updateChannelName = updateChannelArray.getOrElse(updateChannel) { "-" },
                 isCustomChannel = updateChannel == Config.Value.CUSTOM_CHANNEL,
@@ -411,6 +437,15 @@ class SettingsViewModel : ViewModel() {
     }
 
     companion object {
+        fun normalizeCustomChannelUrl(value: String): String? {
+            val normalized = value.trim()
+            val uri = runCatching { URI(normalized) }.getOrNull() ?: return null
+            return normalized.takeIf {
+                uri.scheme.equals("https", ignoreCase = true) &&
+                    !uri.host.isNullOrBlank() && uri.rawUserInfo == null
+            }
+        }
+
         val Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST") return SettingsViewModel() as T
@@ -422,7 +457,30 @@ class SettingsViewModel : ViewModel() {
 val SU_TIMEOUT_VALUES = listOf(10, 15, 20, 30, 45, 60)
 
 private fun currentLanguageTag(): String {
-    return LocaleSetting.instance.appLocale?.toLanguageTag() ?: Config.locale
+    return LocaleSetting.instance.appLocale?.toLanguageTag().orEmpty()
+}
+
+private fun currentLanguageIndex(): Int {
+    return LocaleSetting.available.tags.indexOf(currentLanguageTag()).coerceAtLeast(0)
+}
+
+private fun selectedLanguageName(index: Int): String {
+    if (index == 0) {
+        val systemLocale = LocaleSetting.instance.systemLocale
+        return AppContext.getString(
+            CoreR.string.language_system_summary,
+            systemLocale.localizedDisplayName()
+        )
+    }
+    return LocaleSetting.available.names.getOrElse(index) {
+        AppContext.getString(CoreR.string.system_default)
+    }
+}
+
+private fun Locale.localizedDisplayName(): String {
+    return getDisplayName(this).replaceFirstChar { character ->
+        if (character.isLowerCase()) character.titlecase() else character.toString()
+    }
 }
 
 private fun isHiddenMagiskApp(): Boolean {

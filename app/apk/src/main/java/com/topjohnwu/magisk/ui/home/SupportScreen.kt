@@ -1,7 +1,7 @@
 package com.topjohnwu.magisk.ui.home
 
-import android.content.Intent
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +28,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,16 +42,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.topjohnwu.magisk.arch.UiEffect
 import com.topjohnwu.magisk.arch.UiText
+import com.topjohnwu.magisk.utils.openExternalUri
 import com.topjohnwu.magisk.navigation.AppRoute
 import com.topjohnwu.magisk.ui.component.MagiskBottomSheet
 import com.topjohnwu.magisk.ui.component.MagiskComponentDefaults
 import com.topjohnwu.magisk.ui.component.MagiskLazyContent
 import com.topjohnwu.magisk.ui.component.MagiskListItem
-import com.topjohnwu.magisk.ui.component.MagiskLoadingState
+import com.topjohnwu.magisk.ui.component.MagiskLoader
 import com.topjohnwu.magisk.ui.component.MagiskSection
 import com.topjohnwu.magisk.ui.component.card.MagiskCard
 import com.topjohnwu.magisk.ui.component.card.MagiskCardAction
@@ -73,7 +74,7 @@ fun SupportScreen(
     modifier: Modifier = Modifier,
     viewModel: SupportViewModel = viewModel(factory = SupportViewModel.Factory)
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectedContributorForLinks by remember { mutableStateOf<Contributor?>(null) }
 
@@ -81,7 +82,7 @@ fun SupportScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is UiEffect.OpenUri -> {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, effect.uri))
+                    context.openExternalUri(effect.uri)
                 }
                 else -> {}
             }
@@ -204,6 +205,52 @@ fun SupportScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // --- 0. Support Intro Hero Card ---
+        item {
+            MagiskCard(
+                shape = MagiskComponentDefaults.CardShape,
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                contentPadding = PaddingValues(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Surface(
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Favorite,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(CoreR.string.support_hero_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(CoreR.string.support_hero_subtitle),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MagiskComponentDefaults.SecondaryText
+                        )
+                    }
+                }
+            }
+        }
+
         // --- 1. Magisk-but-expressive (MBE) Section ---
         item {
             MagiskSection(
@@ -225,7 +272,7 @@ fun SupportScreen(
                             onClick = { viewModel.openLink(viewModel.mbeSourceUrl) },
                             style = MagiskCardActionStyle.Secondary
                         ),
-                        actionsStacked = true
+                        actionsStacked = false
                     )
 
                     // Prominent Maintainer Profile Card
@@ -288,7 +335,7 @@ fun SupportScreen(
                             onClick = { viewModel.openLink(viewModel.officialDocsUrl) },
                             style = MagiskCardActionStyle.Secondary
                         ),
-                        actionsStacked = true
+                        actionsStacked = false
                     )
 
                     // Prominent Creator Profile Card
@@ -329,7 +376,7 @@ fun SupportScreen(
 
                     // Official Magisk Contributors List
                     if (state.contributorsLoading) {
-                        MagiskLoadingState()
+                        MagiskLoader()
                     } else {
                         val otherContributors = state.contributors.filter {
                             val loginLower = it.login.lowercase(Locale.US)

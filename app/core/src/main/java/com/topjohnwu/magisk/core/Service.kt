@@ -13,9 +13,12 @@ import com.topjohnwu.magisk.core.download.Subject
 class Service : BaseService(), DownloadSession {
 
     private var mEngine: DownloadEngine? = null
+    @Volatile
+    private var latestStartId = 0
     override val context get() = this
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        latestStartId = startId
         if (intent.action == DownloadEngine.ACTION) {
             IntentCompat
                 .getParcelableExtra(intent, DownloadEngine.SUBJECT_KEY, Subject::class.java)
@@ -35,5 +38,6 @@ class Service : BaseService(), DownloadSession {
 
     override fun onDownloadComplete() {
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelfResult(latestStartId)
     }
 }

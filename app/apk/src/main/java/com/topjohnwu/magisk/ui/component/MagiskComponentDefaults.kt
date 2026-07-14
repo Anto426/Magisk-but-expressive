@@ -37,11 +37,18 @@ object MagiskComponentDefaults {
     val PanelContainer: Color
         @Composable get() = MaterialTheme.colorScheme.surfaceContainerHighest
 
-    val SelectedContainer: Color
+    /** Main accent family used by interactive and decorative UI elements. */
+    val AccentContainer: Color
         @Composable get() = MaterialTheme.colorScheme.primaryContainer
 
-    val SelectedContent: Color
+    val AccentContent: Color
         @Composable get() = MaterialTheme.colorScheme.onPrimaryContainer
+
+    val SelectedContainer: Color
+        @Composable get() = AccentContainer
+
+    val SelectedContent: Color
+        @Composable get() = AccentContent
 
     val DividerColor: Color
         @Composable get() = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
